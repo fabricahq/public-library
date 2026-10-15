@@ -36,7 +36,7 @@ Higher layers take longer to run, fail for more incidental reasons, and cost mor
 Each layer proves only what it exercises, though: a fake proves the fake's behavior, not the real dependency's.
 Choosing the lowest layer that includes the enforcing component gets the most safety for the cost.
 
-Background: [Testing philosophy](../../assets/testing-philosophy.md).
+Background: [Testing philosophy](../../../assets/testing-philosophy.md).
 
 ### Examples
 

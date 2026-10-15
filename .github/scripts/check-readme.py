@@ -7,8 +7,8 @@
 
 Checks the rule count badge, the group table, the "Browse all N rules" lists,
 and the groups the install command selects against the library files, and
-the totals against `code-rules library check`. Run from the repository root
-with code-rules on PATH:
+the totals against `syllabus library check`. Run from the repository root
+with syllabus on PATH:
 
     uv run .github/scripts/check-readme.py
 """
@@ -23,8 +23,10 @@ from pathlib import Path
 
 import yaml
 
+# Groups live in the library's Syllabus directory; their IDs are paths below RULES_DIR.
+RULES_DIR = Path(".syllabus/rules")
 GROUP_ROOTS = ("practices", "techs")
-INSTALL_COMMAND = "code-rules project add library"
+INSTALL_COMMAND = "syllabus project add source"
 
 errors = []
 
@@ -34,7 +36,7 @@ def fail(message):
 
 
 def field(path, text, key):
-    """Read a string field from one YAML document, as Code Rules does.
+    """Read a string field from one YAML document, as Syllabus does.
 
     BaseLoader keeps every scalar a string, so values such as `yes` or `1.0`
     are not converted to other types.
@@ -54,10 +56,13 @@ def frontmatter(path):
 
 
 def load_groups():
-    """Return {group path: (name, {rule path: title})}, following the library format's discovery."""
+    """Return {group link: (name, {rule link: title})}, following the library format's discovery.
+
+    Links are paths from the repository root, as the README links to them.
+    """
     groups = {}
     for root in GROUP_ROOTS:
-        for metadata in sorted(Path(root).glob("*/_group.yaml")):
+        for metadata in sorted((RULES_DIR / root).glob("*/_group.yaml")):
             directory = metadata.parent
             rules = {}
             for rule in sorted(directory.rglob("*.md")):
@@ -70,18 +75,18 @@ def load_groups():
 
 
 def check_totals(groups):
-    """Fail if this script and code-rules disagree about what the library contains."""
+    """Fail if this script and syllabus disagree about what the library contains."""
     result = subprocess.run(
-        ["code-rules", "library", "check", "--json"], capture_output=True, text=True
+        ["syllabus", "library", "check", "--json"], capture_output=True, text=True
     )
     response = json.loads(result.stdout)
     if not response.get("ok"):
-        sys.exit(f"code-rules library check failed:\n{result.stdout}")
+        sys.exit(f"syllabus library check failed:\n{result.stdout}")
     value = response["value"]
     rules = sum(len(group_rules) for _, group_rules in groups.values())
     if (value["groupCount"], value["ruleCount"]) != (len(groups), rules):
         sys.exit(
-            f"code-rules counts {value['groupCount']} groups and {value['ruleCount']} rules, "
+            f"syllabus counts {value['groupCount']} groups and {value['ruleCount']} rules, "
             f"but this check found {len(groups)} and {rules}; update {__file__}"
         )
 
@@ -159,7 +164,7 @@ def check_rule_lists(readme, groups, rule_count):
 
 
 def install_groups(readme):
-    """Return the --groups values of the README's command that adds this library.
+    """Return the --rules values of the README's command that adds this library.
 
     Joins the command's continuation lines and splits it as the shell would, so comments
     and other commands in the same code block don't count. Returns None, after recording
@@ -180,7 +185,7 @@ def install_groups(readme):
     words = iter(shlex.split(command, comments=True))
     for word in words:
         name, equals, value = word.partition("=")
-        if name == "--groups":
+        if name == "--rules":
             selected.append(value if equals else next(words, ""))
     return selected
 
@@ -190,15 +195,16 @@ def check_install_command(readme, groups):
     selected = install_groups(readme)
     if selected is None:
         return
-    for group in sorted(groups.keys() - set(selected)):
-        fail(f"install command is missing --groups {group}")
-    for group in sorted(set(selected) - groups.keys()):
-        fail(f"install command selects --groups {group}, which is not a group")
-    for group, count in sorted(Counter(selected).items()):
+    expected = {f"{Path(link).relative_to(RULES_DIR).as_posix()}/*" for link in groups}
+    for selector in sorted(expected - set(selected)):
+        fail(f"install command is missing --rules '{selector}'")
+    for selector in sorted(set(selected) - expected):
+        fail(f"install command selects --rules '{selector}', which is not a group")
+    for selector, count in sorted(Counter(selected).items()):
         if count > 1:
-            fail(f"install command selects --groups {group} more than once")
+            fail(f"install command selects --rules '{selector}' more than once")
     if selected != sorted(selected):
-        fail("install command should list --groups in alphabetical order")
+        fail("install command should list --rules in alphabetical order")
 
 
 def main():
