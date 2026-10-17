@@ -7,8 +7,8 @@
 
 Checks the rule count badge, the group table, the "Browse all N rules" lists,
 and the groups the install command selects against the library files, and
-the totals against `syllabus library check`. Run from the repository root
-with syllabus on PATH:
+the totals against `trailguide library check`. Run from the repository root
+with trailguide on PATH:
 
     uv run .github/scripts/check-readme.py
 """
@@ -23,10 +23,10 @@ from pathlib import Path
 
 import yaml
 
-# Groups live in the library's Syllabus directory; their IDs are paths below RULES_DIR.
-RULES_DIR = Path(".syllabus/rules")
+# Groups live in the library's Trail Guide directory; their IDs are paths below RULES_DIR.
+RULES_DIR = Path(".trailguide/rules")
 GROUP_ROOTS = ("practices", "techs")
-INSTALL_COMMAND = "syllabus project add source"
+INSTALL_COMMAND = "trailguide project add source"
 
 errors = []
 
@@ -36,7 +36,7 @@ def fail(message):
 
 
 def field(path, text, key):
-    """Read a string field from one YAML document, as Syllabus does.
+    """Read a string field from one YAML document, as Trail Guide does.
 
     BaseLoader keeps every scalar a string, so values such as `yes` or `1.0`
     are not converted to other types.
@@ -75,18 +75,18 @@ def load_groups():
 
 
 def check_totals(groups):
-    """Fail if this script and syllabus disagree about what the library contains."""
+    """Fail if this script and trailguide disagree about what the library contains."""
     result = subprocess.run(
-        ["syllabus", "library", "check", "--json"], capture_output=True, text=True
+        ["trailguide", "library", "check", "--json"], capture_output=True, text=True
     )
     response = json.loads(result.stdout)
     if not response.get("ok"):
-        sys.exit(f"syllabus library check failed:\n{result.stdout}")
+        sys.exit(f"trailguide library check failed:\n{result.stdout}")
     value = response["value"]
     rules = sum(len(group_rules) for _, group_rules in groups.values())
     if (value["groupCount"], value["ruleCount"]) != (len(groups), rules):
         sys.exit(
-            f"syllabus counts {value['groupCount']} groups and {value['ruleCount']} rules, "
+            f"trailguide counts {value['groupCount']} groups and {value['ruleCount']} rules, "
             f"but this check found {len(groups)} and {rules}; update {__file__}"
         )
 

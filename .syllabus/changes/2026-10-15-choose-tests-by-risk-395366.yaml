@@ -1,3 +1,0 @@
-summary: Fixes the link to the testing philosophy after the library moved to the .syllabus/ layout; the guidance is unchanged.
-rules:
-  practices/testing/choose-tests-by-risk: patch
