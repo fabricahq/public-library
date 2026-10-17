@@ -35,7 +35,7 @@ Implementation details change during refactoring even when behavior does not.
 A test that asserts them breaks on harmless changes, which teaches people to update or ignore failing tests, and it can still pass when the observable behavior is wrong.
 A test that asserts observable results fails only when something a caller or user depends on changes.
 
-Background: [Testing philosophy](../../assets/testing-philosophy.md).
+Background: [Testing philosophy](../../../assets/testing-philosophy.md).
 
 ### Examples
 

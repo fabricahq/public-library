@@ -26,7 +26,7 @@ Before declaring the change complete, run the project's full checks and test sui
 Fast feedback on one behavior shortens each edit-test cycle.
 A change can still break other behavior, so the full suite is the check that the change is complete.
 
-Background: [Testing philosophy](../../assets/testing-philosophy.md).
+Background: [Testing philosophy](../../../assets/testing-philosophy.md).
 
 ### Examples
 

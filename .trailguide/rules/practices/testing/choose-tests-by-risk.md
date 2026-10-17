@@ -36,7 +36,7 @@ Tests let a team change code quickly because they catch defects before users do.
 Each test also has a maintenance cost, so a test that cannot fail on a real regression slows the suite without adding safety.
 Spreading effort evenly, or by coverage percentage, puts as many tests on trivial code as on the code most likely to break and most costly when it does.
 
-Background: [Testing philosophy](../../assets/testing-philosophy.md).
+Background: [Testing philosophy](../../../assets/testing-philosophy.md).
 
 ### Examples
 
