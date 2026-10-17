@@ -264,7 +264,7 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
 
    ```sh
    code-rules project add library fabrica \
-     --repository https://github.com/fabricahq/public-rules.git \
+     --repository https://github.com/fabricahq/public-library.git \
      --groups practices/code-design \
      --groups practices/concurrency \
      --groups practices/performance \
