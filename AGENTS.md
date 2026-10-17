@@ -1,4 +1,4 @@
-# Fabrica Public Rules Library agent guide
+# Fabrica Public Library agent guide
 
 This repository is a [Code Rules](https://github.com/fabricahq/code-rules) library. The [README](README.md) explains what it contains and how to contribute.
 
