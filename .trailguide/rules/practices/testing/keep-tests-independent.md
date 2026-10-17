@@ -34,7 +34,7 @@ Those failures are intermittent and point away from the real cause.
 A test can also pass only because an earlier test happened to create its data, and then fail when run alone.
 Live services add failures that the code under test did not cause.
 
-Background: [Testing philosophy](../../assets/testing-philosophy.md).
+Background: [Testing philosophy](../../../assets/testing-philosophy.md).
 
 ### Examples
 

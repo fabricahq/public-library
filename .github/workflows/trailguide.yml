@@ -1,4 +1,4 @@
-name: Code Rules
+name: Trail Guide
 on: pull_request
 permissions:
   contents: read
@@ -10,25 +10,25 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # Download and verify Code Rules, then add it to PATH.
-      - name: Install Code Rules
+      # Download and verify Trail Guide, then add it to PATH.
+      - name: Install Trail Guide
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version=0.2.0
+          version=0.4.0
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
-          archive="code-rules_${version}_linux_amd64.tar.gz"
-          dir="$RUNNER_TEMP/code-rules"
+          archive="trailguide_${version}_linux_amd64.tar.gz"
+          dir="$RUNNER_TEMP/trailguide"
           mkdir -p "$dir" && cd "$dir"
-          gh release download "v$version" --repo fabricahq/code-rules \
+          gh release download "v$version" --repo fabricahq/trailguide \
             --pattern SHA256SUMS --pattern "$archive"
-          gh attestation verify SHA256SUMS --repo fabricahq/code-rules \
-            --signer-workflow fabricahq/code-rules/.github/workflows/release-planner.yml \
+          gh attestation verify SHA256SUMS --repo fabricahq/trailguide \
+            --signer-workflow fabricahq/trailguide/.github/workflows/release-planner.yml \
             --source-ref refs/heads/main
           checksum=$(sha256sum "$archive")
           grep -qxF "$checksum" SHA256SUMS
-          tar -xzf "$archive" code-rules
-          installed="Installed Code Rules $("$dir/code-rules" --version)."
+          tar -xzf "$archive" trailguide
+          installed="Installed Trail Guide $("$dir/trailguide" --version)."
           echo "$installed" && echo "$installed" >> "$GITHUB_STEP_SUMMARY"
           echo "$dir" >> "$GITHUB_PATH"
-      - run: code-rules library check
+      - run: trailguide library check

@@ -26,7 +26,7 @@ This is a naming convention; the exact form is a project choice, but each test s
 A failing test's name is often the first thing a developer reads.
 A name that states the behavior and condition says what broke without opening the test, and makes gaps visible when reading the list of tests.
 
-Background: [Testing philosophy](../../assets/testing-philosophy.md).
+Background: [Testing philosophy](../../../assets/testing-philosophy.md).
 
 ### Examples
 
