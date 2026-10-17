@@ -1,4 +1,4 @@
-# Fabrica Public Rules Library
+# Fabrica Public Library
 
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -6,7 +6,7 @@
   <img alt="14 groups, 128 rules" src="https://img.shields.io/badge/rules-128-brightgreen">
 </p>
 
-Fabrica Public Rules Library is a collection of engineering rules that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
+Fabrica Public Library is a collection of engineering rules that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
 
 The rules live in `.trailguide/rules/` and are organized into groups. Practice groups (`practices/`) apply in any language, and technology groups (`techs/`) cover one language, framework, or tool. You choose the groups that match your stack, and you can leave out any rule you disagree with.
 
@@ -264,7 +264,7 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
 
    ```sh
    trailguide project add source fabrica \
-     --repository https://github.com/fabricahq/public-rules.git \
+     --repository https://github.com/fabricahq/public-library.git \
      --rules 'practices/code-design/*' \
      --rules 'practices/concurrency/*' \
      --rules 'practices/performance/*' \
@@ -311,7 +311,7 @@ Trail Guide is designed to allow importing whatever collection of rules you want
 
 Open a pull request that fixes it. See [How do I contribute?](#how-do-i-contribute) for how to check your change before you submit it.
 
-These rules come from Fabrica's own real-world experience, and yours may differ. If a rule is wrong or incomplete, we welcome the fix, and everyone who uses Fabrica Public Rules Library benefits from it.
+These rules come from Fabrica's own real-world experience, and yours may differ. If a rule is wrong or incomplete, we welcome the fix, and everyone who uses Fabrica Public Library benefits from it.
 
 ## How do I contribute?
 
