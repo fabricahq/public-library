@@ -10,7 +10,7 @@ Write and revise rules with the [Trail Guide rule rubric and template](https://t
 
 ## Skills
 
-The library curates skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack): the `pstack` source in `.trailguide/config.yaml` pins a `cursor/plugins` commit, and `library.skills.offered` lists each curated skill. Curated skills need no change notes. Leave out any pstack skill that picks subagent models, depends on Cursor-only paths or services, depends on a skill left out, or conflicts with this library's rules. To add or drop a skill, or to move the pinned commit, read each listed skill's files at the new commit against those criteria, then update the README's skills section and the commit in NOTICE.md to match.
+The library curates skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack): the `pstack` source in `.trailguide/config.yaml` pins a `cursor/plugins` commit, and `library.skills.offered` lists each curated skill. Curated skills need no change notes. Leave out any pstack skill that picks subagent models, depends on Cursor-only paths or services, needs a left-out skill to carry out its steps, or conflicts with this library's rules. To add or drop a skill, or to move the pinned commit, read each listed skill's files at the new commit against those criteria, then update the README's skills section and the commit in NOTICE.md to match. When a curated skill only mentions a left-out skill, say so in its README line.
 
 ## Change notes
 

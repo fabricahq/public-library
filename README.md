@@ -280,7 +280,7 @@ Or include `"*"` to take all 34. Then run `trailguide project sync`. See [Instal
 - `principle-model-the-domain`: model stateful logic so the code branches less
 - `principle-never-block-on-the-human`: proceed on reversible work, and confirm irreversible actions
 - `principle-outcome-oriented-execution`: converge on the target architecture in a planned rewrite
-- `principle-prove-it-works`: verify against the real artifact before calling work done
+- `principle-prove-it-works`: verify against the real artifact before calling work done; it mentions `show-me-your-work` for an audit trail, which isn't curated here
 - `principle-redesign-from-first-principles`: redesign when a new requirement doesn't fit the design
 - `principle-separate-before-serializing-shared-state`: remove shared writers before serializing them
 - `principle-sequence-verifiable-units`: split work into small units that each end verified
