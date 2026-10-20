@@ -6,3 +6,6 @@ library:
     file: LICENSE.md
     notices:
       - NOTICE.md
+  skills:
+    recommended:
+      - skills/ratchet-files

@@ -96,3 +96,29 @@ These references do not transfer ownership of the upstream material to Fabrica.
 ## Testing philosophy reference
 
 `assets/testing-philosophy.md` is based on Yevgeniy Brikman's talk [Agility Requires Safety](https://www.ybrikman.com/blog/2016/02/14/agility-requires-safety/) (2016). The asset paraphrases and extends its ideas in original wording; no text or slides from the talk are reproduced, and the talk remains his work.
+
+## dzhng/skills
+
+The `ratchet-files` skill adapts [dzhng/skills](https://github.com/dzhng/skills/tree/dc8f546c3adaa615ab86e8328449ae6efe23aca4/skills/engineering/ratchet-files) by David Zhang at commit dc8f546c3adaa615ab86e8328449ae6efe23aca4: the skill's frontmatter is quoted for YAML and a link to a sibling skill is made absolute, and the script is unchanged. Its notice follows unchanged:
+
+MIT License
+
+Copyright (c) 2026 David Zhang
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

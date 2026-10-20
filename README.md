@@ -6,7 +6,7 @@
   <img alt="14 groups, 128 rules" src="https://img.shields.io/badge/rules-128-brightgreen">
 </p>
 
-Fabrica Public Library is a collection of engineering rules that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
+Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
 
 The rules live in `.trailguide/rules/` and are organized into groups. Practice groups (`practices/`) apply in any language, and technology groups (`techs/`) cover one language, framework, or tool. You choose the groups that match your stack, and you can leave out any rule you disagree with.
 
@@ -243,12 +243,18 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 
 </details>
 
+## What skills are included?
+
+Skills are step-by-step procedures for one kind of task, installed into the folders your agents read. The library recommends these; a project installs them by including `recommended` from this source.
+
+- [ratchet-files](.trailguide/skills/ratchet-files/SKILL.md): keep every source file small enough for an agent to read in one pass. Find files over a token budget, split them by concept, and set up the pre-commit ratchet that stops them from growing. Adapted from [dzhng/skills](https://github.com/dzhng/skills).
+
 ## How does it relate to Trail Guide?
 
 [Trail Guide](https://github.com/fabricahq/trailguide) is the tool, and this repository is content for it:
 
 - **Trail Guide** is a command-line tool that manages the rules your agents follow in a project. It imports rules from libraries, tracks the version of each rule, and builds the guidance your agents read.
-- **This library** is one collection of rules you can import with it. [Fabrica](https://fabricahq.com) wrote or curated these rules from its own experience and publishes them in library releases.
+- **This library** is one collection of rules and skills you can import with it. [Fabrica](https://fabricahq.com) wrote or curated these rules from its own experience and publishes them in library releases.
 
 It's the same relationship as a package manager and a package. You install Trail Guide once, then add this library to each project, alongside any others, such as your own team's rules.
 
@@ -260,7 +266,7 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
 
 1. [Install Trail Guide](https://trailguide.fabricahq.com/start-here/install/) on your local computers.
 2. [Set up your project](https://trailguide.fabricahq.com/start-here/set-up-project/) to use Trail Guide.
-3. Add this library as a source. Within the project directory, run the command below. It selects every group; delete the `--rules` lines you don't need. Each rule follows its newest version when you update.
+3. Add this library as a source. Within the project directory, run the command below. It selects every group and the recommended skills; delete the `--rules` lines you don't need, or the `--skills` line. Each rule follows its newest version when you update.
 
    ```sh
    trailguide project add source fabrica \
@@ -278,7 +284,8 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
      --rules 'techs/tanstack-query/*' \
      --rules 'techs/tanstack-router/*' \
      --rules 'techs/typescript/*' \
-     --rules 'techs/zustand/*'
+     --rules 'techs/zustand/*' \
+     --skills recommended
    ```
 
    To take every group, including ones added in future library releases, pass a single wildcard instead: `--rules '*'` for everything, `--rules 'practices/*'` for all practice groups, or `--rules 'techs/*'` for all technology groups. Quote the wildcard so your shell doesn't expand it. See [Select groups from each source](https://trailguide.fabricahq.com/guides/select-rules/#select-groups-from-each-source).
