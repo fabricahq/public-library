@@ -1,5 +1,16 @@
 schemaVersion: 2
-sources: {}
+sources:
+  dzhng:
+    repository: https://github.com/dzhng/skills.git
+    ref: dc8f546c3adaa615ab86e8328449ae6efe23aca4
+    skills:
+      include:
+        - skills/engineering/ratchet-files
+      exclude:
+        - id: skills/engineering/ratchet-files
+          reason: Upstream's SKILL.md frontmatter has an unquoted colon that Trail Guide can't read; the fork quotes it and labels the skill a playbook.
+          replacedBy: skills/ratchet-files
+          basedOn: "dc8f546c3adaa615ab86e8328449ae6efe23aca4"
 library:
   license:
     spdxExpression: MIT
