@@ -1,4 +1,4 @@
-# Fabrica Public Rules Library
+# Fabrica Public Library
 
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -6,7 +6,7 @@
   <img alt="14 groups, 128 rules" src="https://img.shields.io/badge/rules-128-brightgreen">
 </p>
 
-Fabrica Public Rules Library is a collection of engineering rules that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
+Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
 
 The rules live in `.trailguide/rules/` and are organized into groups. Practice groups (`practices/`) apply in any language, and technology groups (`techs/`) cover one language, framework, or tool. You choose the groups that match your stack, and you can leave out any rule you disagree with.
 
@@ -245,75 +245,16 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 
 ## What skills are included?
 
-The library also offers 34 skills from [pstack](https://github.com/cursor/plugins/tree/09d06eb4b97a1020ab31e84030e38baf1099c7dc/pstack), Lauren Tan's Agent Skills collection, under its MIT license. They're curated: this library chooses them and pins the pstack commit it reviewed, and your project fetches each skill from pstack's repository when it syncs. Each one is marked to load only when you invoke it by name, such as `/tdd`.
+Skills are step-by-step procedures for one kind of task, installed into the folders your agents read. The library recommends these; a project installs them by including `recommended` from this source.
 
-The library offers every skill without recommending or requiring it, so a project installs only the skills it names. A skill's ID is `pstack:pstack/skills/<name>`. For example, to install two of them, add a `skills` section to this library's source in `.trailguide/config.yaml`:
-
-```yaml
-sources:
-  fabrica:
-    skills:
-      include:
-        - pstack:pstack/skills/principle-prove-it-works
-        - pstack:pstack/skills/tdd
-```
-
-Or include `"*"` to take all 34. Then run `trailguide project sync`. See [Install skills](https://trailguide.fabricahq.com/guides/install-skills/).
-
-<details>
-<summary><strong>Principles</strong> · 24 skills</summary>
-
-- `principle-attack-the-premise`: after two failed fixes that share a premise, test the premise
-- `principle-boundary-discipline`: validate at system boundaries and trust internal types
-- `principle-build-the-lever`: build the script, codemod, or generator instead of working by hand
-- `principle-encode-lessons-in-structure`: turn a repeated instruction into a lint, check, or script
-- `principle-exhaust-the-design-space`: prototype competing designs before committing to a new one
-- `principle-experience-first`: favor user delight over implementation convenience
-- `principle-explain-the-number`: find what limits a measured number before trusting it
-- `principle-fix-root-causes`: fix a symptom where the system first went wrong
-- `principle-foundational-thinking`: get the core types and data structures right before logic
-- `principle-guard-the-context-window`: keep bulk output out of the main thread
-- `principle-laziness-protocol`: prefer deletion and the smallest change that works
-- `principle-make-operations-idempotent`: converge to the same end state after crashes and retries
-- `principle-migrate-callers-then-delete-legacy-apis`: move every caller and delete the old API together
-- `principle-minimize-reader-load`: collapse layers and hidden state a reader has to trace
-- `principle-model-the-domain`: model stateful logic so the code branches less
-- `principle-never-block-on-the-human`: proceed on reversible work, and confirm irreversible actions
-- `principle-outcome-oriented-execution`: converge on the target architecture in a planned rewrite
-- `principle-prove-it-works`: verify against the real artifact before calling work done; it mentions `show-me-your-work` for an audit trail, which isn't curated here
-- `principle-redesign-from-first-principles`: redesign when a new requirement doesn't fit the design
-- `principle-separate-before-serializing-shared-state`: remove shared writers before serializing them
-- `principle-sequence-verifiable-units`: split work into small units that each end verified
-- `principle-subtract-before-you-add`: remove dead code before building on it
-- `principle-test-behavior-not-implementation`: assert what the code's users can observe
-- `principle-type-system-discipline`: make illegal states unrepresentable
-
-</details>
-
-<details>
-<summary><strong>Tasks</strong> · 10 skills</summary>
-
-- `benchmark-checklist`: vet a performance measurement before reporting or acting on it
-- `bro`: restate the last message in plain language
-- `correct`: make the mistakes agents repeat in a repository impossible
-- `in-your-own-words`: restate the user's goals and problem
-- `ketchup`: catch the user up on what changed since their last message
-- `sharpen`: sharpen a task before starting it
-- `tdd`: fix a bug with a regression test written first
-- `technical-writing`: write and review docs, PR descriptions, and commit messages to a layered standard
-- `typescript-best-practices`: TypeScript type-safety practices
-- `unslop`: cut AI tells from writing
-
-</details>
-
-The rest of pstack isn't curated here. `poteto-mode` and the skills that delegate to subagents pick each subagent's model from a Cursor rule that defaults code work to Grok. The others depend on those skills, on Cursor-only paths or services, or on pstack's own setup, and `no-comments` conflicts with this library's comment rules.
+- [ratchet-files](.trailguide/skills/ratchet-files/SKILL.md): keep every source file small enough for an agent to read in one pass. Find files over a token budget, split them by concept, and set up the pre-commit ratchet that stops them from growing. Adapted from [dzhng/skills](https://github.com/dzhng/skills).
 
 ## How does it relate to Trail Guide?
 
 [Trail Guide](https://github.com/fabricahq/trailguide) is the tool, and this repository is content for it:
 
 - **Trail Guide** is a command-line tool that manages the rules your agents follow in a project. It imports rules from libraries, tracks the version of each rule, and builds the guidance your agents read.
-- **This library** is one collection of rules you can import with it. [Fabrica](https://fabricahq.com) wrote or curated these rules from its own experience and publishes them in library releases.
+- **This library** is one collection of rules and skills you can import with it. [Fabrica](https://fabricahq.com) wrote or curated these rules from its own experience and publishes them in library releases.
 
 It's the same relationship as a package manager and a package. You install Trail Guide once, then add this library to each project, alongside any others, such as your own team's rules.
 
@@ -325,11 +266,11 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
 
 1. [Install Trail Guide](https://trailguide.fabricahq.com/start-here/install/) on your local computers.
 2. [Set up your project](https://trailguide.fabricahq.com/start-here/set-up-project/) to use Trail Guide.
-3. Add this library as a source. Within the project directory, run the command below. It selects every group; delete the `--rules` lines you don't need. Each rule follows its newest version when you update.
+3. Add this library as a source. Within the project directory, run the command below. It selects every group and the recommended skills; delete the `--rules` lines you don't need, or the `--skills` line. Each rule follows its newest version when you update.
 
    ```sh
    trailguide project add source fabrica \
-     --repository https://github.com/fabricahq/public-rules.git \
+     --repository https://github.com/fabricahq/public-library.git \
      --rules 'practices/code-design/*' \
      --rules 'practices/concurrency/*' \
      --rules 'practices/performance/*' \
@@ -343,7 +284,8 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
      --rules 'techs/tanstack-query/*' \
      --rules 'techs/tanstack-router/*' \
      --rules 'techs/typescript/*' \
-     --rules 'techs/zustand/*'
+     --rules 'techs/zustand/*' \
+     --skills recommended
    ```
 
    To take every group, including ones added in future library releases, pass a single wildcard instead: `--rules '*'` for everything, `--rules 'practices/*'` for all practice groups, or `--rules 'techs/*'` for all technology groups. Quote the wildcard so your shell doesn't expand it. See [Select groups from each source](https://trailguide.fabricahq.com/guides/select-rules/#select-groups-from-each-source).
@@ -376,7 +318,7 @@ Trail Guide is designed to allow importing whatever collection of rules you want
 
 Open a pull request that fixes it. See [How do I contribute?](#how-do-i-contribute) for how to check your change before you submit it.
 
-These rules come from Fabrica's own real-world experience, and yours may differ. If a rule is wrong or incomplete, we welcome the fix, and everyone who uses Fabrica Public Rules Library benefits from it.
+These rules come from Fabrica's own real-world experience, and yours may differ. If a rule is wrong or incomplete, we welcome the fix, and everyone who uses Fabrica Public Library benefits from it.
 
 ## How do I contribute?
 
@@ -409,4 +351,4 @@ Maintainers review changes in pull requests, then publish them to projects in th
 
 The library is [MIT licensed](LICENSE.md), with copyright attributed to Fabrica Systems LLC.
 
-Some rules adapt material from third parties, and others draw on official documentation. Adapted rules carry attribution in their metadata, and [NOTICE.md](NOTICE.md) preserves the required third-party notices. The curated pstack skills stay under pstack's own MIT license, which NOTICE.md also reproduces.
+Some rules adapt material from third parties, and others draw on official documentation. Adapted rules carry attribution in their metadata, and [NOTICE.md](NOTICE.md) preserves the required third-party notices.

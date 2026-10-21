@@ -1,4 +1,4 @@
-# Fabrica Public Rules Library agent guide
+# Fabrica Public Library agent guide
 
 This repository is a [Trail Guide](https://github.com/fabricahq/trailguide) library. The `library` section of `.trailguide/config.yaml` is its manifest; groups and rules live in `.trailguide/rules/`, shared files in `.trailguide/assets/`, and change notes in `.trailguide/changes/`. The [README](README.md) explains what it contains and how to contribute.
 
