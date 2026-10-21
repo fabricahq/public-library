@@ -10,7 +10,9 @@ Write and revise rules with the [Trail Guide rule rubric and template](https://t
 
 ## Skills
 
-The library curates skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack): the `pstack` source in `.trailguide/config.yaml` pins a `cursor/plugins` commit, and `library.skills.offered` lists each curated skill. Curated skills need no change notes. Leave out any pstack skill that picks subagent models, depends on Cursor-only paths or services, needs a left-out skill to carry out its steps, or conflicts with this library's rules. To add or drop a skill, or to move the pinned commit, read each listed skill's files at the new commit against those criteria, then update the README's skills section and the commit in NOTICE.md to match. When a curated skill only mentions a left-out skill, say so in its README line.
+The library's own skills live in `.trailguide/skills/`. `build` follows the Build stage of [the Fabrica book](https://fabricahq.com/book) and calls skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack). The `pstack` source in `.trailguide/config.yaml` follows the `main` branch of `cursor/plugins`, so pstack's changes reach projects at their next `trailguide project update`, without a library release. Curate a pstack skill only when one of the library's skills calls it, list it under `library.skills.offered`, and leave out any skill that picks subagent models or depends on Cursor-only paths or services. Curated skills need no change notes.
+
+`show-me-your-work` is the library's fork of pstack's skill of that name, recorded under the `pstack` source's `skills.forks`. When `trailguide library check` lists pstack's changes to it, port the ones that fit. When you add or drop a skill, update the README's skills section and NOTICE.md to match.
 
 ## Change notes
 

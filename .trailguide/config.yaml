@@ -1,5 +1,14 @@
 schemaVersion: 2
 sources:
+  pstack:
+    repository: https://github.com/cursor/plugins.git
+    ref: main
+    skills:
+      forks:
+        pstack/skills/show-me-your-work:
+          as: skills/show-me-your-work
+          basedOn: "699e1e7488c53c05ca13409f40da83cd37682091"
+          reason: pstack's version reads Cursor's transcript folder and takes its review model settings from poteto-mode; the fork works in any agent harness and pairs Claude and Codex for review.
   dzhng:
     repository: https://github.com/dzhng/skills.git
     ref: dc8f546c3adaa615ab86e8328449ae6efe23aca4
@@ -17,4 +26,14 @@ library:
       - NOTICE.md
   skills:
     recommended:
+      - skills/build
       - skills/ratchet-files
+    offered:
+      - pstack:pstack/skills/principle-attack-the-premise
+      - pstack:pstack/skills/principle-build-the-lever
+      - pstack:pstack/skills/principle-fix-root-causes
+      - pstack:pstack/skills/principle-guard-the-context-window
+      - pstack:pstack/skills/principle-laziness-protocol
+      - pstack:pstack/skills/principle-never-block-on-the-human
+      - pstack:pstack/skills/principle-prove-it-works
+      - pstack:pstack/skills/principle-sequence-verifiable-units

@@ -247,7 +247,10 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 
 Skills are step-by-step procedures for one kind of task, installed into the folders your agents read. The library recommends these; a project installs them by including `recommended` from this source.
 
+- [build](.trailguide/skills/build/SKILL.md): build one planned slice of work while you're away. The agent settles a done condition, decides reversible calls itself, works in small verified units, proves the result on the running app, and hands back a decision log for you to review. It follows the Build stage of [the Fabrica book](https://fabricahq.com/book).
 - [ratchet-files](.trailguide/skills/ratchet-files/SKILL.md): keep every source file small enough for an agent to read in one pass. Find files over a token budget, split them by concept, and set up the pre-commit ratchet that stops them from growing. Adapted from [dzhng/skills](https://github.com/dzhng/skills).
+
+`build` calls nine skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack), Lauren Tan's skill collection, and they install with it. Eight are pstack principles the library curates: `principle-attack-the-premise`, `principle-build-the-lever`, `principle-fix-root-causes`, `principle-guard-the-context-window`, `principle-laziness-protocol`, `principle-never-block-on-the-human`, `principle-prove-it-works`, and `principle-sequence-verifiable-units`. Your project fetches them from pstack's `main` branch, records the commit, and moves to pstack's newest commit when you run `trailguide project update`. The ninth, [show-me-your-work](.trailguide/skills/show-me-your-work/SKILL.md), is the library's adaptation of pstack's decision log, which works in any agent harness and has a Codex agent review Claude's work, or the reverse.
 
 ## How does it relate to Trail Guide?
 
@@ -351,4 +354,4 @@ Maintainers review changes in pull requests, then publish them to projects in th
 
 The library is [MIT licensed](LICENSE.md), with copyright attributed to Fabrica Systems LLC.
 
-Some rules adapt material from third parties, and others draw on official documentation. Adapted rules carry attribution in their metadata, and [NOTICE.md](NOTICE.md) preserves the required third-party notices.
+Some rules adapt material from third parties, and others draw on official documentation. Adapted rules carry attribution in their metadata, and [NOTICE.md](NOTICE.md) preserves the required third-party notices. The curated pstack skills stay under pstack's own MIT license, which NOTICE.md also reproduces.
