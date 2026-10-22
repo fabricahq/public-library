@@ -45,5 +45,5 @@ Each step names the skill or rule it applies. The skills sit beside this one, at
 
 11. **Prove it works on the real artifact**, per `principle-prove-it-works`. Run the done condition from step 2. A result that's inconclusive, or a check on the wrong surface, isn't a pass.
 12. **Check the checks.** For each test you added, ask whether it would fail if the code were plausibly wrong. Fix any that wouldn't.
-13. **Audit the decision log and get it reviewed**, as `show-me-your-work` describes.
+13. **Audit the decision log and get it reviewed**, as `show-me-your-work` describes. When your harness can't start a reviewer, hand back with the review outstanding, as that skill says, instead of waiting for one.
 14. **Hand back.** Say what you built, the done condition's result with its evidence, and each decision the plan didn't settle, so the person can check it against their judgment. End with the Attention section from `show-me-your-work`. Leave the work committed on its own branch, ready to validate.

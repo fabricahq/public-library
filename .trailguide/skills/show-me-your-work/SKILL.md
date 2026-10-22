@@ -71,7 +71,9 @@ Before handing back, spawn a subagent on a different model family from the one t
 - Choices that look risky in hindsight (premature, scope-creeping, papering over a symptom).
 - Gaps the user would otherwise miss on a casual skim.
 
-Every reply for a run that produced a trail ends with an "Attention" section. Lead with the reviewer's model on its own line (`reviewed by <model>`, or `reviewed by <model>, same family` for the fallback), then list each flag pointing to specific rows or moments. "No flags" is a valid value. The model name is not.
+When the harness can't start a subagent at all, don't review the trail yourself and don't hold the hand-back for a reviewer. Log a row for the review with result `open`, commit the log with the work so a later reviewer has it and the evidence its rows point to, and hand back with the review outstanding.
+
+Every reply for a run that produced a trail ends with an "Attention" section. Lead with the reviewer's model on its own line (`reviewed by <model>`, `reviewed by <model>, same family` for the fallback, or `independent review unavailable` when no subagent could run), then list each flag pointing to specific rows or moments. Without a review, the first flag says the trail still needs one and gives the log's path. "No flags" is a valid value. The model name is not.
 
 ## Reviewing the trail
 

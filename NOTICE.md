@@ -95,9 +95,9 @@ These references do not transfer ownership of the upstream material to Fabrica.
 
 ## pstack
 
-The library curates skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan, on the `main` branch of `cursor/plugins`. Projects fetch those skills from that repository, so the skills are not part of this library and its MIT declaration does not cover them. pstack's own MIT license covers them; it keeps the notice in [`pstack/LICENSE`](https://github.com/cursor/plugins/blob/main/pstack/LICENSE) rather than in each skill folder, so it is reproduced unchanged below.
+The library curates skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan, at commit `699e1e7488c53c05ca13409f40da83cd37682091` of `cursor/plugins`. Projects fetch those skills from that repository, so the skills are not part of this library and its MIT declaration does not cover them. pstack's own MIT license covers them; it keeps the notice in [`pstack/LICENSE`](https://github.com/cursor/plugins/blob/699e1e7488c53c05ca13409f40da83cd37682091/pstack/LICENSE) rather than in each skill folder, so it is reproduced unchanged below.
 
-Two of the library's own skills draw on pstack, and the notice below also applies to the material they copy. `show-me-your-work` adapts pstack's skill of that name at commit `699e1e7488c53c05ca13409f40da83cd37682091`, changing the steps that read Cursor's transcripts and choose the review model, and dropping its mentions of pstack skills the library doesn't install. `build` adapts steps from the Feature and Autonomous run playbooks of pstack's `poteto-mode` skill.
+Two of the library's own skills draw on pstack, and the notice below also applies to the material they copy. `show-me-your-work` adapts pstack's skill of that name at commit `699e1e7488c53c05ca13409f40da83cd37682091`, changing the steps that read Cursor's transcripts and choose the review model, adding an outcome for harnesses that can't start a reviewer, and dropping its mentions of pstack skills the library doesn't install. `build` adapts steps from the Feature and Autonomous run playbooks of pstack's `poteto-mode` skill.
 
 MIT License
 
