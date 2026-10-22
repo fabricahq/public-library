@@ -1,0 +1,3 @@
+summary: 'Adds build, a playbook for building one planned slice of work unattended: settle a runnable done condition, decide reversible calls without asking, work in small verified units, prove the result on the running app, and hand back a reviewed decision log. Installs eight pstack principles and show-me-your-work with it.'
+skills:
+  skills/build: new

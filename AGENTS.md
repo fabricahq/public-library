@@ -8,6 +8,12 @@ Use the Trail Guide version that `.github/workflows/trailguide.yml` pins, so you
 
 Write and revise rules with the [Trail Guide rule rubric and template](https://trailguide.fabricahq.com/reference/rule-authoring/). When you add, remove, rename, or retitle a rule or group, update the README's rule count badge, group table, rule lists, and install command to match.
 
+## Skills
+
+The library's own skills live in `.trailguide/skills/`. `build` follows the Build stage of [the Fabrica book](https://fabricahq.com/book) and calls skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack). The `pstack` source in `.trailguide/config.yaml` pins a `cursor/plugins` commit, because its skills go straight into agents' build instructions: pstack's changes reach projects only when the library moves the pin and publishes a library release. Curate a pstack skill only when one of the library's skills calls it, list it under `library.skills.dependencies` so it installs only with the skills that call it, and leave out any skill that picks subagent models or depends on Cursor-only paths or services. The library's own skills take change notes the way rules do, as [Change notes](#change-notes) describes; curated skills need none.
+
+`show-me-your-work` is the library's fork of pstack's skill of that name, recorded under the `pstack` source's `skills.forks`. To move the pin, read each curated skill's changes at the new commit against the criteria above, port the ones that fit from the changes to `show-me-your-work` that `trailguide library check` then lists, and update the commit in NOTICE.md. When you add or drop a skill, update the README's skills section and NOTICE.md to match.
+
 ## Change notes
 
 Each rule has its own version, and library releases publish rule changes to projects. Once the library has published its first library release, a `release/1` tag, every new, changed, or retired rule needs a change note in `.trailguide/changes/`. Record it with `trailguide library change` in the same pull request as the rule change:
