@@ -29,7 +29,7 @@ library:
     recommended:
       - skills/build
       - skills/ratchet-files
-    offered:
+    dependencies:
       - pstack:pstack/skills/principle-attack-the-premise
       - pstack:pstack/skills/principle-build-the-lever
       - pstack:pstack/skills/principle-fix-root-causes
