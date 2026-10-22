@@ -15,7 +15,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version=0.5.0
+          version=0.7.0
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
           archive="trailguide_${version}_linux_amd64.tar.gz"
           dir="$RUNNER_TEMP/trailguide"
