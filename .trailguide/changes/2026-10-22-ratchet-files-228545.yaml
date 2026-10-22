@@ -1,0 +1,3 @@
+summary: 'Adds ratchet-files, a playbook for keeping source files small enough for an agent to read whole: find oversized files, split them by concept, and set up a pre-commit size ratchet.'
+skills:
+  skills/ratchet-files: new
