@@ -1,0 +1,3 @@
+summary: Define successful ordinary outcomes deliberately while preserving meaningful failure and authorization semantics.
+rules:
+  practices/code-design/remove-unnecessary-error-cases: new

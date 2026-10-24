@@ -1,0 +1,3 @@
+summary: Keep pure computation inside complete module operations without making callers coordinate implementation details.
+rules:
+  practices/code-design/separate-pure-computation-from-effects: major
