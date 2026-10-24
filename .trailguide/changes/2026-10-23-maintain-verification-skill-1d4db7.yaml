@@ -1,0 +1,3 @@
+summary: Add verification-skill maintenance with source review, live feature coverage, and bounded or sequential review execution.
+skills:
+  skills/maintain-verification-skill: new
