@@ -34,7 +34,6 @@ library:
       - pstack:pstack/skills/principle-build-the-lever
       - pstack:pstack/skills/principle-fix-root-causes
       - pstack:pstack/skills/principle-guard-the-context-window
-      - pstack:pstack/skills/principle-laziness-protocol
       - pstack:pstack/skills/principle-never-block-on-the-human
       - pstack:pstack/skills/principle-prove-it-works
       - pstack:pstack/skills/principle-sequence-verifiable-units

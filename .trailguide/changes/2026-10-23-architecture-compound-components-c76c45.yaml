@@ -1,0 +1,3 @@
+summary: Expose composable parts for structural variation and complete components for repeated standard arrangements.
+rules:
+  techs/react/architecture-compound-components: major

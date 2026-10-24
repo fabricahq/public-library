@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="14 groups, 128 rules" src="https://img.shields.io/badge/rules-128-brightgreen">
+  <img alt="14 groups, 130 rules" src="https://img.shields.io/badge/rules-130-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -15,7 +15,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | Group | Rules | Description |
 | --- | --: | --- |
 | [Testing](.trailguide/rules/practices/testing/) | 8 | Where to spend testing effort, and how to write tests that stay reliable |
-| [Code design](.trailguide/rules/practices/code-design/) | 3 | Structuring functions, modules, and folders so code stays readable |
+| [Code design](.trailguide/rules/practices/code-design/) | 5 | Structuring code around clear ownership, simple interfaces, and meaningful outcomes |
 | [Concurrency](.trailguide/rules/practices/concurrency/) | 2 | Keeping shared resources usable and honoring cancellation throughout blocking operations |
 | [Performance](.trailguide/rules/practices/performance/) | 1 | Making code faster where measurement shows it matters |
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
@@ -29,7 +29,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Go](.trailguide/rules/techs/go/) | 5 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 128 rules
+### Browse all 130 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -46,10 +46,12 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 </details>
 
 <details>
-<summary><strong>Code design</strong> · 3 rules</summary>
+<summary><strong>Code design</strong> · 5 rules</summary>
 
 - [Express operations as meaningful steps](.trailguide/rules/practices/code-design/express-operations-as-meaningful-steps.md)
+- [Keep design knowledge behind simple interfaces](.trailguide/rules/practices/code-design/keep-design-knowledge-behind-simple-interfaces.md)
 - [Organize code by feature](.trailguide/rules/practices/code-design/organize-code-by-feature.md)
+- [Remove unnecessary error cases through contract design](.trailguide/rules/practices/code-design/remove-unnecessary-error-cases.md)
 - [Separate pure computation from effects](.trailguide/rules/practices/code-design/separate-pure-computation-from-effects.md)
 
 </details>
@@ -247,10 +249,10 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 
 Skills are step-by-step procedures for one kind of task, installed into the folders your agents read. The library recommends these; a project installs them by including `recommended` from this source.
 
-- [build](.trailguide/skills/build/SKILL.md): build one planned slice of work while you're away. The agent settles a done condition, decides reversible calls itself, works in small verified units, proves the result on the running app, and hands back a decision log for you to review. It follows the Build stage of [the Fabrica book](https://fabricahq.com/book).
+- [build](.trailguide/skills/build/SKILL.md): build one planned slice of work while you're away. The agent settles a done condition, compares unresolved interface choices, works in small verified units, checks the resulting design, proves the result on the running app, and hands back a decision log for you to review. It follows the Build stage of [the Fabrica book](https://fabricahq.com/book).
 - [ratchet-files](.trailguide/skills/ratchet-files/SKILL.md): keep every source file small enough for an agent to read in one pass. Find files over a token budget, split them by concept, and set up the pre-commit ratchet that stops them from growing. Adapted from [dzhng/skills](https://github.com/dzhng/skills).
 
-`build` calls nine skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack), Lauren Tan's skill collection, and they install with it. Eight are pstack principles the library curates as dependencies, so they install only with `build`: `principle-attack-the-premise`, `principle-build-the-lever`, `principle-fix-root-causes`, `principle-guard-the-context-window`, `principle-laziness-protocol`, `principle-never-block-on-the-human`, `principle-prove-it-works`, and `principle-sequence-verifiable-units`. The library pins them to a pstack commit it has reviewed, and moves the pin only in a new library release. The ninth, [show-me-your-work](.trailguide/skills/show-me-your-work/SKILL.md), is the library's adaptation of pstack's decision log, which works in any agent harness and has a Codex agent review Claude's work, or the reverse.
+`build` calls eight skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack), Lauren Tan's skill collection, and they install with it. Seven are pstack principles the library curates as dependencies, so they install only with `build`: `principle-attack-the-premise`, `principle-build-the-lever`, `principle-fix-root-causes`, `principle-guard-the-context-window`, `principle-never-block-on-the-human`, `principle-prove-it-works`, and `principle-sequence-verifiable-units`. The library pins them to a pstack commit it has reviewed, and moves the pin only in a new library release. The eighth, [show-me-your-work](.trailguide/skills/show-me-your-work/SKILL.md), is the library's adaptation of pstack's decision log, which works in any agent harness and has a Codex agent review Claude's work, or the reverse.
 
 ## How does it relate to Trail Guide?
 

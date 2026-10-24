@@ -1,0 +1,3 @@
+summary: Draft interface contracts before implementation and allow high-level phase intent alongside hidden constraints.
+rules:
+  techs/typescript/comment-role-result-and-constraints: major

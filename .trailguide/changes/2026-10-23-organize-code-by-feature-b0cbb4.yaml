@@ -1,0 +1,3 @@
+summary: Clarify that feature-local placement permits general interfaces before a second consumer exists.
+rules:
+  practices/code-design/organize-code-by-feature: minor
