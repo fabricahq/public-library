@@ -51,17 +51,7 @@ Each step names the skill or rule it applies. The skills sit beside this one, at
 
 ## When review findings come back
 
-Use these steps whenever a reviewer returns findings on the slice, whether from the review in step 13 or a code reviewer on the pull request. Give each reviewer the plan or spec the slice follows and the decisions settled so far, and ask it to say which findings break them and which propose a policy they leave open.
-
-15. **Classify each finding before you change anything.** It is one of three kinds:
-    - **A defect against agreed behavior**, where the plan, spec, or acceptance criteria say what should happen and the code doesn't. Fix it at its cause and verify the fix, as steps 5 and 8 say.
-    - **An unspecified policy choice**, where nothing agreed says what should happen and the finding proposes an answer. Don't choose it. Hand it back as step 14 says, as a decision for the person who owns the design, with the scenario, the options, your recommendation, and what each option means. Keep working on the rest of the findings while you wait.
-    - **An optional improvement.** Take it only when it is small and inside the slice.
-16. **Stop patching at a design checkpoint**, per `principle-attack-the-premise`. A checkpoint is reached when any of these happens:
-    - a second finding lands on the same mechanism, or a finding lands in code the previous fix added;
-    - a fix changes what a term the mechanism depends on means;
-    - the slice gains persistence, a migration, or a new restriction on what a person can do that its plan didn't name.
-
-    These signals make it likely that the design left a question open or has a flaw, and that each fix has been guessing at the answer. Before the next patch, write down the mechanism's contract where the slice's plan lives: what obligation it tracks, what settles that obligation, which failures leave it open, and what a person can do meanwhile. Check each finding so far against the contract. Hand back any open question the contract raises, as step 15 does for a policy choice, and resume once the answer is written down. After the contract changes the design, ask for a review of the whole slice rather than of the latest fix. A mechanism that infers what happened earlier from history is a common flaw here, and so is a migration that reconstructs facts old records lack; see `practices/code-design/record-facts-when-they-happen`.
-17. **Turn a finding outside the slice's acceptance criteria into a follow-up ticket, not more scope**, per `principle-laziness-protocol`, and log it with `show-me-your-work`. The exception is a defect the slice itself introduced: fix that here.
-18. **After two review rounds from one reviewer, hand the call back.** Don't start a third round on your own. Hand back as step 14 says, list the open findings in the Attention section from `show-me-your-work`, and ask the person who planned the slice whether to keep iterating.
+- **Decide what each finding is before you change anything.** If the plan or spec says what should happen and the code doesn't, it's a defect: fix it at its cause. If nothing agreed says what should happen, the finding is asking for a decision. Hand it back to the person who owns the design with the options and your recommendation, rather than choosing.
+- **When findings keep landing on one mechanism, or on code your last fix wrote, stop patching.** The design is probably missing an answer. Write down what the mechanism must guarantee, check the findings against that, and hand back any question it leaves open. A mechanism that works out past events from history is a common cause; see `practices/code-design/record-facts-when-they-happen`.
+- **Turn findings outside the slice into follow-up tickets**, unless the slice caused them.
+- **After two rounds from one reviewer, ask whether to keep going** instead of starting a third.
