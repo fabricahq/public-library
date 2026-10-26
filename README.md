@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="14 groups, 129 rules" src="https://img.shields.io/badge/rules-129-brightgreen">
+  <img alt="15 groups, 131 rules" src="https://img.shields.io/badge/rules-131-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -19,6 +19,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Concurrency](.trailguide/rules/practices/concurrency/) | 2 | Keeping shared resources usable and honoring cancellation throughout blocking operations |
 | [Performance](.trailguide/rules/practices/performance/) | 1 | Making code faster where measurement shows it matters |
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
+| [Documentation](.trailguide/rules/practices/documentation/) | 2 | Writing comments and agent guidance that carry only what the code and its owners don't already say |
 | [TypeScript](.trailguide/rules/techs/typescript/) | 19 | Writing type-safe, maintainable TypeScript |
 | [JavaScript](.trailguide/rules/techs/javascript/) | 8 | Async work, browser APIs, and build-friendly code in JavaScript and TypeScript |
 | [React](.trailguide/rules/techs/react/) | 39 | Building correct, accessible, and fast React interfaces, on the client and server |
@@ -29,7 +30,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Go](.trailguide/rules/techs/go/) | 5 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 129 rules
+### Browse all 131 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -78,6 +79,14 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 - [Match the README's presentation to the product's tier](.trailguide/rules/practices/readmes/match-presentation-to-product-tier.md)
 - [Open with what the product does for the reader](.trailguide/rules/practices/readmes/open-with-what-the-product-does.md)
 - [State what the product does not do](.trailguide/rules/practices/readmes/state-what-the-product-does-not-do.md)
+
+</details>
+
+<details>
+<summary><strong>Documentation</strong> · 2 rules</summary>
+
+- [Comment intent, and point at the owner instead of describing it](.trailguide/rules/practices/documentation/comments-state-intent.md)
+- [State the current model and its reasons, not how it got there](.trailguide/rules/practices/documentation/state-the-current-model.md)
 
 </details>
 
@@ -281,6 +290,7 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
      --repository https://github.com/fabricahq/public-library.git \
      --rules 'practices/code-design/*' \
      --rules 'practices/concurrency/*' \
+     --rules 'practices/documentation/*' \
      --rules 'practices/performance/*' \
      --rules 'practices/readmes/*' \
      --rules 'practices/testing/*' \

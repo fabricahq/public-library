@@ -1,0 +1,3 @@
+summary: 'New rule: guidance states the current model and its reasons, and leaves decision history to version control and decision records.'
+rules:
+  practices/documentation/state-the-current-model: new

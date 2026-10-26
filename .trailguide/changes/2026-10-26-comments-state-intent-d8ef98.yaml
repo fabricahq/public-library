@@ -1,0 +1,3 @@
+summary: 'New rule: comments carry intent and constraints, and point at the owner of a behavior instead of describing it.'
+rules:
+  practices/documentation/comments-state-intent: new
