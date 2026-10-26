@@ -4,7 +4,6 @@ description: "Build one planned slice of work while the person who planned it is
 metadata:
   trailguide-skill-type: playbook
   trailguide-rules-used: |
-    practices/code-design/record-facts-when-they-happen
     practices/testing/run-focused-tests-while-iterating
     practices/testing/test-bug-fixes-before-fixing
     practices/testing/test-observable-behavior
@@ -48,10 +47,3 @@ Each step names the skill or rule it applies. The skills sit beside this one, at
 12. **Check the checks.** For each test you added, ask whether it would fail if the code were plausibly wrong. Fix any that wouldn't.
 13. **Audit the decision log and get it reviewed**, as `show-me-your-work` describes. When your harness can't start a reviewer, hand back with the review outstanding, as that skill says, instead of waiting for one.
 14. **Hand back.** Say what you built, the done condition's result with its evidence, and each decision the plan didn't settle, so the person can check it against their judgment. End with the Attention section from `show-me-your-work`. Leave the work committed on its own branch, ready to validate.
-
-## When review findings come back
-
-- **Decide what each finding is before you change anything.** If the plan or spec says what should happen and the code doesn't, it's a defect: fix it at its cause. If nothing agreed says what should happen, the finding is asking for a decision. Hand it back to the person who owns the design with the options and your recommendation, rather than choosing.
-- **When findings keep landing on one mechanism, or on code your last fix wrote, stop patching.** The design is probably missing an answer. Write down what the mechanism must guarantee, check the findings against that, and hand back any question it leaves open. A mechanism that works out past events from history is a common cause; see `practices/code-design/record-facts-when-they-happen`.
-- **Turn findings outside the slice into follow-up tickets**, unless the slice caused them.
-- **After two rounds from one reviewer, ask whether to keep going** instead of starting a third.

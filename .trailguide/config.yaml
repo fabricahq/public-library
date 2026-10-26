@@ -36,6 +36,7 @@ library:
       - NOTICE.md
   skills:
     recommended:
+      - skills/address-review-findings
       - skills/build
       - skills/create-verification-skill
       - skills/maintain-verification-skill

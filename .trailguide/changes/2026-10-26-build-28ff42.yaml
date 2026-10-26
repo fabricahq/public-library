@@ -1,3 +1,0 @@
-summary: "Adds guidance for review findings: fix a defect against the plan or spec, but hand back a finding that asks for an unsettled decision; when findings keep landing on one mechanism, stop patching, write down what it must guarantee, and hand back open questions; turn findings outside the slice into follow-ups; and after two rounds from one reviewer, ask whether to keep going. Now cites practices/code-design/record-facts-when-they-happen."
-skills:
-  skills/build: major
