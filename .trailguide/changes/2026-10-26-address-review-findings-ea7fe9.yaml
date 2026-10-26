@@ -1,3 +1,0 @@
-summary: 'Adds address-review-findings, a playbook for responding to review findings: fix defects against what was agreed, hand back findings that ask for an unsettled decision, file out-of-scope ones as follow-ups, stop patching and write down what a mechanism must guarantee when findings repeat on it, and ask before a third round from one reviewer. Cites practices/code-design/record-facts-when-they-happen.'
-skills:
-  skills/address-review-findings: new

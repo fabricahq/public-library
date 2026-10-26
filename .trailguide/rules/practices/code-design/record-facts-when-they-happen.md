@@ -81,6 +81,7 @@ function alreadyRefunded(refunds: ReadonlyArray<Refund>, payment: Payment): bool
 ```
 
 The refund record exists from the moment the flow decides to refund, so a second cancellation sees it while the provider is still processing.
+A unique constraint on `refunds.paymentId` covers two cancellations racing in parallel: the second insert fails instead of queuing a second refund.
 A chargeback writes no refund record, so it can't be mistaken for one.
 The queue table is illustrative; what matters is that the record commits together with the event it describes.
 
