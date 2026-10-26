@@ -4,6 +4,7 @@ description: "Build one planned slice of work while the person who planned it is
 metadata:
   trailguide-skill-type: playbook
   trailguide-rules-used: |
+    practices/code-design/record-facts-when-they-happen
     practices/testing/run-focused-tests-while-iterating
     practices/testing/test-bug-fixes-before-fixing
     practices/testing/test-observable-behavior
@@ -47,3 +48,12 @@ Each step names the skill or rule it applies. The skills sit beside this one, at
 12. **Check the checks.** For each test you added, ask whether it would fail if the code were plausibly wrong. Fix any that wouldn't.
 13. **Audit the decision log and get it reviewed**, as `show-me-your-work` describes. When your harness can't start a reviewer, hand back with the review outstanding, as that skill says, instead of waiting for one.
 14. **Hand back.** Say what you built, the done condition's result with its evidence, and each decision the plan didn't settle, so the person can check it against their judgment. End with the Attention section from `show-me-your-work`. Leave the work committed on its own branch, ready to validate.
+
+## When review findings come back
+
+Use these steps whenever a reviewer returns findings on the slice, whether from the review in step 13 or a code reviewer on the pull request.
+
+15. **Fix each finding at its cause and verify the fix**, as steps 5 and 8 say.
+16. **On a second finding about the same mechanism, stop patching**, per `principle-attack-the-premise`. Write down the invariant the mechanism must keep, check the code against it, and redesign the mechanism if it fails. Then make each further fix follow from the invariant. A finding in code the previous fix added is the clearest sign. When the mechanism depends on what happened earlier, record that fact when it happens, per `practices/code-design/record-facts-when-they-happen`, instead of inferring it from history.
+17. **Turn a finding outside the slice's acceptance criteria into a follow-up ticket, not more scope**, per `principle-laziness-protocol`, and log it with `show-me-your-work`. The exception is a defect the slice itself introduced: fix that here.
+18. **After two review rounds from one reviewer, hand the call back.** Don't start a third round on your own. Hand back as step 14 says, list the open findings in the Attention section from `show-me-your-work`, and ask the person who planned the slice whether to keep iterating.
