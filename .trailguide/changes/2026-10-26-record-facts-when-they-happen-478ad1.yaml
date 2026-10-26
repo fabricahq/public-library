@@ -1,3 +1,3 @@
-summary: Adds a rule to record a fact that behavior depends on, such as which reply a request received or whether a payment was refunded, when it happens, and derive state from the record instead of inferring it from history; old records that lack the fact get an explicit settlement, not a reconstruction.
+summary: "Adds a rule: when code needs to know something that happened earlier, such as which question a reply answered or whether a payment was refunded, write it down when it happens instead of working it out later from timestamps or record order; old records that lack it get one explicit outcome, not a guess."
 rules:
   practices/code-design/record-facts-when-they-happen: new

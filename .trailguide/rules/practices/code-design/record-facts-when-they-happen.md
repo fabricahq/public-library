@@ -1,50 +1,50 @@
 ---
 title: "Record facts when they happen"
-whenToRead: "Before planning, writing, changing, or reviewing behavior that depends on what happened earlier, such as which reply a request received, which job delivered a result, whether a question was answered, or whether an order was refunded, and before migrating records that lack such a fact."
+whenToRead: "Before planning, writing, changing, or reviewing code that needs to know something that happened earlier, such as which question a reply answered, which job delivered a result, or whether a payment was refunded, and before migrating records that don't say it."
 impact: "HIGH"
-impactDescription: "A fact inferred from history, such as from entry order, timestamps, or which entries ran, is wrong whenever history takes a shape the inference didn't expect, so code repeats, skips, or misattributes work, and each patch to the inference invites the next."
+impactDescription: "Code that works out a past event from timestamps, ordering, or which records exist gets it wrong whenever history takes a shape its author didn't foresee, and each patch to the guess invites the next."
 tags: "code-design, state, events, data-modeling, migrations"
 ---
 
 ## Record facts when they happen
 
-When behavior depends on what happened before, record that fact durably at the moment it happens, and derive state from the record.
-Don't infer the fact later from patterns in history, such as the order of entries, timestamps, or which entries exist.
+When your code needs to know something that happened earlier, write it down at the moment it happens, and read it back later.
+Don't work it out afterwards from clues such as timestamps, the order of records, or which records exist.
+
+The moment something happens is the only moment the code knows for certain what happened.
+Later, all it has are clues, and clues can be read more than one way.
 
 ### Implementation
 
-- State the fact the behavior depends on as a sentence, such as "this reply answers that question" or "this refund reverses that payment."
-  If no stored field or record says that sentence, add one.
-- Write the fact in the operation where it happens, in the same transaction or write as the event, so the event and its record can't disagree.
-  Include the identifiers that link it, such as the question a reply answers or the payment a refund reverses.
-- Derive state by reading those records: a refunded payment is one a refund record names, and an open question is one that no reply names.
-  A cache or projection of the records is fine when it can be rebuilt from them.
-- When existing records predate the fact, don't reconstruct it by inference, in a backfill or in a fallback at read time.
-  Settle the old cases explicitly instead: give them one stated outcome, chosen from the behavior they had when they happened, and mark them as settled without the fact.
-  Record the fact for every new event from the change on.
+- Say the fact as a plain sentence, such as "this reply answers that question" or "this refund reverses that payment."
+  If nothing stored says that sentence, add a field or a record that does.
+- Write it in the same operation, and the same transaction, as the event itself, with the ids that link the two, such as the question a reply answers.
+  Then the event and its record can't disagree.
+- Make every later decision read that record: a payment is refunded when a refund record names it, and a question is open while no reply names it.
+- Records written before you added the fact don't have it.
+  Don't guess it for them, in a backfill or in a fallback when reading.
+  Give them one explicit outcome instead, usually the behavior they had at the time, and mark them as settled without the fact.
+  Record the fact for everything that happens from the change on.
 
-These cases comply:
+These comply:
 
-- An event log whose events state the fact is the record, so deriving state from those events complies.
-  What the rule forbids is reconstructing a fact that no event states.
-- When another system owns the fact and can answer for it, such as a payment provider's refund API, reading the fact from that system complies.
-- Patterns in history are fine for estimates that drive no behavior, such as a trend on a dashboard.
+- Deriving state from an event log whose events state the fact; the log is the record.
+- Asking the system that owns the fact, such as a payment provider's refund API.
+- Using patterns in history for estimates that drive no behavior, such as a trend on a dashboard.
 
 ### Rationale
 
-An inference holds only for the histories its author imagined.
-Retries, concurrent work, edits, partial failures, and new features produce histories it didn't expect, and it then answers wrong without raising an error.
-Each wrong answer gets patched with another condition, the conditions interact, and the mechanism never settles.
-A fact recorded when it happens doesn't depend on what happens later: the code that knew the answer wrote it down, so no code has to guess it.
+A guess about the past holds only for the histories its author pictured.
+Retries, failures, duplicates, edits, and new features produce histories nobody pictured, and the guess then gives a wrong answer without raising an error.
+Each wrong answer gets patched with one more condition, and each condition creates a new case to get wrong, so the code never settles.
+A recorded fact doesn't depend on what happens afterwards, because the code that knew the answer wrote it down.
 
-Reconstructing a missing fact for old records brings the inference back, and is usually harder than the original, because old history was never shaped to answer the question.
-An explicit settlement of old cases is one decision a reviewer can check once.
-An inference is a guess that every later change must keep right.
+Guessing the fact for old records brings the guess back, and it is usually harder, because old history was never shaped to answer the question.
+Settling old records with one explicit outcome is a single decision a reviewer can check once.
 
 ### Examples
 
-This practice applies in any language and with any storage.
-The TypeScript examples illustrate it.
+These examples are in TypeScript; the practice applies in any language and with any storage.
 
 #### Application: Deciding whether a payment was refunded
 
@@ -123,12 +123,11 @@ Every new refund is recorded when it happens.
 
 ### Validation
 
-For each behavior that depends on an earlier event, find the field or record that states the fact, and the code that writes it where the event happens, together with the event.
-Then check that the decision reads that record.
+For each decision that depends on an earlier event, find the field or record that states it, and check that it is written together with the event and that the decision reads it.
 
-Look for decisions computed from entry order, the first or latest entry, timestamps compared across records, counts, or which entries ran, and for fallbacks that handle records missing the fact.
-Each is a likely inference.
-Check for a test whose history makes the pattern and the fact disagree, such as a chargeback that isn't a refund or a job that ran twice, and that asserts the behavior follows the record.
-For a migration, check that old records get an explicit, labeled settlement, and that no code reconstructs the fact for them.
+Look for decisions computed from the first or latest record, timestamps compared across records, counts, or which records exist, and for fallbacks that handle records missing the fact.
+Each is a likely guess.
+Check for a test where the clues and the fact disagree, such as a chargeback that isn't a refund or a job that ran twice, and that asserts the behavior follows the record.
+For a migration, check that old records get an explicit, labeled outcome and that no code reconstructs the fact for them.
 
-These are not by themselves evidence of a violation: sorting entries by time for display; reading the latest entry when "latest" is the specified meaning, such as the current setting being the most recent edit; deriving state from an event log whose events state the fact; and reading the fact from the system that owns it.
+These are not by themselves violations: sorting records by time for display; reading the latest record when "latest" is what's meant, such as the current setting being the most recent edit; deriving state from an event log whose events state the fact; and reading the fact from the system that owns it.
