@@ -1,0 +1,3 @@
+name: Documentation
+description: Write code comments and agent guidance that carry only what the code and its owners don't already say, and that stay true when the code around them changes.
+whenToRead: When planning, writing, changing, or reviewing code comments, file headers, package documentation, agent instructions such as AGENTS.md, guides, or other prose that explains a convention, term, or piece of code.
