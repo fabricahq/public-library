@@ -1,0 +1,3 @@
+summary: 'The live pass now reads each drive''s output as its user would: confusing output is a product gap even when pinned checks pass, and pinned text nobody relies on is doc drift.'
+skills:
+  skills/maintain-verification-skill: major
