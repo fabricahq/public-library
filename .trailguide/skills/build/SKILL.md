@@ -28,7 +28,9 @@ Each step names the skill or rule it applies. The skills sit beside this one, at
 ## Before you write code
 
 1. **Find the plan and name the slice.** Read the plan, spec, issue, or task you were given. Name what this slice delivers and what it leaves out.
-2. **Write the done condition as a check you can run.** For example, the tests for the new behavior pass and the flow works on the running app. Decide how you'll verify before you build: when the project has a skill for driving its app, use it.
+2. **Write the done condition as a check you can run.** For example, the tests for the new behavior pass and the flow works on the running app. Decide how you'll verify before you build:
+   - **When the project has a verification skill** for driving its app, such as one `create-verification-skill` generated, update its feature map before you build. For each behavior this slice adds or changes that a user sees, write the journey a user takes through it, with the exact output each step must show. Cover the ways it goes wrong or comes back: a failure and its recovery, an undo, a change made by hand outside the app, a run with nothing to do. Those journeys are your done condition.
+   - **When it has none**, use the project's tests and the running app, and in the hand-back suggest running `create-verification-skill` as its own task. Don't stop to build one.
 3. **Start a decision log** with the `show-me-your-work` skill.
 
 ## While you build
@@ -43,7 +45,7 @@ Each step names the skill or rule it applies. The skills sit beside this one, at
 
 ## Before you hand back
 
-11. **Prove it works on the real artifact**, per `principle-prove-it-works`. Run the done condition from step 2. A result that's inconclusive, or a check on the wrong surface, isn't a pass.
+11. **Prove it works on the real artifact**, per `principle-prove-it-works`. Run the done condition from step 2: drive every step of each journey on the built app and compare its output exactly. A result that's inconclusive, or a check on the wrong surface, isn't a pass. If the feature map was wrong about behavior this slice didn't touch, fix only what the slice needs, and in the hand-back suggest running `maintain-verification-skill`.
 12. **Check the checks.** For each test you added, ask whether it would fail if the code were plausibly wrong. Fix any that wouldn't.
 13. **Audit the decision log and get it reviewed**, as `show-me-your-work` describes. When your harness can't start a reviewer, hand back with the review outstanding, as that skill says, instead of waiting for one.
 14. **Hand back.** Say what you built, the done condition's result with its evidence, and each decision the plan didn't settle, so the person can check it against their judgment. End with the Attention section from `show-me-your-work`. Leave the work committed on its own branch, ready to validate.
