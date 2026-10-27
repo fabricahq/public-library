@@ -1,0 +1,3 @@
+summary: Split a file when a typical change can read one part alone, and treat the token budget as the prompt to look for that seam.
+skills:
+  skills/ratchet-files: minor

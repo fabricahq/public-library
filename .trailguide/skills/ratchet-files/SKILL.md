@@ -1,17 +1,17 @@
 ---
 name: ratchet-files
-description: "Ratchet source file size so every file stays small enough for an agent to read whole: find every file over a token budget, split oversized files by concept, and set up the pre-commit ratchet that stops them from growing. Use when a commit is blocked because a file is over the size budget, when asked to find or split oversized/long/god files, when a file you need to change is too large to read in one pass, or when asked to add a file-size limit or hook to a repository."
+description: "Ratchet source file size so an agent opens one responsibility at a time: find every file over a token budget, split it where a typical change needs only part of it, and set up the pre-commit ratchet that stops files from growing. Use when a commit is blocked because a file is over the size budget, when asked to find or split oversized/long/god files, when a file you need to change is too large to read in one pass, or when asked to add a file-size limit or hook to a repository."
 metadata:
   trailguide-skill-type: playbook
 ---
 
 # Ratchet Files
 
-A source file is over budget when it is past what an agent can read in one
-pass (8,000 tokens, counted as bytes / 4, unless the repository sets
-another). [`scripts/check-file-size.mjs`](scripts/check-file-size.mjs) owns
-what counts as source, the budget, the ratchet, and the split rules; run it
-with `--help` before anything else.
+A source file is over budget at 8,000 tokens, counted as bytes / 4, unless
+the repository sets another. The budget is a prompt to look for a seam an
+agent can open alone. [`scripts/check-file-size.mjs`](scripts/check-file-size.mjs)
+owns what counts as source, the budget, the ratchet, and the split rules; run
+it with `--help` before anything else.
 
 ## Splitting
 
@@ -19,29 +19,34 @@ with `--help` before anything else.
    repository's `--max-tokens` if its hook sets one. Its list is the backlog.
 2. Pick the files to split: the one blocking the work in front of you, or
    with no blocker, the largest ones a change is about to touch.
-3. Split each one by the rules the script prints. A seam is a concept the
-   file already owns, not a line count; when
+3. Split each one by the rules the script prints. Take a seam when a typical
+   change needs only that part and the part stands on its own. Leave the file
+   together when a typical change needs all of it. See that in lines, and cut
+   on a concept the file already owns: one responsibility of a few hundred to
+   about a thousand lines stays one file, and past about 1,000 to 1,500 lines,
+   look for a second responsibility. When
    [refactor-clean](https://github.com/dzhng/skills/tree/main/skills/engineering/refactor-clean) is installed, use it to find
-   them.
+   the seam.
 4. Prove the split changed no behaviour with the repository's own checks,
    and commit it alone, before the change that needed the room.
 
-A file whose every split would cost more than it saves (one table or state
-machine that only reads whole) may opt out instead. Put
-`@ratchet-files-ignore` in a comment within its first 10 lines, in the
-file's own comment syntax, followed by why splitting fails:
+A file that is still one responsibility a typical change reads whole (one
+table, parser, or state machine) opts out instead of being cut to meet the
+budget. Put `@ratchet-files-ignore` in a comment within its first 10 lines,
+in the file's own comment syntax, followed by why it stays one file:
 
 ```js
-// @ratchet-files-ignore: one opcode table; split, each half reads without the other.
+// @ratchet-files-ignore: one opcode table; a change reads it whole.
 ```
 
 The check then skips the file entirely, even as it grows, so opt out only
-after looking for a seam and finding none worth its cost, never to get past a
-refusal. Tell the user each file you opt out and why. `--all` counts
-opted-out files so they stay visible.
+after looking for a seam and finding none a change can read alone, never to
+get past a refusal. Tell the user each file you opt out and why. `--all`
+counts opted-out files so they stay visible.
 
-Done when every file you picked is under budget in its own commit, the
-behaviour checks pass, and `--all` no longer lists those files.
+Done when every file you picked is under budget in its own commit, or opted
+out with a reason you told the user. The behaviour checks pass, and `--all`
+no longer lists those files.
 
 ## Setting up the ratchet
 
@@ -57,9 +62,9 @@ budget, so audit first and leave the repository untouched while you do:
 2. Ask once, with everything the user is agreeing to: how many files the hook
    would freeze and which are largest, leaving out generated or vendored ones
    you will mark below (name those); the budget, 8,000 tokens unless they want
-   another; and which pre-commit runner you will wire it into, including any
-   you would add. In a repository without Node tooling, say the check adds
-   it.
+   another, and that crossing it prompts a look for a seam; and which
+   pre-commit runner you will wire it into, including any you would add. In a
+   repository without Node tooling, say the check adds it.
 
 Once they agree, set up everything the check needs:
 

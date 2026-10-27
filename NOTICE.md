@@ -127,7 +127,7 @@ SOFTWARE.
 
 ## dzhng/skills
 
-The `ratchet-files` skill adapts [dzhng/skills](https://github.com/dzhng/skills/tree/dc8f546c3adaa615ab86e8328449ae6efe23aca4/skills/engineering/ratchet-files) by David Zhang at commit dc8f546c3adaa615ab86e8328449ae6efe23aca4: the skill's frontmatter is quoted for YAML and a link to a sibling skill is made absolute, and the script is unchanged. Its notice follows unchanged:
+The `ratchet-files` skill adapts [dzhng/skills](https://github.com/dzhng/skills/tree/dc8f546c3adaa615ab86e8328449ae6efe23aca4/skills/engineering/ratchet-files) by David Zhang at commit dc8f546c3adaa615ab86e8328449ae6efe23aca4: the skill's frontmatter is quoted for YAML and a link to a sibling skill is made absolute, and the fork changes when a file should be split. The size check is otherwise the upstream script. Its notice follows unchanged:
 
 MIT License
 

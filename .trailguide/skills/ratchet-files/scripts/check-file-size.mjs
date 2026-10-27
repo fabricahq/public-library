@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Size budget for source files, so an agent can read any file whole. Tokens
-// are estimated as bytes / 4. Run with --help for modes and hook setup.
+// Size budget for source files. Crossing it prompts a look for a seam an
+// agent can open alone. Tokens are estimated as bytes / 4. Run with --help
+// for modes and hook setup.
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -23,12 +24,13 @@ Source is any extension GitHub Linguist assigns to a programming language
 and no prose language (.md is not source). Files marked linguist-generated
 or linguist-vendored in the staged .gitattributes are skipped, and so is a
 file with ${pragma} in a comment in its first ${pragmaLines} lines,
-followed by why splitting it would cost more than it saves. Language data
+followed by why a typical change reads it whole. Language data
 comes from the linguist-languages package, resolved from the repository,
 else from beside this script. Bun fetches it in a repository without
 node_modules.
 
-The default budget is 8,000 tokens. Exit 1 means a file broke the budget.
+The default budget is 8,000 tokens. Crossing it means look for a seam. Exit 1
+means a file broke the budget.
 
 Pre-commit install: run it on every staged file with bun or node (18.3+), e.g.
   lint-staged:  "*": "node <path-to>/check-file-size.mjs"
@@ -37,7 +39,13 @@ Commit this script into the repository and point the hook at that copy, so
 every clone runs the same check.`;
 
 const splitRules = `Split a file before adding to it:
-  - Split by concept, never by line count: each new file owns one idea and is
+  - Take a seam when a typical change needs only that part and the part
+    stands on its own. Leave the file together when a typical change needs
+    all of it.
+  - See the seam in lines, and cut on a concept. One responsibility of a few
+    hundred to about a thousand lines stays one file. Past about 1,000 to
+    1,500 lines, look for a second responsibility. The token budget is the
+    prompt to look, not the place to cut. Each new file owns one idea and is
     named for it. No part1/part2, utils, helpers, or misc files.
   - Move whole items (types with their impls, functions with the contract
     their callers rely on) and keep the public interface where callers
@@ -47,12 +55,13 @@ const splitRules = `Split a file before adding to it:
     split must not change behaviour; prove it with the checks the repository
     already uses for that.`;
 
-const optOut = `Opt a file out only when every split would cost more than it saves, such
-as one table or state machine that reads only as a whole. Put
-${pragma} in a comment within its first ${pragmaLines} lines, followed by why:
-  // ${pragma}: one opcode table; split, each half reads without the other.
-The check then skips the file entirely, even as it grows, so it is a last
-resort, never a way past a refusal. Tell the user each file you opt out.`;
+const optOut = `Opt a file out when it is still one responsibility a typical change reads
+whole, such as one table, parser, or state machine. Put ${pragma} in a
+comment within its first ${pragmaLines} lines, followed by why:
+  // ${pragma}: one opcode table; a change reads it whole.
+The check then skips the file entirely, even as it grows, so opt out after
+looking for a seam and finding none a change can read alone. Tell the user
+each file you opt out.`;
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -189,7 +198,7 @@ if (failures.length > 0) {
     console.error(`    Cut at least ${(bytes - limit).toLocaleString("en")} bytes.`);
   }
   console.error(
-    `\nMake room by moving a concept into its own file, not by squeezing code to fit.\n${splitRules}\n\n${optOut}`,
+    `\nMake room by moving a concept a typical change can read alone into its own file, not by squeezing code to fit.\n${splitRules}\n\n${optOut}`,
   );
   process.exit(1);
 }

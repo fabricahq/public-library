@@ -26,7 +26,7 @@ sources:
         skills/engineering/ratchet-files:
           as: skills/ratchet-files
           basedOn: "dc8f546c3adaa615ab86e8328449ae6efe23aca4"
-          reason: Upstream's SKILL.md frontmatter has an unquoted colon that Trail Guide can't read; the fork quotes it and labels the skill a playbook.
+          reason: Upstream's SKILL.md frontmatter has an unquoted colon that Trail Guide can't read; the fork quotes it and labels the skill a playbook. The fork also treats the token budget as a prompt to look for a seam, and splits only where a typical change can read one part alone.
 library:
   schemaVersion: 1
   license:
