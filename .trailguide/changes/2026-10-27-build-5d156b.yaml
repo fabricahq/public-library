@@ -1,3 +1,3 @@
-summary: When the project has a verification skill, build now writes a journey for each user-facing behavior the slice adds or changes, with failure and recovery cases and exact output, before building, and proves the slice by driving those journeys; projects without one get a hand-back suggestion to run create-verification-skill.
+summary: When the project has a verification skill, build now writes a journey for each user-facing behavior the slice adds or changes, with failure and recovery cases, before building, and proves the slice by driving those journeys and reading their output as the user would; projects without one get a hand-back suggestion to run create-verification-skill.
 skills:
   skills/build: major
