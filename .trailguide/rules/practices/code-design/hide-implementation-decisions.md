@@ -6,18 +6,30 @@ impactDescription: "Callers that repeat a module's internal steps can miss requi
 tags: "code-design, interfaces, information-hiding, ownership"
 attribution:
   - url: https://web.stanford.edu/~ouster/cgi-bin/book.php
-    description: "Informed by information hiding, different abstractions at different layers, and pulling complexity downward in John Ousterhout's A Philosophy of Software Design, second edition, chapters 5, 7, and 8. Wording and examples are original."
+    description: "Informed by modules and interfaces, information hiding, different abstractions at different layers, and pulling complexity downward in John Ousterhout's A Philosophy of Software Design, second edition, chapters 4, 5, 7, and 8. Wording and examples are original."
 ---
 
 ## Hide implementation decisions behind meaningful interfaces
 
-Let callers ask for a result without making them understand how to produce it.
-Keep the steps inside the module that performs the operation.
-Let callers choose the things that matter to their task, such as which document to save or which account to charge.
+Hide implementation decisions so callers neither need to understand them nor depend on them.
 
 A module can be a function, class, package, or service.
 Its interface is everything a caller must know to use it correctly.
 That includes arguments, return values, call order, who closes a resource, and what happens if a step fails.
+
+Encapsulate an implementation decision by keeping the code and data that depend on it together in one module.
+Those decisions include how to arrange stored data, which algorithm to use, and which steps must happen in what order.
+The module should make those decisions and carry them out, rather than requiring callers to repeat them.
+
+Information hiding succeeds when callers can use the module correctly without knowing those decisions.
+You should be able to change a hidden decision without changing callers, as long as the module's behavior stays the same for them.
+For example, callers of a document store should not need to know whether it stores documents in one file or several.
+
+Making a field private is not enough.
+If callers still need to understand its contents through getters, setters, or configuration, that information remains exposed.
+
+Let callers ask for a result and choose the things that matter to their task, such as which document to save.
+Keep the decisions about how to produce that result inside the module.
 
 ### Implementation
 
