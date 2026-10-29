@@ -17,9 +17,10 @@ A module can be a function, class, package, or service.
 Its interface is everything a caller must know to use it correctly.
 That includes arguments, return values, call order, who closes a resource, and what happens if a step fails, whether or not the type system states it.
 
-Encapsulate an implementation decision by keeping all the code and data that depend on it together in one module.
-Those decisions include how to arrange stored data, which format to encode it in, which algorithm to use, and which steps must happen in what order.
-The module should make those decisions and carry them out, rather than requiring callers to repeat them.
+Give each implementation decision one owning module.
+Any code that would have to change if the decision changed belongs in that module.
+Implementation decisions include how stored data is arranged, which format encodes it, which algorithm to use, and which steps must happen in what order.
+The owning module makes those decisions and carries them out, so callers do not repeat them.
 
 Information hiding succeeds when callers can use the module correctly without knowing those decisions.
 You should be able to change a hidden decision without changing callers, as long as the module's behavior stays the same for them.
