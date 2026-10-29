@@ -19,9 +19,9 @@ Its interface includes everything callers must know to use it correctly: paramet
 
 ### Implementation
 
-- Own the complete operation promised by the interface.
-  Keep internal sequencing and invariants together instead of requiring each caller to coordinate them.
-  State observable guarantees and failure behavior even when their implementation is hidden.
+- When a module exposes an operation, implement the steps needed to deliver its documented result inside that module, including required ordering and failure cleanup.
+  For example, if `saveDocument` promises to replace a file safely, it should create the temporary file, replace the destination, and handle cleanup itself; callers should supply the destination and contents.
+  Document what callers can expect on success and failure, without making them reproduce the internal procedure.
 - Accept inputs, policies, and resources that callers own or need to select.
   Choose internal mechanisms in the module responsible for them, using the information it already has.
   Add configuration when the caller has a meaningful choice, rather than exposing every decision the implementation makes.
