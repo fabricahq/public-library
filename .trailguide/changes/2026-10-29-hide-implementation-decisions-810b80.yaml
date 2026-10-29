@@ -1,0 +1,3 @@
+summary: Keep implementation decisions with their owning module and expose caller intent, policies, and resources through meaningful interfaces.
+rules:
+  practices/code-design/hide-implementation-decisions: new
