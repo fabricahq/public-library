@@ -165,6 +165,7 @@ const app = createApplication({
 ```
 
 The entry point must import those functions and know where to pass them.
+Because the implementations are fixed, that is unnecessary exposure; passing them would be appropriate if the entry point intentionally chose implementations, such as one per platform.
 Adding a function to `SessionDependencies` changes what the entry point must supply, even if it has no new decision to make.
 Replacing `Omit` with an explicit list of the same fields makes the type easier to read but leaves that problem in place.
 
@@ -181,8 +182,8 @@ const app = createApplication({ apiMode, authRequired });
 
 `createApplication` selects the session functions and connects them to account and cache cleanup.
 The session module's factory still accepts dependencies, so its tests can supply controlled implementations.
-Changing one of those functions does not change what the entry point must supply.
-If callers need to select an authentication provider, accept that provider as configuration.
+Adding or replacing an internal session dependency does not change what the entry point must supply.
+If callers need to choose an authentication provider, expose that choice explicitly.
 
 #### Application: Sharing a transaction across operations
 
