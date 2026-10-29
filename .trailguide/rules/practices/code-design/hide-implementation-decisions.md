@@ -1,8 +1,8 @@
 ---
 title: "Hide implementation decisions behind meaningful interfaces"
-whenToRead: "Before planning, writing, changing, or reviewing interfaces between functions, classes, packages, or services, such as choosing parameters, defining configuration, exposing dependencies, or dividing an operation across callers and modules."
+whenToRead: "Before designing, changing, or reviewing how functions, classes, packages, or services work together. Read when choosing parameters, adding configuration, passing dependencies, or deciding which module performs a step."
 impact: "HIGH"
-impactDescription: "Interfaces that expose implementation decisions spread required knowledge across callers, invite inconsistent behavior, and make internal changes require coordinated edits."
+impactDescription: "Callers that repeat a module's internal steps can miss required work and must change whenever those steps change."
 tags: "code-design, interfaces, information-hiding, ownership"
 attribution:
   - url: https://web.stanford.edu/~ouster/cgi-bin/book.php
@@ -11,53 +11,56 @@ attribution:
 
 ## Hide implementation decisions behind meaningful interfaces
 
-Give callers operations that express what they want to accomplish.
-Keep the knowledge needed to implement those operations inside the module that owns them, and expose a choice when callers have a legitimate reason to make it.
+Let callers ask for a result without making them understand how to produce it.
+Keep the steps inside the module that performs the operation.
+Let callers choose the things that matter to their task, such as which document to save or which account to charge.
 
 A module can be a function, class, package, or service.
-Its interface includes everything callers must know to use it correctly: parameters and results, required call order, resource ownership, and failure behavior.
+Its interface is everything a caller must know to use it correctly.
+That includes arguments, return values, call order, who closes a resource, and what happens if a step fails.
 
 ### Implementation
 
 - Let callers ask for a result instead of making them assemble the steps that produce it.
-  For example, a caller should save a document by calling `saveDocument(path, contents)`, not by creating a temporary file, writing to it, replacing the original, and cleaning up if something fails.
-  The document module should perform those steps in the right order and handle cleanup.
-- Accept inputs, policies, and resources that callers own or need to select.
-  Choose internal mechanisms in the module responsible for them, using the information it already has.
-  Add configuration when the caller has a meaningful choice, rather than exposing every decision the implementation makes.
-- Give adjacent layers distinct responsibilities.
-  When a layer forwards most of another layer's interface, check what knowledge or coordination it saves callers.
-  Move responsibilities or combine layers when the extra interface adds no such benefit.
-- Keep construction details in the module that assembles the collaborators.
-  An internal factory can accept dependencies without making every higher-level caller supply those same dependencies.
-  Keep testing seams at the module they exercise rather than propagating them through unrelated interfaces solely for tests.
-- Judge the knowledge required, not the number of arguments or declarations.
-  An options object still exposes every decision its caller must make.
-  Deriving a higher-level type from internal dependencies, or spelling out the same fields explicitly, does not hide those decisions.
+  For example, a caller should save a document by calling `saveDocument(path, contents)`.
+  The document module should create the temporary file, write to it, replace the original, and clean up if something fails.
+- Ask callers for choices they need to make.
+  A caller may need to choose a destination, a payment provider, or a transaction that several operations share.
+  Let the module decide details such as temporary-file names and which private helper to call.
+- Make each module save its callers from knowing or doing something.
+  If a wrapper forwards the same arguments and returns the same result, check what else it provides, such as authorization or retries.
+  If it adds nothing, remove it or move the work so each module has a clear job.
+- Build and connect dependencies where the code already knows which implementations to use.
+  For example, application setup can select the session fetcher without making the entry point pass that function through.
+  A module's tests can supply substitutes to its factory without adding those parameters to every caller above it.
+- Check what callers must understand, rather than counting arguments.
+  Putting five implementation details in one options object still requires callers to know all five.
+  Writing the fields explicitly or deriving them from another type does not remove that knowledge.
 
-Explicit dependency injection, low-level primitives, and configurable policies are appropriate when they serve the intended callers.
-A projection of an existing contract can legitimately share its types.
-Neither a derived type nor a repeated parameter is by itself a violation.
-Identify the implementation knowledge a caller unnecessarily needs before changing the design; a small, cohesive module needs no additional layer merely to follow this rule.
+Keep explicit dependencies and small operations when callers need them to control the larger task.
+For example, a caller may need to pass one transaction to several modules so their changes succeed or fail together.
+Shared types are also useful when they describe the same data: `Pick<User, 'id' | 'name'>` need not become a separate handwritten type.
+A small module that already gives callers a useful operation needs no extra wrapper.
 
 ### Rationale
 
-When callers know an operation's internal recipe, each caller must reproduce it correctly and change when the recipe changes.
-A module that owns the recipe lets callers depend on its guarantees instead.
-This keeps implementation changes local and makes correct use require fewer decisions.
+When every caller repeats the steps for an operation, each can omit a step or run them in the wrong order.
+Changing those steps then requires finding and updating every caller.
+Putting the steps in one module means fixing them once, while callers keep asking for the same result.
 
-Hiding information does not mean concealing side effects or failures.
-It means giving callers a useful contract without requiring them to understand how it is fulfilled.
-A wrapper that renames the same steps, a larger configuration object, or private fields exposed through getters can leave the required knowledge unchanged.
+Callers still need to know whether an operation writes a file, charges money, or can fail.
+They should not need to know which helpers it calls or how it arranges stored data.
+Renaming functions or making fields private does not help if callers still need that knowledge.
 
 ### Examples
 
-These interface sketches use TypeScript, but the practice applies in any language.
-The implementations must fulfill the stated contracts; the shorter calls alone do not establish correctness.
+These examples use TypeScript, but the practice applies in any language.
+They show what callers use; the implementation must still do the work correctly.
+A shorter call alone does not make a better module.
 
-#### Application: Saving a document without exposing the replacement protocol
+#### Application: Saving a document
 
-An editor's callers need to save complete document contents while concurrent readers see either the previous version or the new one.
+An editor needs to save a document while other readers see either the complete old version or the complete new version.
 
 **Incorrect (counterexample):**
 
@@ -66,9 +69,9 @@ const temporary = await documents.writeTemporary(path, contents);
 await documents.replace(path, temporary);
 ```
 
-Every caller must know the temporary-file protocol, the required order, and who cleans up after failure.
-A caller can leave a temporary file behind or substitute an unsafe direct write.
-Bundling `temporary` into an options object would not remove that knowledge.
+Every caller must know to write a temporary file before replacing the original.
+Each must also handle leftover files if replacement fails.
+Putting `temporary` in an options object would leave those responsibilities with the caller.
 
 **Correct:**
 
@@ -76,15 +79,15 @@ Bundling `temporary` into an options object would not remove that knowledge.
 await documents.save(path, contents);
 ```
 
-The document module owns temporary-file placement, replacement, and failure cleanup.
-Its contract states that readers see a complete version and explains what a reported failure means for the saved contents.
-Crash durability is a separate guarantee that must be stated if provided; the method name alone does not promise it.
-Callers supply the document and destination, not the replacement protocol.
+The document module creates the temporary file, replaces the original, and cleans up after failure.
+The caller supplies the destination and contents.
+Changing how replacement works does not require editing callers.
+A successful save in this example does not guarantee that the contents survive a machine crash.
 
-#### Application: Constructing an application without forwarding its internal recipe
+#### Application: Constructing an application
 
-An entry point selects the runtime mode and whether authentication is required.
-Session fetching, logout, and account cleanup have fixed implementations for this application.
+An entry point chooses the API mode and whether users must sign in.
+The application already has fixed functions for fetching sessions, logging out, and clearing account state.
 
 **Incorrect (counterexample):**
 
@@ -100,9 +103,9 @@ const app = createApplication({
 });
 ```
 
-The entry point must import the internal collaborators and understand their roles just to forward them.
-Adding another session dependency changes application configuration even if callers have no new choice to make.
-Replacing `Omit` with an explicit list of the same fields would improve readability without changing this responsibility.
+The entry point must import those functions and know where to pass them.
+Adding a function to `SessionDependencies` changes what the entry point must supply, even if it has no new decision to make.
+Replacing `Omit` with an explicit list of the same fields makes the type easier to read but leaves that problem in place.
 
 **Correct:**
 
@@ -115,19 +118,19 @@ type ApplicationConfig = {
 const app = createApplication({ apiMode, authRequired });
 ```
 
-Application assembly selects and connects the fixed session collaborators and cache cleanup internally.
-The session module can still have a factory that accepts dependencies for its own callers and tests.
-An internal collaborator can change without changing the entry point's interface.
-If the application instead supports a caller-selected authentication provider, that provider is a legitimate configuration choice.
+`createApplication` selects the session functions and connects them to account and cache cleanup.
+The session module's factory still accepts dependencies, so its tests can supply controlled implementations.
+Changing one of those functions does not change what the entry point must supply.
+If callers need to select an authentication provider, accept that provider as configuration.
 
-#### Application: A caller-owned transaction is a valid dependency
+#### Application: Sharing a transaction across operations
 
-A caller needs to save an order and reserve stock in one transaction.
+A caller needs to save an order and reserve stock in one transaction: both changes must succeed, or neither should take effect.
 
 **Incorrect (counterexample):**
 
-Make `saveOrder(order)` and `reserveStock(items)` each start and commit a hidden transaction merely to shorten their interfaces.
-The caller can no longer make the two changes atomic; one can commit while the other fails.
+Make `saveOrder(order)` and `reserveStock(items)` each start and commit its own transaction to avoid passing a transaction argument.
+The order can then save successfully even if reserving stock fails.
 
 **Correct:**
 
@@ -138,20 +141,25 @@ await database.transaction(async (tx) => {
 });
 ```
 
-The caller owns the transaction because the larger operation spans both modules.
-Passing it explicitly preserves a required capability; each module still hides its queries and storage layout.
-Do not remove a dependency whose ownership belongs to the caller, or introduce a higher-level operation without a real owner for that responsibility.
+The caller starts the transaction because it knows the two changes must happen together.
+Each module uses that transaction but keeps its queries and table layout private.
+Removing the transaction argument would take away control the caller needs.
 
 ### Validation
 
-Read the interface and representative callers together.
-For each parameter, callback, or required sequence, identify whether it expresses caller intent, caller-owned policy or resources, or an internal mechanism.
-For a proposed finding, name the unnecessary knowledge, the caller that must carry it, and the module that could own it instead.
+Read the module's interface and a few places that call it.
+For each argument, callback, or required sequence, ask:
 
-Consider a plausible internal change, such as replacing a storage layout, adding a cleanup step, or changing a fixed collaborator.
-Check which callers would need edits and why.
-An internal change should normally stay within its owning module; a deliberate change to observable behavior or a genuinely shared contract can require caller changes.
+- Does the caller need to choose this, such as the destination file or a shared transaction?
+- Or does the caller supply it only because the module requires help with an internal step?
 
-When refactoring, verify the operation's observable guarantees and failure behavior through its interface.
-Also check that legitimate caller choices, such as transaction scope or provider selection, remain possible.
-Helper counts, parameter counts, `Omit`, dependency injection, and shared types are not sufficient evidence of a violation.
+Before reporting a problem, name what the caller unnecessarily needs to know and which module could handle it instead.
+
+Try a plausible internal change: add a cleanup step, change a table layout, or replace a helper.
+Which callers would need edits, and why?
+If their requested result stays the same, those callers should normally stay unchanged.
+A change to results, accepted inputs, or an intentionally shared data format can require caller changes.
+
+After refactoring, test the results callers depend on, including what happens if a step fails.
+Check that callers can still make necessary choices, such as selecting a provider or sharing a transaction.
+Neither argument counts, `Omit`, dependency injection, nor shared types prove a problem on their own.
