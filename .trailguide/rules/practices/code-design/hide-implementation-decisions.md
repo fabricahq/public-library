@@ -19,9 +19,9 @@ Its interface includes everything callers must know to use it correctly: paramet
 
 ### Implementation
 
-- When a module exposes an operation, implement the steps needed to deliver its documented result inside that module, including required ordering and failure cleanup.
-  For example, if `saveDocument` promises to replace a file safely, it should create the temporary file, replace the destination, and handle cleanup itself; callers should supply the destination and contents.
-  Document what callers can expect on success and failure, without making them reproduce the internal procedure.
+- Let callers ask for a result instead of making them assemble the steps that produce it.
+  For example, a caller should save a document by calling `saveDocument(path, contents)`, not by creating a temporary file, writing to it, replacing the original, and cleaning up if something fails.
+  The document module should perform those steps in the right order and handle cleanup.
 - Accept inputs, policies, and resources that callers own or need to select.
   Choose internal mechanisms in the module responsible for them, using the information it already has.
   Add configuration when the caller has a meaningful choice, rather than exposing every decision the implementation makes.
