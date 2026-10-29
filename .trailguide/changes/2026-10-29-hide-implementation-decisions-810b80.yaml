@@ -1,0 +1,3 @@
+summary: Keep each implementation decision, including step order, data formats, and settings the module can determine, in its owning module, and expose only caller intent, policies, and shared resources through meaningful interfaces.
+rules:
+  practices/code-design/hide-implementation-decisions: new
