@@ -119,7 +119,8 @@ const stored = await cache.get(`profile:${userId}:v2`);
 const profile = stored === undefined ? undefined : decodeProfile(stored);
 ```
 
-Neither module's interface mentions the key layout or encoding, yet both depend on them.
+Both modules independently encode knowledge of the same storage format.
+Changing that format requires updating both together.
 If the loader moves to a `v3` key and the page is not updated, the page silently misses every cached profile.
 The code was split by when it runs, so the format ended up in both places.
 
