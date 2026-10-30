@@ -258,6 +258,10 @@ Skills are step-by-step procedures for one kind of task, installed into the fold
 
 The two verification skills are also adapted from the pinned pstack source. Both are recommended and can be selected independently. Neither calls a fixed skill: creation offers maintenance as a later task, while maintenance discovers the project's authored verification skill and suggests creation only when no target exists. These suggestions are not `trailguide-skills-used` dependencies, so installing either one alone does not install the other. Their bundled references are ordinary files, not additional skills.
 
+The library also offers skills a project installs only by name, with `--skills skills/<name>`:
+
+- [setup-pr-10k](.trailguide/skills/setup-pr-10k/SKILL.md): declare a repository's layers once and keep them true. The agent proposes layers from the import graph, writes the ones you approve to a go-arch-lint file with a purpose and a review marker for each, and adds CI checks that fail a pull request when a layer it changes hasn't been reviewed in 50 commits. It prepares a repository for PR 10K, which reviews a pull request's interface changes layer by layer. Go only for now.
+
 ## How does it relate to Trail Guide?
 
 [Trail Guide](https://github.com/fabricahq/trailguide) is the tool, and this repository is content for it:
