@@ -28,7 +28,8 @@ sources:
           basedOn: "dc8f546c3adaa615ab86e8328449ae6efe23aca4"
           reason: Upstream's SKILL.md frontmatter has an unquoted colon that Trail Guide can't read; the fork quotes it and labels the skill a playbook.
 library:
-  schemaVersion: 1
+  schemaVersion: 2
+  name: fabrica
   license:
     spdxExpression: MIT
     file: LICENSE.md
