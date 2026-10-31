@@ -12,12 +12,13 @@ sources:
         pstack/skills/create-verification-skill:
           as: skills/create-verification-skill
           basedOn: "699e1e7488c53c05ca13409f40da83cd37682091"
-          reason: Use the project's authored skill location instead of hardcoding `.cursor/skills/`.
+          reason: Use the project's authored skill location instead of hardcoding `.cursor/skills/`, and make every proof read the output as its user would, pinning exact text only where users or scripts rely on it.
         pstack/skills/maintain-verification-skill:
           as: skills/maintain-verification-skill
           basedOn: "699e1e7488c53c05ca13409f40da83cd37682091"
           reason: Discover verification skills across project-configured skill locations
-            instead of a Cursor-only directory and respect the host concurrency limit.
+            instead of a Cursor-only directory, respect the host concurrency limit, and read each drive's output
+            as its user would, so confusing output is a finding even when pinned checks pass.
   dzhng:
     repository: https://github.com/dzhng/skills.git
     ref: dc8f546c3adaa615ab86e8328449ae6efe23aca4

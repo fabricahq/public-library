@@ -1,0 +1,3 @@
+summary: Generated verification skills now pin exact text only where users or scripts rely on it, and every proof reads the output as its user would and reports anything missing, repeated, contradictory, or internal; a pinned check that passes on confusing output isn't a pass.
+skills:
+  skills/create-verification-skill: major
