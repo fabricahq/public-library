@@ -1,0 +1,3 @@
+summary: Compare unsettled consequential interfaces and review resulting design instead of minimizing diffs; remove the laziness-protocol dependency.
+skills:
+  skills/build: major

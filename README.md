@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="15 groups, 132 rules" src="https://img.shields.io/badge/rules-132-brightgreen">
+  <img alt="15 groups, 133 rules" src="https://img.shields.io/badge/rules-133-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -15,7 +15,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | Group | Rules | Description |
 | --- | --: | --- |
 | [Testing](.trailguide/rules/practices/testing/) | 8 | Where to spend testing effort, and how to write tests that stay reliable |
-| [Code design](.trailguide/rules/practices/code-design/) | 5 | Designing interfaces, functions, modules, folders, and recorded state so code stays readable and correct |
+| [Code design](.trailguide/rules/practices/code-design/) | 6 | Designing interfaces, functions, modules, folders, and recorded state so code stays readable and correct |
 | [Concurrency](.trailguide/rules/practices/concurrency/) | 2 | Keeping shared resources usable and honoring cancellation throughout blocking operations |
 | [Performance](.trailguide/rules/practices/performance/) | 1 | Making code faster where measurement shows it matters |
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
@@ -30,7 +30,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Go](.trailguide/rules/techs/go/) | 5 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 132 rules
+### Browse all 133 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -47,11 +47,12 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 </details>
 
 <details>
-<summary><strong>Code design</strong> · 5 rules</summary>
+<summary><strong>Code design</strong> · 6 rules</summary>
 
 - [Express operations as meaningful steps](.trailguide/rules/practices/code-design/express-operations-as-meaningful-steps.md)
 - [Hide implementation decisions behind meaningful interfaces](.trailguide/rules/practices/code-design/hide-implementation-decisions.md)
 - [Organize code by feature](.trailguide/rules/practices/code-design/organize-code-by-feature.md)
+- [Remove unnecessary error cases through contract design](.trailguide/rules/practices/code-design/remove-unnecessary-error-cases.md)
 - [Record facts when they happen](.trailguide/rules/practices/code-design/record-facts-when-they-happen.md)
 - [Separate pure computation from effects](.trailguide/rules/practices/code-design/separate-pure-computation-from-effects.md)
 
@@ -105,7 +106,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 - [Prefer literal unions over enums](.trailguide/rules/techs/typescript/prefer-literal-unions-over-enums.md)
 - [Prefer type aliases over interfaces](.trailguide/rules/techs/typescript/prefer-type-aliases.md)
 - [Preserve caller-owned data](.trailguide/rules/techs/typescript/preserve-caller-owned-data.md)
-- [Make properties and parameters required, and name them](.trailguide/rules/techs/typescript/require-properties-and-name-parameters.md)
+- [Require caller-owned inputs and document defaults](.trailguide/rules/techs/typescript/require-properties-and-name-parameters.md)
 - [Import types with import type](.trailguide/rules/techs/typescript/separate-type-imports.md)
 - [Use Boolean() for explicit boolean coercion](.trailguide/rules/techs/typescript/use-boolean-for-explicit-boolean-coercion.md)
 - [Follow consistent naming conventions](.trailguide/rules/techs/typescript/use-consistent-naming.md)
@@ -258,12 +259,12 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 
 Skills are step-by-step procedures for one kind of task, installed into the folders your agents read. The library recommends these; a project installs them by including `recommended` from this source.
 
-- [build](.trailguide/skills/fabrica/build/SKILL.md): build one planned slice of work while you're away. The agent settles a done condition, decides reversible calls itself, works in small verified units, proves the result on the running app, and hands back a decision log for you to review. It follows the Build stage of [the Fabrica book](https://fabricahq.com/book).
+- [build](.trailguide/skills/fabrica/build/SKILL.md): build one planned slice of work while you're away. The agent settles a done condition, compares unresolved interface choices, works in small verified units, checks the resulting design, proves the result on the running app, and hands back a decision log for you to review. It follows the Build stage of [the Fabrica book](https://fabricahq.com/book).
 - [create-verification-skill](.trailguide/skills/pstack/create-verification-skill/SKILL.md): generate a project-local skill that launches the real app, drives its user-facing features, records proof, and cleans up. Includes a feature-map example and requires a successful end-to-end run before hand-back.
 - [maintain-verification-skill](.trailguide/skills/pstack/maintain-verification-skill/SKILL.md): check an existing verification skill against source and live behavior, then open one PR for proven documentation, harness, or feature-map corrections. Product regressions are reported separately.
 - [ratchet-files](.trailguide/skills/dzhng/ratchet-files/SKILL.md): keep every source file small enough for an agent to read in one pass. Find files over a token budget, split them by concept, and set up the pre-commit ratchet that stops them from growing. Adapted from [dzhng/skills](https://github.com/dzhng/skills).
 
-`build` calls nine skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack), Lauren Tan's skill collection, and they install with it. Eight are pstack principles the library curates as dependencies, so they install only with `build`: `principle-attack-the-premise`, `principle-build-the-lever`, `principle-fix-root-causes`, `principle-guard-the-context-window`, `principle-laziness-protocol`, `principle-never-block-on-the-human`, `principle-prove-it-works`, and `principle-sequence-verifiable-units`. The library pins them to a pstack commit it has reviewed, and moves the pin only in a new library release. The ninth, [show-me-your-work](.trailguide/skills/pstack/show-me-your-work/SKILL.md), is the library's adaptation of pstack's decision log, which works in any agent harness and has a Codex agent review Claude's work, or the reverse.
+`build` calls eight skills from [pstack](https://github.com/cursor/plugins/tree/main/pstack), Lauren Tan's skill collection, and they install with it. Seven are pstack principles the library curates as dependencies, so they install only with `build`: `principle-attack-the-premise`, `principle-build-the-lever`, `principle-fix-root-causes`, `principle-guard-the-context-window`, `principle-never-block-on-the-human`, `principle-prove-it-works`, and `principle-sequence-verifiable-units`. The library pins them to a pstack commit it has reviewed, and moves the pin only in a new library release. The eighth, [show-me-your-work](.trailguide/skills/pstack/show-me-your-work/SKILL.md), is the library's adaptation of pstack's decision log, which works in any agent harness and has a Codex agent review Claude's work, or the reverse.
 
 The two verification skills are also adapted from the pinned pstack source. Both are recommended and can be selected independently. Neither calls a fixed skill: creation offers maintenance as a later task, while maintenance discovers the project's authored verification skill and suggests creation only when no target exists. These suggestions are not `trailguide-skills-used` dependencies, so installing either one alone does not install the other. Their bundled references are ordinary files, not additional skills.
 

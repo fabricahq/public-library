@@ -11,21 +11,28 @@ attribution:
 
 ## Build complex components from composable parts
 
-Structure a component with optional or rearrangeable parts as a set of compound components that callers compose as children, sharing state through context.
+When callers need different arrangements of a component's parts, expose compound components they compose as children, sharing state through context.
+Keep a complete component for a repeated standard arrangement so ordinary callers do not have to assemble it.
 Use render props only when the component must pass data back to the caller's content.
 
 ### Implementation
 
-- Export the parts together, such as `Composer.Frame`, `Composer.Input`, and `Composer.Submit`, and let callers arrange them as children.
+- Expose parts when callers need structural variation, such as a custom header or a different placement of actions.
+  Export those parts together, such as `Composer.Frame`, `Composer.Input`, and `Composer.Submit`.
+- Provide a complete component for a repeated standard arrangement, composing the same parts internally.
+  It should own meaningful defaults and coordination rather than merely rename another component.
+  A cohesive component with no structural customization needs no compound API.
 - Share state and actions among the parts through a context provided by the root or a provider component, instead of threading props through every part.
-- Replace `showX` flags and `renderX` props for static structure with children.
+- Replace collections of `showX` flags and `renderX` props that encode different static arrangements with children.
+  Behavioral props such as `disabled` do not by themselves call for a compound API.
 - Keep a render prop, such as `renderItem`, when the component supplies data to each piece of caller content.
 
 ### Rationale
 
-A monolithic component needs a new prop for every optional part and every arrangement callers want.
+A component that configures many arrangements through flags needs another prop for each new structural choice.
 Callers then configure structure indirectly through flags and callbacks.
-With composable parts, callers write the structure they want directly, and adding a part does not change the existing API.
+With composable parts, callers write custom structure directly.
+A complete component owns the repeated standard arrangement, so changing that arrangement does not require coordinated edits across ordinary callers.
 
 ### Examples
 
@@ -57,7 +64,24 @@ With composable parts, callers write the structure they want directly, and addin
 </Composer.Provider>
 ```
 
-Callers see and control exactly which parts appear and in what order.
+Callers that need this custom arrangement see and control which parts appear and in what order.
+
+#### Application: A repeated standard arrangement
+
+**Incorrect (counterexample):**
+
+Every ordinary message form repeats the provider, input, attachments, footer, and submit composition above and initializes the same local state.
+A change to the standard arrangement requires editing every caller.
+
+**Correct:**
+
+```tsx
+<MessageComposer onSubmit={sendMessage} />
+```
+
+`MessageComposer` owns the standard arrangement and local state, using the same compound parts internally.
+Callers supply the submission behavior they own.
+A caller that needs a custom arrangement can still compose the parts directly; the standard component does not accumulate a mode flag for each variation.
 
 #### Application: Content that needs data from the component
 
@@ -71,6 +95,7 @@ The list supplies each item, so a render prop is the right tool.
 
 ### Validation
 
-Check components with several `showX` or `renderX` props for static structure; they should expose composable parts instead.
+Check components with several `showX` or `renderX` props for static structure; when those props encode different arrangements, callers should be able to compose the parts.
+Inspect ordinary call sites too: repeated setup and standard arrangements should have a complete component that owns them.
 
-A render prop that receives data from the component is not a violation.
+A render prop that receives data from the component, a behavioral flag, or a cohesive component without structural customization is not a violation.
