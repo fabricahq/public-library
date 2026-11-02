@@ -1,3 +1,0 @@
-summary: Keep implementation knowledge with one owner behind complete, simple caller contracts.
-rules:
-  practices/code-design/keep-design-knowledge-behind-simple-interfaces: new

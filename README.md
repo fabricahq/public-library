@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="15 groups, 134 rules" src="https://img.shields.io/badge/rules-134-brightgreen">
+  <img alt="15 groups, 133 rules" src="https://img.shields.io/badge/rules-133-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -15,7 +15,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | Group | Rules | Description |
 | --- | --: | --- |
 | [Testing](.trailguide/rules/practices/testing/) | 8 | Where to spend testing effort, and how to write tests that stay reliable |
-| [Code design](.trailguide/rules/practices/code-design/) | 7 | Designing interfaces, functions, modules, folders, and recorded state so code stays readable and correct |
+| [Code design](.trailguide/rules/practices/code-design/) | 6 | Designing interfaces, functions, modules, folders, and recorded state so code stays readable and correct |
 | [Concurrency](.trailguide/rules/practices/concurrency/) | 2 | Keeping shared resources usable and honoring cancellation throughout blocking operations |
 | [Performance](.trailguide/rules/practices/performance/) | 1 | Making code faster where measurement shows it matters |
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
@@ -30,7 +30,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Go](.trailguide/rules/techs/go/) | 5 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 132 rules
+### Browse all 133 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -47,11 +47,10 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 </details>
 
 <details>
-<summary><strong>Code design</strong> · 7 rules</summary>
+<summary><strong>Code design</strong> · 6 rules</summary>
 
 - [Express operations as meaningful steps](.trailguide/rules/practices/code-design/express-operations-as-meaningful-steps.md)
 - [Hide implementation decisions behind meaningful interfaces](.trailguide/rules/practices/code-design/hide-implementation-decisions.md)
-- [Keep design knowledge behind simple interfaces](.trailguide/rules/practices/code-design/keep-design-knowledge-behind-simple-interfaces.md)
 - [Organize code by feature](.trailguide/rules/practices/code-design/organize-code-by-feature.md)
 - [Remove unnecessary error cases through contract design](.trailguide/rules/practices/code-design/remove-unnecessary-error-cases.md)
 - [Record facts when they happen](.trailguide/rules/practices/code-design/record-facts-when-they-happen.md)
