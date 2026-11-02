@@ -1,3 +1,3 @@
-summary: 'The live pass now reads each drive''s output as its user would: confusing output is a product gap even when pinned checks pass, and pinned text nobody relies on is doc drift.'
+summary: 'The live pass now reads each drive''s output as its user would: confusing output is a product gap even when its end state is right, and a map that compares output verbatim is doc drift, with any text users or scripts rely on moved under an automated test.'
 skills:
   skills/maintain-verification-skill: major
