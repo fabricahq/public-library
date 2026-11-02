@@ -1,0 +1,3 @@
+summary: Require caller-owned inputs while hiding implementation choices and documenting ordinary defaults.
+rules:
+  techs/typescript/require-properties-and-name-parameters: major
