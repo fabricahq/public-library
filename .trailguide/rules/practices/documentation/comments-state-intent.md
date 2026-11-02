@@ -8,24 +8,27 @@ tags: "comments, documentation"
 
 ## Comment intent, and point at the owner instead of describing it
 
-A comment carries what the code can't say: why this file or block exists, what it is for, and any constraint or contract a reader can't see in the code.
-Don't describe what something does when authoritative code, a check, a rule, or a document already says it, whether that owner is the code right below the comment or another file or tool.
+Document purpose, observable contracts, and constraints where readers need them: why this file or block exists, what callers can rely on, and any constraint a reader can't see in the code.
+Don't duplicate implementation details or conventions that an authoritative owner already states, whether that owner is the code right below the comment or another file, tool, or document.
 When a reader needs the owner, name it in one clause.
 
 ### Implementation
 
 - State the purpose: "Exempt X from Y because Z", not "Tool T reads these marks to do U".
-- Don't narrate the code below the comment, and don't describe how another file, script, tool, or service behaves.
-- Don't describe call sites, consumers, or how another layer uses this code.
+- Don't narrate the steps of the code below the comment.
+- Don't retell how another file, script, or tool works, or list the call sites and consumers of this code: they change without this file changing.
 - Keep guidance on how to use a kind of file or package in the document that owns the convention, such as an architecture decision record or `AGENTS.md`, not in each instance's comment.
-- A contract that the signature or types can't express, such as units, ordering, or failure modes, is intent the code doesn't state; keep it.
+- Keep a contract that callers rely on and the signature or types can't express, such as units, ordering, failure modes, or what a public function guarantees.
+- Keep the outside behavior that explains a local constraint, such as the vendor limit behind a delay or the upstream bug behind a workaround.
+  Say only the part that causes the constraint, and link the upstream report when there is one.
   Technology groups may say more about where such comments go.
 
 ### Rationale
 
 A description of another owner's behavior is a second copy of a fact.
 When the owner changes, nothing fails, so the copy stays wrong until someone notices, and an agent that reads the comment acts on the stale version.
-Intent and constraints are the facts only this file can carry, so they stay true as long as the file keeps its purpose.
+Intent, contracts, and the reasons for constraints are the facts only this file can carry, so they stay true as long as the file keeps its purpose.
+Without them, a reader has to trace the implementation to learn what it promises, and a constraint whose cause isn't stated looks arbitrary enough to remove.
 
 ### Examples
 
@@ -78,9 +81,54 @@ package shared
 
 The comment states the package's purpose and names the owner of the convention without retelling it.
 
+#### Application: A public function's contract
+
+**Incorrect (counterexample):**
+
+```go
+// Reserve locks the SKU's row with SELECT ... FOR UPDATE, decrements its
+// count, and commits.
+func (s *Store) Reserve(ctx context.Context, sku string, n int) error
+```
+
+The comment narrates the implementation, and leaves out what a caller needs: whether a partial reservation can happen and what a shortage returns.
+
+**Correct:**
+
+```go
+// Reserve holds n units of sku. It reserves all n or none, and returns
+// ErrInsufficientStock when fewer than n are available.
+func (s *Store) Reserve(ctx context.Context, sku string, n int) error
+```
+
+Keep this comment: the all-or-none guarantee and the error are a contract the signature can't express.
+
+#### Application: A workaround for another service
+
+**Incorrect (counterexample):**
+
+```ts
+// Wait before refunding.
+await sleep(1_100);
+```
+
+Cutting the reason leaves a delay that looks arbitrary, and the next reader may remove it.
+
+**Correct:**
+
+```ts
+// The payment provider rejects a refund issued within one second of its
+// charge.
+await sleep(1_100);
+```
+
+Keep this comment: it describes another service, but only the behavior that sets this delay.
+
 ### Validation
 
 For each new or changed comment, ask: if the code, file, tool, or check it mentions changed tomorrow while this file kept its purpose, would this comment become false?
-If so, cut it to the intent and, when a reader needs it, a pointer to the owner.
+If so, and the comment retells an implementation or a convention someone else owns, cut it to the intent and, when a reader needs it, a pointer to the owner.
 
-A comment that names an owner without describing its behavior is not a violation, and neither is a comment stating a contract or constraint the code can't express.
+A comment that names an owner without describing its behavior is not a violation.
+Neither is a comment stating a contract the code can't express, or the outside behavior that causes a local constraint: if that behavior changed, the constraint would change with it.
+Before removing a comment, check that it isn't one of these.

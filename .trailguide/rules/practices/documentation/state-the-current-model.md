@@ -19,6 +19,7 @@ Leave out when it was decided, what it replaced, and how the discussion went: ve
 - When a change replaces a convention, rewrite the guidance in place instead of adding a note about the change.
 
 A decision record, changelog, or release note exists to record history, so this rule doesn't apply to it.
+Neither does a migration or compatibility instruction that still applies, such as an upgrade guide or a deprecated name that's still accepted: readers need the old form to find and update what they have.
 
 ### Rationale
 
@@ -52,9 +53,28 @@ to the same artifact rather than instantiated once.
 
 The paragraph defines each term and gives the reason for the distinction, with no history.
 
+#### Application: An upgrade guide while the old name still works
+
+**Incorrect (counterexample):**
+
+```md
+Set `output.dir` to choose where reports go.
+```
+
+A user whose configuration still says `report_dir` can't tell that it's the same setting, or that they need to change it.
+
+**Correct:**
+
+```md
+`output.dir` replaces `report_dir`. Version 2 still reads `report_dir` and
+warns; version 3 rejects it. Rename the key in your configuration to update.
+```
+
+Keep the old name here: the instruction still applies to configurations that use it.
+
 ### Validation
 
-Search changed guidance for dates, "used to", "renamed", "previously", "no longer", and "we decided".
-Each match should either go or be rewritten as a statement of the current model and its reason.
+Search changed guidance for dates, "used to", "renamed", "previously", "no longer", and "we decided", and review each match.
+Unless it's part of a migration or compatibility instruction that still applies, remove it or rewrite it as a statement of the current model and its reason.
 
 A link to a decision record is not a violation, and neither is a version number that states a current requirement, such as a minimum supported version.
