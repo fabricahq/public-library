@@ -106,7 +106,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 - [Prefer literal unions over enums](.trailguide/rules/techs/typescript/prefer-literal-unions-over-enums.md)
 - [Prefer type aliases over interfaces](.trailguide/rules/techs/typescript/prefer-type-aliases.md)
 - [Preserve caller-owned data](.trailguide/rules/techs/typescript/preserve-caller-owned-data.md)
-- [Make properties and parameters required, and name them](.trailguide/rules/techs/typescript/require-properties-and-name-parameters.md)
+- [Require caller-owned inputs and document defaults](.trailguide/rules/techs/typescript/require-properties-and-name-parameters.md)
 - [Import types with import type](.trailguide/rules/techs/typescript/separate-type-imports.md)
 - [Use Boolean() for explicit boolean coercion](.trailguide/rules/techs/typescript/use-boolean-for-explicit-boolean-coercion.md)
 - [Follow consistent naming conventions](.trailguide/rules/techs/typescript/use-consistent-naming.md)

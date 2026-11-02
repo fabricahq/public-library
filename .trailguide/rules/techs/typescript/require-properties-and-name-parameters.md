@@ -1,5 +1,5 @@
 ---
-title: "Make properties and parameters required, and name them"
+title: "Require caller-owned inputs and document defaults"
 whenToRead: "Before planning, writing, changing, or reviewing TypeScript object types or function signatures, especially ones with many optional properties or several positional parameters."
 impact: "MEDIUM-HIGH"
 impactDescription: "Optional-heavy types and long positional parameter lists hide which inputs are needed and let calls pass the wrong value in the wrong place."
@@ -9,7 +9,7 @@ attribution:
     description: "Adapted from mkosir TypeScript Style Guide guidance (prefer-required-object-properties, keep-function-args-mostly-required, prefer-single-object-function-args; MIT, notice retained in NOTICE.md): merged the required-properties, required-arguments, and single-object-argument rules, restructured to the rule template, and pointed variant modeling to the discriminated union rule."
 ---
 
-## Make properties and parameters required, and name them
+## Require caller-owned inputs and document defaults
 
 Require inputs that the caller must supply; make absence explicit when it has a meaning, including selecting a documented default.
 Keep implementation choices inside the module when it can determine them itself.
@@ -22,7 +22,8 @@ When a function takes several parameters, especially booleans or values of the s
 - Mark a property or parameter optional only when leaving it out is a valid, meaningful case, such as an optional filter or a documented default.
   Keep caller-specific requirements explicit, such as which account to use or whether the user consented; a default must not guess them.
 - When optional fields exist because an object represents several states, model the states as a discriminated union instead.
-- When a function accumulates optional parameters for different use cases, split it into separate functions.
+- Split a function only when its options select different operations or allow combinations that can't be valid together.
+  Keep cohesive variations of one operation together, such as a search's filters, pagination, and sort order.
 - Use a single options object when a function takes more than two or three parameters, or any boolean or same-typed parameters that are easy to swap.
 - Keep simple positional parameters for one or two obviously distinct values, such as `isNumber(value)` or `formatAmount(amount, currency)`.
 
@@ -105,4 +106,4 @@ Review required inputs for information or policy the caller owns, and optional i
 Walk a common call and check that it does not repeat implementation choices the module could determine.
 Review calls with several positional arguments and check that each value's meaning is obvious without reading the function.
 
-An optional property whose absence is meaningful, or a short positional list of distinct values, is not a violation.
+An optional property whose absence is meaningful, a cohesive set of options for one operation, or a short positional list of distinct values is not a violation.
