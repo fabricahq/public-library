@@ -1,0 +1,3 @@
+summary: 'New rule: start a hand-written file with a short purpose comment only when its name and location can''t say what it is for, or when it deliberately leaves out something a reader would expect.'
+rules:
+  practices/documentation/file-header-when-name-falls-short: new

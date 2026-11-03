@@ -31,7 +31,7 @@ A package comment separated by a blank line is not documentation at all.
 **Incorrect (counterexample):**
 
 ```go
-// Projection helpers for mock fixture JSON.
+// Mock fixtures as JSON, for local sample data only; production code never imports them.
 package devseed
 ```
 
@@ -40,7 +40,7 @@ The comment describes one file, but Go treats it as the package's documentation.
 **Correct:**
 
 ```go
-// Projection helpers for mock fixture JSON.
+// Mock fixtures as JSON, for local sample data only; production code never imports them.
 
 package devseed
 ```

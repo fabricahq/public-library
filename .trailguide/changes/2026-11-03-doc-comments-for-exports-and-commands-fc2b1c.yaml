@@ -1,3 +1,0 @@
-summary: 'New rule: exported identifiers and main packages get doc comments stating their contract or purpose.'
-rules:
-  techs/go/doc-comments-for-exports-and-commands: new

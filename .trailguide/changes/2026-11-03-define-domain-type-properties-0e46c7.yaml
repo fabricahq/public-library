@@ -1,0 +1,3 @@
+summary: 'New rule: every property of a TypeScript domain type gets a one-sentence definition of the term; other properties are commented only for optional or null meaning, invariants, and cross-module references.'
+rules:
+  techs/typescript/define-domain-type-properties: new

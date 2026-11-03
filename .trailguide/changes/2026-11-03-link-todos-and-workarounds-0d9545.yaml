@@ -1,0 +1,3 @@
+summary: 'New rule: every TODO, FIXME, and workaround links the issue, pull request, or upstream document that tracks it.'
+rules:
+  practices/documentation/link-todos-and-workarounds: new

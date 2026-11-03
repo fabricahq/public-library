@@ -1,0 +1,3 @@
+summary: Every function, exported or not, now needs a one-sentence intent doc comment, checked with require-jsdoc publicOnly false and informative-docs; file headers are no longer required on every file, and generic guidance on constraints, TODOs, and body comments moved to the Documentation practice rules.
+rules:
+  techs/typescript/comment-role-result-and-constraints: major
