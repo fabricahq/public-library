@@ -6,7 +6,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 
 - Launch Notes at `http://127.0.0.1:4173` with a disposable data directory.
 - Set `NOTES_DATA_DIR=/tmp/notes-verify-$RUN_ID` so concurrent runs do not share state.
-- Seed notes titled `Quarterly plan` and `Grocery list`.
+- Run `control-notes setup seed`. It creates notes titled `Quarterly plan` and `Grocery list`, and stops with the failing step if either note doesn't appear.
 - Put `control-notes` and the `notes` CLI on `PATH`.
 - Run `control-notes doctor` and require the expected URL, data directory, and build revision.
 - Never drive an instance that was not started by this verification run.
@@ -16,6 +16,8 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Start every recipe from the baseline state unless its preconditions say otherwise.
 - Prefer ARIA roles and accessible names over CSS selectors or DOM position.
 - Treat every command as literal. Keep quoted names and flags unchanged.
+- Reach a recipe's starting state with its named setup sequences. Setup isn't the behavior under test, so run it as written and judge only its end state.
+- Drive the steps under test one at a time. Check the step's observable state before moving on, and when it doesn't match, stop and report what you saw instead of running the rest.
 - Run browser actions through `control-notes browser`.
 - Run terminal actions through `control-notes cli -- <command>`.
 - Restore seeded data after a mutation. Do not remove proof artifacts during cleanup.
@@ -37,7 +39,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 
 1. `Sub-features` lists short IDs with one line for each behavior.
 2. `How to get to it (user POV)` lists every user entry point.
-3. `Driving it with control-<app>` starts with `Preconditions:` and uses labeled bullets that pair each user action with an exact command, the observable end state, and what the user should be able to tell from it.
+3. `Driving it with control-<app>` starts with `Preconditions:`, naming the setup sequence that reaches each one, and uses labeled bullets that pair each user action with an exact command, the observable end state, and what the user should be able to tell from it.
 4. `Gotchas` lists traps that can waste or invalidate a verification run.
 
 Keep implementation details out of the map. Name only user paths, stable handles, required state, commands, and observable proof.

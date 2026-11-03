@@ -20,7 +20,7 @@ Create note lets a user save a titled note from the browser or CLI, cancel an un
 Preconditions:
 
 - Notes is healthy at `http://127.0.0.1:4173`.
-- No note is titled `Release checklist` or `CLI note`.
+- No note is titled `Release checklist` or `CLI note`. Run `control-notes setup remove-notes --title "Release checklist" --title "CLI note"`, which deletes them if present and fails if either remains.
 - `control-notes doctor` reports the expected URL and disposable data directory.
 
 - **Open editor.** Choose `New note`. Run `control-notes browser click --role button --name "New note"`. A form named `Note editor` appears with focus in the `Title` textbox.

@@ -1,0 +1,3 @@
+summary: The pass now treats a proof that replays pre-written e2e specs, or a journey with no state to check between commands, as a harness gap to fix with setup sequences and checked steps, and keeps a control-<app> CLI's tests passing.
+skills:
+  skills/maintain-verification-skill: major
