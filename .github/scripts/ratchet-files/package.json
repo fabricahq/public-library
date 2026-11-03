@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "description": "Test dependencies for the ratchet-files skill's check-file-size.mjs.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "linguist-languages": "9.5.0"
+  }
+}
