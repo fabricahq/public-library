@@ -14,6 +14,7 @@ A label such as "helpers" or "component" says neither.
 
 ### Implementation
 
+- Keep required leading directives, such as shebangs, before the header.
 - Write the header in the format's own comment syntax: `//` in Go and TypeScript, `--` in SQL, `#` in YAML and shell, `<!-- -->` in Markdown and HTML.
 - State what the file is not for when that would surprise a reader.
 - State what the file is for, not what other files or tools do with it.

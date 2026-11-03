@@ -68,6 +68,6 @@ package devseed
 ### Validation
 
 Run `go doc ./path/to/package` and check that it shows the intended package description and no file-specific text.
-Search for comments attached to `package` that do not start with `Package <name>`.
+Search for comments attached to `package` that do not start with `Package <name>`, except command documentation on `package main`.
 
 A file header separated from `package` by a blank line is not a violation.
