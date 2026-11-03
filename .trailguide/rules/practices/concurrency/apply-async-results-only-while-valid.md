@@ -52,10 +52,9 @@ Its late response replaces the validated metadata and makes the editor writable 
 
 **Correct:**
 
-The state owner prevents the obsolete prefetch from replacing the validated result.
-For example, it can cancel the pending cache read before publishing the validated result if the cache library guarantees that canceled reads cannot later publish their responses.
-If cancellation cannot provide that guarantee, enforce acceptance at the cache update boundary, such as by comparing authoritative data revisions.
-Keep the validation itself current across any wait introduced by cancellation.
+In this example, canceling a cache read guarantees that its response cannot later update the cache.
+Cancel the older prefetch, recheck that validation is still current, then publish the validated result.
+If the cache provides no such guarantee, enforce acceptance at the update boundary, for example with authoritative data revisions.
 
 #### Application: An account changes while a save is pending
 

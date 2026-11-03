@@ -43,12 +43,9 @@ Keep the decisions about how to produce that result inside the module.
   Put the code that reads and the code that writes a format, key layout, or protocol in the module that owns it, even when they run at different times.
 - Move work into a module only when it belongs to that module's job, simplifies its callers, and keeps its interface simple.
   Moving one caller's policy into a general module, such as putting a screen's keyboard shortcuts into a text buffer, leaks that caller's decisions into the module instead.
-- Keep lifecycle mechanics with the module that owns the operation.
-  When correctness depends on replacing a session, tracking pending writes, rejecting obsolete results, or updating a cache, make the supported interface carry out that coordination.
-  Callers choose the target and request the operation without reconstructing its internal protocol.
-  Keep lifecycle choices explicit when callers genuinely own them, such as deciding how long a transaction or editing session lasts.
-- A module may contain several files and private helpers.
-  Judge its boundary by the knowledge callers need and the decisions they duplicate, rather than by file count.
+- Keep lifecycle coordination inside the module that owns the operation.
+  Callers choose the target and request the work without coordinating the module's internal reads, writes, and cleanup.
+  Keep caller-owned lifetime choices explicit, such as deciding how long a transaction or editing session lasts.
 - Make each module save its callers from knowing or doing something.
   If a wrapper forwards the same arguments and returns the same result, check what else it provides, such as authorization, retries, or a choice among implementations.
   If it adds nothing, remove it or move the work so each module has a clear job.
@@ -63,7 +60,7 @@ Keep the decisions about how to produce that result inside the module.
 - Build and connect dependencies where the code already knows which implementations to use.
   Give a value that only a deep component needs to that component when it is constructed, instead of adding the value to every function signature on the way down.
   A module's tests can supply substitutes to its factory without adding those parameters to every caller above it.
-- Judge an interface by what callers must understand, not by how many arguments it takes.
+- Judge a module by what callers must understand, not by its argument count or how many files implement it.
   Putting five implementation details in one options object still requires callers to know all five, and writing the fields explicitly or deriving them from another type does not remove that knowledge.
   Shared types are fine when they describe the same data: `Pick<User, 'id' | 'name'>` need not become a separate handwritten type.
 
@@ -197,21 +194,18 @@ A document pane uses `useDocument(id)` and changes `id` when the user selects an
 
 **Incorrect (counterexample):**
 
-The hook creates its editing session only on the first render.
-Its documentation tells every caller to key an ancestor by document ID so React remounts the pane when the target changes.
-A caller that passes the new ID without that extra coordination retains the old session, potentially displaying or saving the wrong document.
+The hook creates its session only on the first render and requires every caller to key an ancestor by document ID.
+Without that extra coordination, passing a new ID retains the old session, potentially displaying or saving the wrong document.
 The caller must understand the hook's internal lifetime to use it correctly.
 
 **Correct:**
 
-The abstraction that owns the editing session handles target changes: it retires the old session, prevents its pending results from affecting the new one, and creates the new session before exposing it to the caller.
+The owning abstraction retires the old editing session and creates the new one when the target changes.
 This can live inside the hook or in a document-pane component that owns both the hook and the remount boundary.
 The caller supplies the selected document ID.
 
-A fixed-target session is also valid when the caller intentionally owns its lifetime.
-For example, `openDocument(id)` can return a session bound to that document, with a documented close operation.
-That caller chooses when to open and close sessions; it does not coordinate the session's internal writes or cache updates.
-A React key is not itself a violation: the question is whether it expresses a caller-owned identity choice or makes the caller compensate for an internal lifecycle assumption.
+A fixed-target session is also valid when the caller intentionally owns its lifetime: `openDocument(id)` can return a session bound to that document, with a documented close operation.
+A React key is not itself a violation; it may express a caller-owned identity choice rather than compensate for an internal lifecycle assumption.
 
 #### Application: Sharing a transaction across operations
 
