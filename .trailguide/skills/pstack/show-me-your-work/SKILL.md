@@ -54,7 +54,7 @@ Commit it only when the work is ambitious enough that a reviewer needs the trail
 
 ## Audit the log against the transcript
 
-At the end of the run, before handing back, check the log told the truth. Read this run's transcript, where your harness keeps one you can read. Read only this run's: don't search other sessions' transcripts, which hold unrelated private chats. Without a transcript, use this conversation as the record. Walk this run's rows against what actually happened. Each stretch of them begins at one of this run's `start` rows, or at the first row if this run created the log, and ends at the next `start` row of another run:
+At the end of the run, before writing the summary, check the log told the truth. Read this run's transcript, where your harness keeps one you can read. Read only this run's: don't search other sessions' transcripts, which hold unrelated private chats. Without a transcript, use this conversation as the record. Walk this run's rows against what actually happened. Each stretch of them begins at one of this run's `start` rows, or at the first row if this run created the log, and ends at the next `start` row of another run:
 
 - Check that every row maps to a real decision or action.
 - Check that each row's evidence resolves and shows what the row claims.
@@ -64,18 +64,18 @@ Correct the log, not the story. The audit never edits or removes a row, even an 
 
 ## Preserve lasting design knowledge
 
-Before handing back, inspect the decisions for invariants, contracts, and reasons a future maintainer needs to preserve. Put each beside its owning code, or in one discoverable design note when it spans modules, and add an evidence pointer to that location in the log. State the current requirement and reason, leaving the sequence of attempts in the log. Verify the explanation against the implementation. Done when no lasting design constraint exists only in this working log or a commit message.
+Before writing the summary, inspect the decisions for invariants, contracts, and reasons a future maintainer needs to preserve. Put each beside its owning code, or in one discoverable design note when it spans modules, and add an evidence pointer to that location in the log. State the current requirement and reason, leaving the sequence of attempts in the log. Verify the explanation against the implementation. Done when no lasting design constraint exists only in this working log or a commit message.
 
 ## Cross-model review of the trail
 
-Before handing back, spawn a subagent on a different model family from the one that did the work, such as a Codex model to review a Claude model's work, or a Claude model to review Codex's. Self-review is not a substitute. When the harness can't run another family, a fresh subagent on the same model is the fallback, and the Attention section says so. The subagent reads the audit trail and the run's transcript, or without one, the evidence the rows point to, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
+Before writing the summary, spawn a subagent on a different model family from the one that did the work, such as a Codex model to review a Claude model's work, or a Claude model to review Codex's. Self-review is not a substitute. When the harness can't run another family, a fresh subagent on the same model is the fallback, and the Attention section says so. The subagent reads the audit trail and the run's transcript, or without one, the evidence the rows point to, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
 
 - Decisions logged with weak or absent evidence.
 - Verification steps skipped or claimed without proof in the transcript.
 - Choices that look risky in hindsight (premature, scope-creeping, papering over a symptom).
 - Gaps the user would otherwise miss on a casual skim.
 
-When the harness can't start a subagent at all, don't review the trail yourself and don't hold the hand-back for a reviewer. Log a row for the review with result `open`, commit the log with the work so a later reviewer has it and the evidence its rows point to, and hand back with the review outstanding.
+When the harness can't start a subagent at all, don't review the trail yourself and don't hold the summary for a reviewer. Log a row for the review with result `open`, commit the log with the work so a later reviewer has it and the evidence its rows point to, and write the summary with the review outstanding.
 
 Every reply for a run that produced a trail ends with an "Attention" section. Lead with the reviewer's model on its own line (`reviewed by <model>`, `reviewed by <model>, same family` for the fallback, or `independent review unavailable` when no subagent could run), then list each flag pointing to specific rows or moments. Without a review, the first flag says the trail still needs one and gives the log's path. "No flags" is a valid value. The model name is not.
 
