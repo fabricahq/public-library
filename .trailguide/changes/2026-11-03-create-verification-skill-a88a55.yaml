@@ -1,0 +1,3 @@
+summary: The feature map example confirms a note created from the CLI by reopening it and reading its body.
+skills:
+  skills/create-verification-skill: patch
