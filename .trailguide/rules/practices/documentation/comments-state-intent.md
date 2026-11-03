@@ -14,14 +14,19 @@ When a reader needs the owner, name it in one clause.
 
 ### Implementation
 
+- Before writing a comment inside a function body, or one explaining why our own code is surprising, try to make it unnecessary with a clearer name, a narrower type, a test, or a lint rule.
+  Comment only what remains.
+  Doc comments on exported interfaces and definitions of domain fields are written even when the code is clear.
 - State the purpose: "Exempt X from Y because Z", not "Tool T reads these marks to do U".
 - Don't narrate the steps of the code below the comment.
 - Don't retell how another file, script, or tool works, or list the call sites and consumers of this code: they change without this file changing.
 - Keep guidance on how to use a kind of file or package in the document that owns the convention, such as an architecture decision record or `AGENTS.md`, not in each instance's comment.
 - Keep a contract that callers rely on and the signature or types can't express, such as units, ordering, failure modes, or what a public function guarantees.
-- Keep the outside behavior that explains a local constraint, such as the vendor limit behind a delay or the upstream bug behind a workaround.
-  Say only the part that causes the constraint, and link the upstream report when there is one.
-  Technology groups may say more about where such comments go.
+- Keep the outside constraint that explains local code, such as a vendor limit, browser behavior, protocol requirement, or legal requirement.
+  Say only the part that causes the constraint, and link the upstream source when there is one.
+  When you don't know the reason for a value, don't guess one.
+- Delete commented-out code instead of keeping it; version control keeps the old version.
+- Don't use banner comments, such as a row of `=` or `// ---- Helpers ----`, to divide a file into sections; split the file or let the declarations speak.
 
 ### Rationale
 
@@ -103,7 +108,7 @@ func (s *Store) Reserve(ctx context.Context, sku string, n int) error
 
 Keep this comment: the all-or-none guarantee and the error are a contract the signature can't express.
 
-#### Application: A workaround for another service
+#### Application: A constraint from another service
 
 **Incorrect (counterexample):**
 
@@ -132,3 +137,5 @@ If so, and the comment retells an implementation or a convention someone else ow
 A comment that names an owner without describing its behavior is not a violation.
 Neither is a comment stating a contract the code can't express, or the outside behavior that causes a local constraint: if that behavior changed, the constraint would change with it.
 Before removing a comment, check that it isn't one of these.
+
+Commented-out code and banner comments are always violations; Go's `gocritic` `commentedOutCode` check finds the first.

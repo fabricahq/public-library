@@ -14,6 +14,7 @@ Separate a comment about one file from the `package` clause with a blank line.
 ### Implementation
 
 - For package documentation, put the comment directly above `package`, starting with `Package <name> ...`, in `doc.go` or the package's central file.
+  A `main` package is the exception: its comment describes the command, so it may start with `Command <name> ...` or another sentence about the program.
 - For a file header, leave exactly one blank line between the comment and `package`, and do not start it with `Package <name>`.
 - Keep package documentation in one file per package.
 - When there is no package-level documentation to add, write a file header rather than an accidental package doc.
@@ -31,7 +32,7 @@ A package comment separated by a blank line is not documentation at all.
 **Incorrect (counterexample):**
 
 ```go
-// Projection helpers for mock fixture JSON.
+// Mock fixtures as JSON, for local sample data only; production code never imports them.
 package devseed
 ```
 
@@ -40,7 +41,7 @@ The comment describes one file, but Go treats it as the package's documentation.
 **Correct:**
 
 ```go
-// Projection helpers for mock fixture JSON.
+// Mock fixtures as JSON, for local sample data only; production code never imports them.
 
 package devseed
 ```
@@ -67,6 +68,6 @@ package devseed
 ### Validation
 
 Run `go doc ./path/to/package` and check that it shows the intended package description and no file-specific text.
-Search for comments attached to `package` that do not start with `Package <name>`.
+Search for comments attached to `package` that do not start with `Package <name>`, except command documentation on `package main`.
 
 A file header separated from `package` by a blank line is not a violation.

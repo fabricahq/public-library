@@ -1,0 +1,3 @@
+summary: 'New rule: every lint or type-checker suppression names the one check it disables and gives a reason a reviewer can verify.'
+rules:
+  practices/documentation/give-every-suppression-a-reason: new

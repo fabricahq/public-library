@@ -1,0 +1,3 @@
+summary: The requirement to give @ts-expect-error a reason moved to the Documentation practice rule on suppressions; using @ts-expect-error instead of @ts-ignore is unchanged.
+rules:
+  techs/typescript/avoid-silencing-the-type-checker: patch

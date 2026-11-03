@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="15 groups, 134 rules" src="https://img.shields.io/badge/rules-134-brightgreen">
+  <img alt="15 groups, 139 rules" src="https://img.shields.io/badge/rules-139-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -19,18 +19,18 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Concurrency](.trailguide/rules/practices/concurrency/) | 3 | Keeping shared resources usable, rejecting obsolete results, and honoring cancellation throughout blocking operations |
 | [Performance](.trailguide/rules/practices/performance/) | 1 | Making code faster where measurement shows it matters |
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
-| [Documentation](.trailguide/rules/practices/documentation/) | 2 | Writing comments and agent guidance that carry only what the code and its owners don't already say |
-| [TypeScript](.trailguide/rules/techs/typescript/) | 19 | Writing type-safe, maintainable TypeScript |
+| [Documentation](.trailguide/rules/practices/documentation/) | 5 | Writing comments and agent guidance that carry only what the code and its owners don't already say |
+| [TypeScript](.trailguide/rules/techs/typescript/) | 20 | Writing type-safe, maintainable TypeScript |
 | [JavaScript](.trailguide/rules/techs/javascript/) | 8 | Async work, browser APIs, and build-friendly code in JavaScript and TypeScript |
 | [React](.trailguide/rules/techs/react/) | 39 | Building correct, accessible, and fast React interfaces, on the client and server |
 | [TanStack Query](.trailguide/rules/techs/tanstack-query/) | 15 | Fetching, caching, and updating server data with TanStack Query |
 | [TanStack Router](.trailguide/rules/techs/tanstack-router/) | 10 | Typed routing, data loading, and navigation with TanStack Router |
 | [Zustand](.trailguide/rules/techs/zustand/) | 10 | Managing shared client state with Zustand |
 | [Playwright](.trailguide/rules/techs/playwright/) | 2 | Writing stable browser tests with Playwright |
-| [Go](.trailguide/rules/techs/go/) | 5 | Writing clear, maintainable Go |
+| [Go](.trailguide/rules/techs/go/) | 6 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 134 rules
+### Browse all 139 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -86,20 +86,24 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 </details>
 
 <details>
-<summary><strong>Documentation</strong> · 2 rules</summary>
+<summary><strong>Documentation</strong> · 5 rules</summary>
 
 - [Comment intent, and point at the owner instead of describing it](.trailguide/rules/practices/documentation/comments-state-intent.md)
+- [Head a file with its purpose only when its name can't say it](.trailguide/rules/practices/documentation/file-header-when-name-falls-short.md)
+- [Give every lint or type-checker suppression a reason](.trailguide/rules/practices/documentation/give-every-suppression-a-reason.md)
+- [Link every TODO and workaround to where it will be resolved](.trailguide/rules/practices/documentation/link-todos-and-workarounds.md)
 - [State the current model and its reasons, not how it got there](.trailguide/rules/practices/documentation/state-the-current-model.md)
 
 </details>
 
 <details>
-<summary><strong>TypeScript</strong> · 19 rules</summary>
+<summary><strong>TypeScript</strong> · 20 rules</summary>
 
 - [Annotate types at module boundaries and where they narrow](.trailguide/rules/techs/typescript/annotate-types-at-boundaries.md)
 - [Avoid silencing the type checker](.trailguide/rules/techs/typescript/avoid-silencing-the-type-checker.md)
-- [Comment the role, the result, and the hidden constraint](.trailguide/rules/techs/typescript/comment-role-result-and-constraints.md)
+- [Give exported TypeScript interfaces and non-obvious functions doc comments stating their intent](.trailguide/rules/techs/typescript/comment-role-result-and-constraints.md)
 - [Declare constants with as const, and satisfies when a type exists](.trailguide/rules/techs/typescript/declare-constants-with-as-const.md)
+- [Define every property of a domain type](.trailguide/rules/techs/typescript/define-domain-type-properties.md)
 - [Distinguish null from undefined](.trailguide/rules/techs/typescript/distinguish-null-from-undefined.md)
 - [Generate service types from their contracts](.trailguide/rules/techs/typescript/generate-service-types-from-contracts.md)
 - [Model distinct states as discriminated unions](.trailguide/rules/techs/typescript/model-variants-as-discriminated-unions.md)
@@ -239,10 +243,11 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 </details>
 
 <details>
-<summary><strong>Go</strong> · 5 rules</summary>
+<summary><strong>Go</strong> · 6 rules</summary>
 
-- [Comment struct fields whose meaning the type does not show](.trailguide/rules/techs/go/comment-non-obvious-struct-fields.md)
+- [Define every domain field, and comment other struct fields whose meaning the type does not show](.trailguide/rules/techs/go/comment-non-obvious-struct-fields.md)
 - [Separate package documentation from file headers](.trailguide/rules/techs/go/comments-package-doc-vs-file-header.md)
+- [Give exported Go identifiers and non-obvious functions doc comments stating their intent](.trailguide/rules/techs/go/doc-comments-state-intent.md)
 - [Add operation and identifier context to errors at boundaries](.trailguide/rules/techs/go/errors-include-useful-diagnostic-data.md)
 - [Expose error identity only for contract errors](.trailguide/rules/techs/go/errors-use-contract-errors-deliberately.md)
 - [Give text and its parsed form one owner](.trailguide/rules/techs/go/one-owner-for-text-and-parsed-form.md)
