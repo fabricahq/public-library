@@ -1,0 +1,3 @@
+summary: Generated verification skills ship a tested control-<app> CLI that the agent drives one command at a time, checking the app's state after each step; named setup sequences reach a feature's starting state, and existing e2e specs are read for selectors and setup but no longer replayed as the proof.
+skills:
+  skills/create-verification-skill: major
