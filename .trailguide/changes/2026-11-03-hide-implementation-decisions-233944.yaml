@@ -1,0 +1,3 @@
+summary: Clarify lifecycle ownership, including session replacement and read/write coordination, with an editing-target example and caller-contract checks.
+rules:
+  practices/code-design/hide-implementation-decisions: minor

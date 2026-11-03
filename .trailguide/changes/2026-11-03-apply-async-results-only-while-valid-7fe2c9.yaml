@@ -1,0 +1,3 @@
+summary: Apply asynchronous results only to destinations that still accept them, covering competing cache writers, owner changes, and controlled completion-order tests.
+rules:
+  practices/concurrency/apply-async-results-only-while-valid: new

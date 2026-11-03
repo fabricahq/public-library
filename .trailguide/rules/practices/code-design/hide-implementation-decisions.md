@@ -1,6 +1,6 @@
 ---
 title: "Hide implementation decisions behind meaningful interfaces"
-whenToRead: "Before designing, changing, or reviewing how functions, classes, packages, or services work together. Read when choosing parameters, defaults, or configuration, passing dependencies, returning internal data, defining a format that more than one module reads or writes, or deciding which module performs a step."
+whenToRead: "Before designing, changing, or reviewing how functions, classes, packages, or services work together. Read when choosing parameters, defaults, or configuration, passing dependencies, returning internal data, defining a format that more than one module reads or writes, deciding which module performs a step, or managing session identity and lifetime."
 impact: "HIGH"
 impactDescription: "Callers that repeat a module's internal steps, formats, or settings can miss required work and must change whenever those details change."
 tags: "code-design, interfaces, information-hiding, ownership"
@@ -15,7 +15,7 @@ Hide implementation decisions so callers neither need to understand them nor dep
 
 A module can be a function, class, package, or service.
 Its interface is everything a caller must know to use it correctly.
-That includes arguments, return values, call order, who closes a resource, and what happens if a step fails, whether or not the type system states it.
+That includes arguments, return values, call order, session identity and lifetime, who closes a resource, and what happens if a step fails, whether or not the type system states it.
 
 Give each implementation decision one owning module.
 Any code that would have to change if the decision changed belongs in that module.
@@ -43,6 +43,9 @@ Keep the decisions about how to produce that result inside the module.
   Put the code that reads and the code that writes a format, key layout, or protocol in the module that owns it, even when they run at different times.
 - Move work into a module only when it belongs to that module's job, simplifies its callers, and keeps its interface simple.
   Moving one caller's policy into a general module, such as putting a screen's keyboard shortcuts into a text buffer, leaks that caller's decisions into the module instead.
+- Keep lifecycle coordination inside the module that owns the operation.
+  Callers choose the target and request the work without coordinating the module's internal reads, writes, and cleanup.
+  Keep caller-owned lifetime choices explicit, such as deciding how long a transaction or editing session lasts.
 - Make each module save its callers from knowing or doing something.
   If a wrapper forwards the same arguments and returns the same result, check what else it provides, such as authorization, retries, or a choice among implementations.
   If it adds nothing, remove it or move the work so each module has a clear job.
@@ -57,7 +60,7 @@ Keep the decisions about how to produce that result inside the module.
 - Build and connect dependencies where the code already knows which implementations to use.
   Give a value that only a deep component needs to that component when it is constructed, instead of adding the value to every function signature on the way down.
   A module's tests can supply substitutes to its factory without adding those parameters to every caller above it.
-- Judge an interface by what callers must understand, not by how many arguments it takes.
+- Judge a module by what callers must understand, not by its argument count or how many files implement it.
   Putting five implementation details in one options object still requires callers to know all five, and writing the fields explicitly or deriving them from another type does not remove that knowledge.
   Shared types are fine when they describe the same data: `Pick<User, 'id' | 'name'>` need not become a separate handwritten type.
 
@@ -185,6 +188,25 @@ The session module's factory still accepts dependencies, so its tests can supply
 Adding or replacing an internal session dependency does not change what the entry point must supply.
 If callers need to choose an authentication provider, expose that choice explicitly.
 
+#### Application: Changing an editing target
+
+A document pane uses `useDocument(id)` and changes `id` when the user selects another document.
+
+**Incorrect (counterexample):**
+
+The hook creates its session only on the first render and requires every caller to key an ancestor by document ID.
+Without that extra coordination, passing a new ID retains the old session, potentially displaying or saving the wrong document.
+The caller must understand the hook's internal lifetime to use it correctly.
+
+**Correct:**
+
+The owning abstraction retires the old editing session and creates the new one when the target changes.
+This can live inside the hook or in a document-pane component that owns both the hook and the remount boundary.
+The caller supplies the selected document ID.
+
+A fixed-target session is also valid when the caller intentionally owns its lifetime: `openDocument(id)` can return a session bound to that document, with a documented close operation.
+A React key is not itself a violation; it may express a caller-owned identity choice rather than compensate for an internal lifecycle assumption.
+
 #### Application: Sharing a transaction across operations
 
 A caller needs to save an order and reserve stock in one transaction: both changes must succeed, or neither should take effect.
@@ -215,6 +237,9 @@ For each argument, callback, configuration setting, or required sequence, ask:
 - Does the caller need to choose this, such as the destination file or a shared transaction?
 - Or does the caller supply it only because the module requires help with an internal step?
 - Could the module determine a value as good as the caller's, or provide a default that most callers would accept?
+
+Identify every condition callers must maintain for correctness beyond supplying valid arguments, including required remounts and coordination between reads and writes.
+For each condition, explain why the caller owns it, or move its enforcement into the owning module.
 
 Then search for the same decision encoded outside its owner: key templates, file or message layouts, magic constants, and ordering assumptions that appear in more than one module.
 
