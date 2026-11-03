@@ -1,0 +1,29 @@
+name: Skill scripts
+# Test the scripts that skills ship, on every pull request and on main. The Trail
+# Guide and README workflows check the library's files but never run these scripts.
+on:
+  pull_request:
+  push:
+    branches: ['main']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  ratchet-files:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .github/scripts/ratchet-files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The runner's preinstalled Node is new enough: the script needs 18.3 or later.
+      - name: Install test dependencies
+        run: |
+          node --version
+          npm ci --no-audit --no-fund
+      - name: Test check-file-size.mjs in temporary Git repositories
+        run: npm test

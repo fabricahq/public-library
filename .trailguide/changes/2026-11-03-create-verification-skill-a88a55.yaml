@@ -1,0 +1,3 @@
+summary: The feature map example requires that no note named CLI note exists beforehand, reopens the note created from the CLI to read its body, and keeps a snapshot of each reopened note as proof.
+skills:
+  skills/create-verification-skill: patch

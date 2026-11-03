@@ -1,0 +1,3 @@
+summary: check-file-size.mjs rejects a --max-tokens value that isn't a positive whole number instead of letting every file pass, and recognizes renames of paths with non-ASCII characters.
+skills:
+  skills/ratchet-files: patch
