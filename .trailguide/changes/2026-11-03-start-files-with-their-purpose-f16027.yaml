@@ -1,0 +1,3 @@
+summary: 'New rule: start each hand-written file with a short comment saying why it exists and what it is for.'
+rules:
+  practices/documentation/start-files-with-their-purpose: new
