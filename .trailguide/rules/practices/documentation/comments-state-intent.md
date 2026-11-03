@@ -16,7 +16,7 @@ When a reader needs the owner, name it in one clause.
 
 - Before writing a comment inside a function body, or one explaining why our own code is surprising, try to make it unnecessary with a clearer name, a narrower type, a test, or a lint rule.
   Comment only what remains.
-  Function intent comments and domain field definitions are always written.
+  Doc comments on exported interfaces and definitions of domain fields are written even when the code is clear.
 - State the purpose: "Exempt X from Y because Z", not "Tool T reads these marks to do U".
 - Don't narrate the steps of the code below the comment.
 - Don't retell how another file, script, or tool works, or list the call sites and consumers of this code: they change without this file changing.

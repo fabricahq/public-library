@@ -1,6 +1,6 @@
 ---
-title: "Give every TypeScript function a doc comment stating its intent"
-whenToRead: "Before planning, writing, changing, or reviewing a TypeScript function, method, or component, exported or not, an exported type, or a TypeScript file header."
+title: "Give exported TypeScript interfaces and non-obvious functions doc comments stating their intent"
+whenToRead: "Before planning, writing, changing, or reviewing a TypeScript function, method, class, or component, exported or not, an exported type, a TypeScript file header, or the lint configuration that checks doc comments."
 impact: "MEDIUM"
 impactDescription: "Missing or filler doc comments force readers and agents to trace implementations to learn what a function is for and what callers can rely on."
 tags: "typescript, comments, tsdoc, documentation"
@@ -9,16 +9,20 @@ attribution:
     description: "Adapted from mkosir TypeScript Style Guide guidance (comment-role-result-and-constraints; MIT, notice retained in NOTICE.md): restructured to the rule template, extended with contract-first design, and narrowed to TSDoc form and tooling for function intent and file headers."
 ---
 
-## Give every TypeScript function a doc comment stating its intent
+## Give exported TypeScript interfaces and non-obvious functions doc comments stating their intent
 
-Give every function, method, and component, exported or not, a one-sentence TSDoc comment stating its intent: what it accomplishes for its caller, not how.
-For exported functions, types, and components, add only what callers can rely on beyond the name and signature, such as ordering, case, locale, units, mutation, empty input, and failure modes.
-If the intent or contract needs more than a few sentences, simplify the function or API.
+A doc comment carries what a reader needs that the name, types, and code don't already say.
+Give every exported function, class, method, type, and component a TSDoc comment that states its intent: what it accomplishes for its caller, not how.
+Add what callers can rely on beyond the name and signature, such as ordering, case, locale, units, mutation, empty input, cancellation, atomicity, and failure modes, and document every guarantee callers depend on.
+Give an unexported function or method the same kind of comment when its intent or constraints aren't apparent from its name and signature.
+Inline callbacks, such as the function passed to `map` or an event handler written in place, need none.
 
 ### Implementation
 
 - **Intent, not filler:** a comment that restates the name fails, such as `/** Parses rows. */` on `parseRows`.
   Say what the caller gets that the name doesn't.
+  When an unexported function has nothing to add, such as `isEmpty`, leave it uncommented rather than write filler.
+- **Length as a signal:** when the intent or contract takes more than a few sentences, reconsider the interface, but document a cohesive operation's guarantees in full rather than cut them.
 - **Form:** write doc comments as `/** ... */` directly above the declaration.
   Drop `@param` and `@returns` tags that repeat names and types; keep `@throws` only when it names the condition.
 - **Contract first:** draft the contract of a new or materially changed exported interface before its implementation.
@@ -84,6 +88,7 @@ function parseRow(line: string): Transaction {
 ```
 
 The sentence says what the caller gets that the name doesn't.
+A helper like `const isBlank = (s: string) => s.trim() === '';` needs no comment: its name and body already say everything.
 
 #### Application: An observable result
 
@@ -107,8 +112,33 @@ export function sortFolders(folders: ReadonlyArray<Folder>): Array<Folder> {
 
 ### Validation
 
-Check that each function has a doc comment stating its intent, and that each export's comment states the contract its signature doesn't show.
+Check that each exported function, class, method, type, and component has a doc comment stating its intent, and that it states the contract its signature doesn't show.
 For a new or materially changed interface, inspect its drafted contract and confirm the finished behavior matches it.
-Lint for presence and filler with `eslint-plugin-jsdoc`: enable `require-jsdoc` with `publicOnly: false`, `require-description`, and `informative-docs`, and disable `require-param` and `require-returns`.
+
+Lint the exported scope with `eslint-plugin-jsdoc`.
+`require-jsdoc` checks only function declarations by default, so list the other forms explicitly:
+
+```js
+'jsdoc/require-jsdoc': ['error', {
+  publicOnly: true,
+  require: {
+    FunctionDeclaration: true,
+    FunctionExpression: true,
+    ArrowFunctionExpression: true,
+    ClassDeclaration: true,
+    MethodDefinition: true,
+  },
+  contexts: ['TSInterfaceDeclaration', 'TSTypeAliasDeclaration'],
+}],
+'jsdoc/require-description': 'error',
+'jsdoc/informative-docs': 'error',
+'jsdoc/require-param': 'off',
+'jsdoc/require-returns': 'off',
+```
+
+With this configuration, `export function f() {}`, `export const f = () => {}`, an exported class and its public methods, and exported types and interfaces fail without a doc comment.
+Unexported functions, `private` methods, and inline callbacks pass without one, because whether their intent is apparent is a judgment for review.
+`informative-docs` fails a description made only of the name's words, such as `/** Parse rows. */` on `parseRows`, but passes `/** Parses rows. */`, so review still judges whether each comment states intent rather than restating the name.
 `require-file-overview` recognizes only the `@file` block form, so a project that checks `//` headers needs its own check.
-Review judges whether each comment states intent rather than restating the name.
+
+An unexported function without a comment is not a violation when its name and signature say everything a reader needs.

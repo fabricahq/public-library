@@ -1,3 +1,3 @@
-summary: Every field of a domain type now needs a one-sentence definition of the term, including units, scope, and lifecycle; other structs keep the existing narrow cases.
+summary: 'Every field of a domain type now needs a one-sentence definition of the term, or of its role when a reusable domain type such as Money owns the term; short comments may sit after the field; other structs keep the existing narrow cases.'
 rules:
   techs/go/comment-non-obvious-struct-fields: major

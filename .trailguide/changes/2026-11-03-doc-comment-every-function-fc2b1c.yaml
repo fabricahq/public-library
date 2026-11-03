@@ -1,3 +1,0 @@
-summary: 'New rule: every Go function, exported or not, gets a one-sentence doc comment that starts with its name and states its intent; exported identifiers add only the contract the signature can''t show, and main packages get a command comment.'
-rules:
-  techs/go/doc-comment-every-function: new

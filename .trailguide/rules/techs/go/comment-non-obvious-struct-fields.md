@@ -10,9 +10,12 @@ tags: "go, comments, structs, invariants, domain"
 
 In domain types, give every field a one-sentence comment defining what the term means in this domain, including units, scope, and lifecycle when they apply.
 Fields like `Status` or `Balance` look self-describing but rarely are.
+When the field's type is a reusable domain type, such as `Money` or `InvoiceStatus`, that type's doc comment owns the shared meaning: the field's comment states only its particular role or extra constraints.
 Outside domain types, comment a field only when its meaning includes a durable fact that its name and type cannot express, and skip fields whose name and type already say everything.
 
 ### Implementation
+
+Put a short comment after the field on the same line when it fits within the line length the project uses; otherwise put it on the line above.
 
 A domain type is a struct that represents a business concept rather than plumbing or transport, such as the types in a `domain/` or `model/` package.
 A request or response DTO, a database row struct, a config struct, or a service struct holding dependencies is not a domain type.
@@ -67,6 +70,34 @@ type Invoice struct {
 }
 ```
 
+#### Application: A field whose type owns the term
+
+**Incorrect (counterexample):**
+
+```go
+// Money is an amount in the smallest unit of its currency.
+type Money struct {
+	Amount   int64
+	Currency string
+}
+
+type Invoice struct {
+	Balance Money // Balance is an amount in the smallest unit of its currency.
+}
+```
+
+The field repeats `Money`'s definition, so the two can drift apart.
+
+**Correct:**
+
+```go
+type Invoice struct {
+	Balance Money // still owed after payments and credits applied so far
+}
+```
+
+The field states only its role; `Money` keeps the meaning of the amount.
+
 #### Application: A non-domain struct
 
 **Incorrect (counterexample):**
@@ -102,7 +133,7 @@ type documentRow struct {
 
 ### Validation
 
-In domain types, check that every field has a one-sentence definition of the term, not a restatement of its name.
+In domain types, check that every field has a one-sentence definition of the term or, when its type owns the term, of its role, and not a restatement of its name.
 For each commented field, check that the comment would stay true if the methods that write the field changed but the field's meaning did not.
 For each uncommented field with a pointer, zero-value, or cross-module meaning, check that its meaning is obvious from the name and type.
 

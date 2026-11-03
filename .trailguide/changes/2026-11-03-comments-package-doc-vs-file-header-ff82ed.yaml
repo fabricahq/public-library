@@ -1,3 +1,3 @@
-summary: The file header example now states what the file is not for instead of a generic label.
+summary: 'A main package''s comment may start with Command <name> instead of Package <name>, and the file header example now states what the file is not for.'
 rules:
-  techs/go/comments-package-doc-vs-file-header: patch
+  techs/go/comments-package-doc-vs-file-header: minor

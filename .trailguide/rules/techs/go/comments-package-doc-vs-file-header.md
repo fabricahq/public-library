@@ -14,6 +14,7 @@ Separate a comment about one file from the `package` clause with a blank line.
 ### Implementation
 
 - For package documentation, put the comment directly above `package`, starting with `Package <name> ...`, in `doc.go` or the package's central file.
+  A `main` package is the exception: its comment describes the command, so it may start with `Command <name> ...` or another sentence about the program.
 - For a file header, leave exactly one blank line between the comment and `package`, and do not start it with `Package <name>`.
 - Keep package documentation in one file per package.
 - When there is no package-level documentation to add, write a file header rather than an accidental package doc.

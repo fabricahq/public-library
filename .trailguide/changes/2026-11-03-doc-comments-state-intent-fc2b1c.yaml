@@ -1,0 +1,3 @@
+summary: 'New rule: exported Go identifiers and unexported functions whose intent isn''t apparent get a doc comment that starts with the name and states its intent and the guarantees callers rely on; main packages get a command comment.'
+rules:
+  techs/go/doc-comments-state-intent: new

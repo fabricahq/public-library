@@ -101,7 +101,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 
 - [Annotate types at module boundaries and where they narrow](.trailguide/rules/techs/typescript/annotate-types-at-boundaries.md)
 - [Avoid silencing the type checker](.trailguide/rules/techs/typescript/avoid-silencing-the-type-checker.md)
-- [Give every TypeScript function a doc comment stating its intent](.trailguide/rules/techs/typescript/comment-role-result-and-constraints.md)
+- [Give exported TypeScript interfaces and non-obvious functions doc comments stating their intent](.trailguide/rules/techs/typescript/comment-role-result-and-constraints.md)
 - [Declare constants with as const, and satisfies when a type exists](.trailguide/rules/techs/typescript/declare-constants-with-as-const.md)
 - [Define every property of a domain type](.trailguide/rules/techs/typescript/define-domain-type-properties.md)
 - [Distinguish null from undefined](.trailguide/rules/techs/typescript/distinguish-null-from-undefined.md)
@@ -247,7 +247,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 
 - [Define every domain field, and comment other struct fields whose meaning the type does not show](.trailguide/rules/techs/go/comment-non-obvious-struct-fields.md)
 - [Separate package documentation from file headers](.trailguide/rules/techs/go/comments-package-doc-vs-file-header.md)
-- [Give every Go function a doc comment stating its intent](.trailguide/rules/techs/go/doc-comment-every-function.md)
+- [Give exported Go identifiers and non-obvious functions doc comments stating their intent](.trailguide/rules/techs/go/doc-comments-state-intent.md)
 - [Add operation and identifier context to errors at boundaries](.trailguide/rules/techs/go/errors-include-useful-diagnostic-data.md)
 - [Expose error identity only for contract errors](.trailguide/rules/techs/go/errors-use-contract-errors-deliberately.md)
 - [Give text and its parsed form one owner](.trailguide/rules/techs/go/one-owner-for-text-and-parsed-form.md)

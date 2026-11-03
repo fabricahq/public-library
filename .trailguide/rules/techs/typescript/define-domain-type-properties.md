@@ -9,6 +9,7 @@ tags: "typescript, comments, tsdoc, domain, types"
 ## Define every property of a domain type
 
 In a domain type or interface, give every property a one-sentence TSDoc comment defining what the term means in this domain, including units, scope, and lifecycle when they apply.
+When the property's type is a reusable domain type, such as `Money` or `InvoiceStatus`, that type's doc comment owns the shared meaning: the property's comment states only its particular role or extra constraints.
 Outside domain types, comment a property only for what its name and type can't show: what an optional or null value means, an invariant it takes part in, or a reference to something another module owns.
 
 ### Implementation
@@ -48,6 +49,22 @@ type Invoice = {
 };
 ```
 
+#### Application: A property whose type owns the term
+
+**Correct:**
+
+```ts
+/** An amount in the smallest unit of its currency. */
+type Money = { amount: number; currency: CurrencyCode };
+
+type Invoice = {
+  /** Still owed after payments and credits applied so far. */
+  balance: Money;
+};
+```
+
+`Money` defines the amount once; the property states only its role.
+
 #### Application: A non-domain type
 
 **Correct:**
@@ -64,7 +81,7 @@ Only the optional property carries a meaning its type can't show, so only it get
 
 ### Validation
 
-In domain types, check that every property has a one-sentence definition of the term, not a restatement of its name.
+In domain types, check that every property has a one-sentence definition of the term or, when its type owns the term, of its role, and not a restatement of its name.
 Outside domain types, check that each uncommented optional, nullable, or cross-module property has a meaning obvious from its name and type.
 
 A self-describing property outside a domain type without a comment is not a violation.
