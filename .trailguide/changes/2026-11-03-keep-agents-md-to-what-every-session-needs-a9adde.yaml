@@ -1,0 +1,3 @@
+summary: 'New rule: an always-loaded agent instruction file holds only what almost every session needs and can''t see in the code, points to the owners of everything else, moves narrow procedures out, keeps CLAUDE.md as only @AGENTS.md, and replaces an exceptionless rule with one line that names its check.'
+rules:
+  practices/agents-md/keep-agents-md-to-what-every-session-needs: new

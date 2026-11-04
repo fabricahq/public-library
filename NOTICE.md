@@ -154,3 +154,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## runner-up
+
+The AGENTS.md rule "End AGENTS.md with a section on maintaining it" quotes Kun Chen's "Maintaining this file" section verbatim, as a starting template projects may adapt, from his repositories: [runner-up's AGENTS.md](https://github.com/kunchenguid/runner-up/blob/main/AGENTS.md) and [backpass's AGENTS.md](https://github.com/kunchenguid/backpass/blob/main/AGENTS.md). He describes that footer in [Your AGENTS.md is a neural net](https://blog.kunchenguid.com/p/your-agentsmd-is-a-neural-net). The text in this library is taken from runner-up at commit aba66beab5956684c23b21a08317711648b5107b. Both repositories publish the MIT notice below; it follows unchanged:
+
+MIT License
+
+Copyright (c) 2026 Kun Chen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

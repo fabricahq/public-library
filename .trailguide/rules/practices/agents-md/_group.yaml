@@ -1,0 +1,3 @@
+name: AGENTS.md
+description: Write always-loaded agent instruction files, such as AGENTS.md, so every line earns its cost in every session, stays true, and has one place to be maintained.
+whenToRead: When creating, adding to, pruning, restructuring, or reviewing an agent instruction file, such as a root or nested AGENTS.md or a CLAUDE.md, or when a change alters a command, directory, or invariant one of those files describes.
