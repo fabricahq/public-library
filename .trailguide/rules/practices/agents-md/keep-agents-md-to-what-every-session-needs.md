@@ -1,12 +1,14 @@
 ---
 title: "Keep AGENTS.md to what almost every session needs and can't see"
-whenToRead: "Before adding an entry to, pruning, or reviewing an always-loaded agent instruction file, such as a root or nested AGENTS.md, including when a change alters a command, directory, or invariant that file describes."
+whenToRead: "Before adding an entry to, pruning, or reviewing an always-loaded agent instruction file, such as a root or nested AGENTS.md or the CLAUDE.md beside it, including when a change alters a command, directory, or invariant that file describes."
 impact: "MEDIUM"
 impactDescription: "Entries that restate the code or matter to a few tasks dilute the ones every task needs, and copies of what other files own go stale without anything failing."
 tags: "agents-md"
 attribution:
   - url: https://blog.kunchenguid.com/p/your-agentsmd-is-a-neural-net
-    description: "Draws on Kun Chen's guidance that a project AGENTS.md holds only what almost every session needs, with narrow material moved to skills; restated, not copied."
+    description: "Draws on Kun Chen's guidance that a project AGENTS.md holds only what almost every session needs, with narrow material moved to skills, and that CLAUDE.md is only the import line @AGENTS.md; restated, not copied."
+  - url: https://openai.com/index/harness-engineering/
+    description: "The bullet on an exceptionless rule follows OpenAI's harness-engineering guidance to enforce invariants mechanically rather than by instruction; restated, not copied."
 ---
 
 ## Keep AGENTS.md to what almost every session needs and can't see
@@ -21,7 +23,9 @@ For anything an existing file, command, or test already states, write a pointer 
 - **Leave out:** what reading the code shows, such as a full directory tree, a flag table, or a convention every file already follows; advice the agent follows without being told, such as "write clean code"; and a reaction to one incident that hasn't recurred.
 - **Move narrow material out:** a procedure most sessions don't need, such as cutting a release, goes in a skill whose description names when to use it, the document that owns it, or a nested AGENTS.md for the directory it concerns.
   Leave at most one line behind, and only when the step is easy to miss and costly to skip.
-- **Write each entry as one plain instruction or fact,** without emphasis such as IMPORTANT or capitals.
+- **Write each entry as one plain instruction or fact.**
+- When a rule has no exceptions and a test, lint rule, or hook can check it, add the check and keep one line naming it; don't use capitals or "IMPORTANT" for emphasis.
+- Keep instructions in AGENTS.md and make CLAUDE.md only `@AGENTS.md`; a symlink or a "see AGENTS.md" line makes the agent spend a turn reading the file instead of loading it.
 
 A safety-critical entry stays even when few sessions need it.
 
