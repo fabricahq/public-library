@@ -5,13 +5,15 @@ impact: "MEDIUM"
 impactDescription: "Agents edit AGENTS.md as often as people do, and without the bar written in the file, each edit appends to it and restates what the code already shows."
 tags: "agents-md"
 attribution:
-  - url: https://github.com/kunchenguid/runner-up/blob/aba66beab5956684c23b21a08317711648b5107b/AGENTS.md#L45-L50
-    description: "The section text is copied verbatim from Kun Chen's runner-up AGENTS.md, which also ships as the starter section in his backpass tool; MIT License, Copyright (c) 2026 Kun Chen."
+  - url: https://github.com/kunchenguid/runner-up/blob/main/AGENTS.md
+    description: "The 'Maintaining this file' footer is Kun Chen's text, quoted verbatim from his repositories (runner-up and backpass); MIT License, Copyright (c) 2026 Kun Chen, notice retained in NOTICE.md."
+  - url: https://blog.kunchenguid.com/p/your-agentsmd-is-a-neural-net
+    description: "Kun Chen's guidance for a short AGENTS.md; the maintenance footer this rule quotes is his text, quoted verbatim from his repositories."
 ---
 
 ## End AGENTS.md with a section on maintaining it
 
-Close a project's AGENTS.md with this section, word for word:
+Close a project's AGENTS.md with this section, word for word. These four sentences are Kun Chen's text, quoted verbatim from his repositories:
 
 ```md
 ## Maintaining this file
