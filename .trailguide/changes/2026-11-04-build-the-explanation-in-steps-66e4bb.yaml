@@ -1,0 +1,3 @@
+summary: 'New rule: build an explanation from what the reader already knows, supplying each premise and walking through a concrete case before stating the lesson.'
+rules:
+  practices/writing/build-the-explanation-in-steps: new

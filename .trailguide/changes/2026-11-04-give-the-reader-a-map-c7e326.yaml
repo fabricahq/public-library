@@ -1,0 +1,3 @@
+summary: 'New rule: give a long piece an opening that says why it matters, a map or sequence the sections follow, headings that name what each section contributes, and a close that resolves the opening.'
+rules:
+  practices/writing/give-the-reader-a-map: new

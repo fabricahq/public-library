@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="16 groups, 142 rules" src="https://img.shields.io/badge/rules-142-brightgreen">
+  <img alt="17 groups, 148 rules" src="https://img.shields.io/badge/rules-148-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -21,6 +21,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
 | [Documentation](.trailguide/rules/practices/documentation/) | 5 | Writing comments and agent guidance that carry only what the code and its owners don't already say |
 | [AGENTS.md](.trailguide/rules/practices/agents-md/) | 3 | Keeping AGENTS.md and other always-loaded agent instructions short, owned in one place, and enforced by checks where they can be |
+| [Writing](.trailguide/rules/practices/writing/) | 6 | Writing blog posts, announcements, and page copy that readers can follow, believe, and finish |
 | [TypeScript](.trailguide/rules/techs/typescript/) | 20 | Writing type-safe, maintainable TypeScript |
 | [JavaScript](.trailguide/rules/techs/javascript/) | 8 | Async work, browser APIs, and build-friendly code in JavaScript and TypeScript |
 | [React](.trailguide/rules/techs/react/) | 39 | Building correct, accessible, and fast React interfaces, on the client and server |
@@ -31,7 +32,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Go](.trailguide/rules/techs/go/) | 6 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 142 rules
+### Browse all 148 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -103,6 +104,18 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 - [End AGENTS.md with a section on maintaining it](.trailguide/rules/practices/agents-md/end-agents-md-with-a-maintenance-section.md)
 - [Hold a size budget for always-loaded agent instructions](.trailguide/rules/practices/agents-md/hold-a-budget-for-always-loaded-instructions.md)
 - [Keep AGENTS.md to what almost every session needs and can't see](.trailguide/rules/practices/agents-md/keep-agents-md-to-what-every-session-needs.md)
+
+</details>
+
+<details>
+<summary><strong>Writing</strong> · 6 rules</summary>
+
+- [Build the explanation in steps](.trailguide/rules/practices/writing/build-the-explanation-in-steps.md)
+- [Give the reader a map, then follow it](.trailguide/rules/practices/writing/give-the-reader-a-map.md)
+- [Make important abstractions concrete](.trailguide/rules/practices/writing/make-abstractions-concrete.md)
+- [Make the actor and action clear](.trailguide/rules/practices/writing/name-who-acts.md)
+- [Take a side and earn it](.trailguide/rules/practices/writing/take-a-side.md)
+- [Write to one reader as if they're across the table](.trailguide/rules/practices/writing/write-to-one-reader.md)
 
 </details>
 
@@ -313,6 +326,7 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
      --rules 'practices/performance/*' \
      --rules 'practices/readmes/*' \
      --rules 'practices/testing/*' \
+     --rules 'practices/writing/*' \
      --rules 'techs/go/*' \
      --rules 'techs/goose/*' \
      --rules 'techs/javascript/*' \

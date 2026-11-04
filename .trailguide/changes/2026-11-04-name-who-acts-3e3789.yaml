@@ -1,0 +1,3 @@
+summary: 'New rule: make clear who performs each action in published prose, preferring concrete subjects and direct verbs over buried nouns and needless passive voice.'
+rules:
+  practices/writing/name-who-acts: new
