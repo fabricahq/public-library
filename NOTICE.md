@@ -157,7 +157,7 @@ SOFTWARE.
 
 ## runner-up
 
-The AGENTS.md rule "End AGENTS.md with a section on maintaining it" quotes Kun Chen's "Maintaining this file" section verbatim from his repositories: [runner-up's AGENTS.md](https://github.com/kunchenguid/runner-up/blob/main/AGENTS.md) and [backpass's AGENTS.md](https://github.com/kunchenguid/backpass/blob/main/AGENTS.md). He describes that footer in [Your AGENTS.md is a neural net](https://blog.kunchenguid.com/p/your-agentsmd-is-a-neural-net). The text in this library is taken from runner-up at commit aba66beab5956684c23b21a08317711648b5107b. Both repositories publish the MIT notice below; it follows unchanged:
+The AGENTS.md rule "End AGENTS.md with a section on maintaining it" quotes Kun Chen's "Maintaining this file" section verbatim, as a starting template projects may adapt, from his repositories: [runner-up's AGENTS.md](https://github.com/kunchenguid/runner-up/blob/main/AGENTS.md) and [backpass's AGENTS.md](https://github.com/kunchenguid/backpass/blob/main/AGENTS.md). He describes that footer in [Your AGENTS.md is a neural net](https://blog.kunchenguid.com/p/your-agentsmd-is-a-neural-net). The text in this library is taken from runner-up at commit aba66beab5956684c23b21a08317711648b5107b. Both repositories publish the MIT notice below; it follows unchanged:
 
 MIT License
 

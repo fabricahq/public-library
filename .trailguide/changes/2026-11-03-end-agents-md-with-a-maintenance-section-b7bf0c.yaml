@@ -1,3 +1,3 @@
-summary: 'New rule: close a project''s AGENTS.md with Kun Chen''s four-sentence ''Maintaining this file'' section, word for word.'
+summary: 'New rule: end a project''s AGENTS.md with a short maintenance section that states four principles (broadly useful or costly to violate, point at the owner, rewrite or prune, stay concise). Kun Chen''s footer is a starting template projects may adapt, not required wording.'
 rules:
   practices/agents-md/end-agents-md-with-a-maintenance-section: new
