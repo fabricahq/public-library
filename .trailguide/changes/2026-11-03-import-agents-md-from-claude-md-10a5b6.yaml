@@ -1,0 +1,3 @@
+summary: 'New rule: keep instructions in AGENTS.md and make CLAUDE.md only the import line @AGENTS.md, not a symlink, a copy, or a pointer sentence.'
+rules:
+  practices/agents-md/import-agents-md-from-claude-md: new

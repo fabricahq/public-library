@@ -1,0 +1,3 @@
+summary: 'New rule: hold a size budget for the root instruction file, its imports, and skill descriptions; pay for additions by pruning or moving entries, and rewrite entries instead of appending corrections.'
+rules:
+  practices/agents-md/hold-a-budget-for-always-loaded-instructions: new

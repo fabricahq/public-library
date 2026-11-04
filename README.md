@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="15 groups, 139 rules" src="https://img.shields.io/badge/rules-139-brightgreen">
+  <img alt="16 groups, 144 rules" src="https://img.shields.io/badge/rules-144-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -20,6 +20,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Performance](.trailguide/rules/practices/performance/) | 1 | Making code faster where measurement shows it matters |
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
 | [Documentation](.trailguide/rules/practices/documentation/) | 5 | Writing comments and agent guidance that carry only what the code and its owners don't already say |
+| [AGENTS.md](.trailguide/rules/practices/agents-md/) | 5 | Keeping AGENTS.md and other always-loaded agent instructions short, owned in one place, and enforced by checks where they can be |
 | [TypeScript](.trailguide/rules/techs/typescript/) | 20 | Writing type-safe, maintainable TypeScript |
 | [JavaScript](.trailguide/rules/techs/javascript/) | 8 | Async work, browser APIs, and build-friendly code in JavaScript and TypeScript |
 | [React](.trailguide/rules/techs/react/) | 39 | Building correct, accessible, and fast React interfaces, on the client and server |
@@ -30,7 +31,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Go](.trailguide/rules/techs/go/) | 6 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 139 rules
+### Browse all 144 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -93,6 +94,17 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 - [Give every lint or type-checker suppression a reason](.trailguide/rules/practices/documentation/give-every-suppression-a-reason.md)
 - [Link every TODO and workaround to where it will be resolved](.trailguide/rules/practices/documentation/link-todos-and-workarounds.md)
 - [State the current model and its reasons, not how it got there](.trailguide/rules/practices/documentation/state-the-current-model.md)
+
+</details>
+
+<details>
+<summary><strong>AGENTS.md</strong> · 5 rules</summary>
+
+- [End AGENTS.md with a section on maintaining it](.trailguide/rules/practices/agents-md/end-agents-md-with-a-maintenance-section.md)
+- [Enforce an instruction that has no exceptions with a check](.trailguide/rules/practices/agents-md/enforce-exceptionless-instructions-with-a-check.md)
+- [Hold a size budget for always-loaded agent instructions](.trailguide/rules/practices/agents-md/hold-a-budget-for-always-loaded-instructions.md)
+- [Keep instructions in AGENTS.md, and import it from CLAUDE.md](.trailguide/rules/practices/agents-md/import-agents-md-from-claude-md.md)
+- [Keep AGENTS.md to what almost every session needs and can't see](.trailguide/rules/practices/agents-md/keep-agents-md-to-what-every-session-needs.md)
 
 </details>
 
@@ -296,6 +308,7 @@ Each rule has its own semantic version, such as `1.2.0`. A major version means c
    ```sh
    trailguide project add source fabrica \
      --repository https://github.com/fabricahq/public-library.git \
+     --rules 'practices/agents-md/*' \
      --rules 'practices/code-design/*' \
      --rules 'practices/concurrency/*' \
      --rules 'practices/documentation/*' \

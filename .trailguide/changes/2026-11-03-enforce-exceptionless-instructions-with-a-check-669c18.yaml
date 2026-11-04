@@ -1,0 +1,3 @@
+summary: 'New rule: enforce an instruction that must always hold with a test, lint rule, CI job, or hook, and keep one line naming the rule and its check instead of emphasis.'
+rules:
+  practices/agents-md/enforce-exceptionless-instructions-with-a-check: new
