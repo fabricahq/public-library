@@ -1,6 +1,6 @@
 ---
 title: "Build the explanation in steps"
-whenToRead: "Before drafting, editing, or reviewing prose that teaches an unfamiliar concept, explains how something works, or leads readers through a technical argument. Not for code comments or docstrings, which follow the Documentation group's \"Write comments in plain, direct language\" rule."
+whenToRead: "Before drafting, editing, or reviewing prose that teaches an unfamiliar concept, explains how something works, or leads readers through a technical argument. Not meant for code comments or docstrings."
 impact: "MEDIUM"
 impactDescription: "Readers lose the argument when a conclusion depends on terms or reasoning the piece has not explained."
 tags: "writing, explanation, reasoning"

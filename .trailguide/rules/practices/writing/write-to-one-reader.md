@@ -1,6 +1,6 @@
 ---
 title: "Write to one reader as if they're across the table"
-whenToRead: "Before drafting, editing, or reviewing the tone of blog posts, announcements, newsletters, or other first-person writing, including openings, transitions, and conclusions. Not for code comments or docstrings, which follow the Documentation group's \"Write comments in plain, direct language\" rule."
+whenToRead: "Before drafting, editing, or reviewing the tone of blog posts, announcements, newsletters, or other first-person writing, including openings, transitions, and conclusions. Not meant for code comments or docstrings."
 impact: "LOW-MEDIUM"
 impactDescription: "Impersonal, lecture-style prose loses readers' attention, so fewer of them reach the point."
 tags: "writing, voice, tone"
