@@ -1,6 +1,6 @@
 ---
 title: "Give the reader a map, then follow it"
-whenToRead: "Before planning, outlining, drafting, or reviewing the structure of a blog post, announcement, or other piece long enough to need section headings, including its opening, headings, and conclusion."
+whenToRead: "Before planning, outlining, drafting, or reviewing the structure of a blog post, announcement, or other piece long enough to need section headings, including its opening, headings, and conclusion. Not for code comments or docstrings, which follow the Documentation group's \"Write comments in plain, direct language\" rule."
 impact: "MEDIUM"
 impactDescription: "Readers abandon long pieces when they cannot tell what they will learn or how the sections connect."
 tags: "writing, structure, headings"

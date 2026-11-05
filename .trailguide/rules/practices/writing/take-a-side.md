@@ -1,6 +1,6 @@
 ---
 title: "Take a side and earn it"
-whenToRead: "Before drafting, editing, or reviewing writing that argues for a position, recommends a choice, compares options, or asks readers to adopt something, including its thesis and conclusion."
+whenToRead: "Before drafting, editing, or reviewing writing that argues for a position, recommends a choice, compares options, or asks readers to adopt something, including its thesis and conclusion. Not for code comments or docstrings, which follow the Documentation group's \"Write comments in plain, direct language\" rule."
 impact: "MEDIUM"
 impactDescription: "Hedged or one-sided arguments give readers nothing to act on and lose skeptical readers' trust."
 tags: "writing, argument, persuasion"

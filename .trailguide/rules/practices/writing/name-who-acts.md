@@ -1,6 +1,6 @@
 ---
 title: "Make the actor and action clear"
-whenToRead: "Before drafting, editing, or reviewing sentences in published prose, such as blog posts, announcements, or page copy, especially sentences that describe what a person, team, or product does."
+whenToRead: "Before drafting, editing, or reviewing sentences in published prose, such as blog posts, announcements, or page copy, especially sentences that describe what a person, team, or product does. Not for code comments or docstrings, which follow the Documentation group's \"Write comments in plain, direct language\" rule."
 impact: "MEDIUM"
 impactDescription: "Sentences that bury the actor or the action in nouns and passive voice make readers reread or skim past the point."
 tags: "writing, voice, verbs"

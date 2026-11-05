@@ -1,6 +1,6 @@
 ---
 title: "Write comments in plain, direct language"
-whenToRead: "Before writing, changing, or reviewing a code or configuration comment, such as a file header, package, type, function, or field documentation, or a comment inside a function body."
+whenToRead: "Before writing, changing, or reviewing a code or configuration comment, such as a file header, package, type, function, or field documentation, or a comment inside a function body. Use this rule, not the Writing group's rules, for the prose of any comment or docstring."
 impact: "MEDIUM"
 impactDescription: "A comment that readers must parse twice slows every later change to its code, and one they misread leads people and agents to change the code wrongly."
 tags: "comments, documentation, writing"

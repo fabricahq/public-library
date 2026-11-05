@@ -1,6 +1,6 @@
 ---
 title: "Make important abstractions concrete"
-whenToRead: "Before drafting, editing, or reviewing prose that makes a claim or explains an idea, such as describing a benefit, the size of a problem, a tradeoff, or how something works."
+whenToRead: "Before drafting, editing, or reviewing prose that makes a claim or explains an idea, such as describing a benefit, the size of a problem, a tradeoff, or how something works. Not for code comments or docstrings, which follow the Documentation group's \"Write comments in plain, direct language\" rule."
 impact: "MEDIUM"
 impactDescription: "Claims without numbers, examples, or analogies are hard to check, picture, or remember, so readers discount or forget them."
 tags: "writing, examples, analogies"
