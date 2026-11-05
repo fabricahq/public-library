@@ -1,0 +1,3 @@
+summary: 'New rule: write code comments a maintainer understands on the first read, with the actor, action, condition, and consequence clear, related words kept together, and project-specific shorthand explained. Clear comments in any sentence shape need no rewrite.'
+rules:
+  practices/documentation/write-comments-for-the-first-read: new
