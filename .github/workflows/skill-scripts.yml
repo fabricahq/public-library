@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   ratchet-files:
-    runs-on: ${{ fromJSON(vars.CI_RUNNERS).linux }}
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     defaults:
       run:
         working-directory: .github/scripts/ratchet-files
