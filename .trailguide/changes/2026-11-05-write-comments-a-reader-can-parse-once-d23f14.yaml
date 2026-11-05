@@ -1,0 +1,3 @@
+summary: 'New rule: write code comments as plain sentences a maintainer understands on the first read, with a subject from the code, its verb next to it, one idea per sentence, and no coined terms.'
+rules:
+  practices/documentation/write-comments-a-reader-can-parse-once: new

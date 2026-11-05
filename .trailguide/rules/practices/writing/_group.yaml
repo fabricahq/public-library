@@ -1,3 +1,3 @@
 name: Writing
-description: Write readable, engaging prose for blog posts, announcements, page copy, and other writing people read for its ideas.
-whenToRead: Before planning, drafting, editing, or reviewing prose that people read for its ideas, such as blog posts, announcements, landing page copy, newsletters, or social posts, including small wording edits to existing copy.
+description: Write readable, engaging prose for blog posts, announcements, page copy, and other writing people read for its ideas. Code comments and technical documentation belong to the Documentation group instead.
+whenToRead: Before planning, drafting, editing, or reviewing prose that people read for its ideas, such as blog posts, announcements, landing page copy, newsletters, or social posts, including small wording edits to existing copy. Not for code comments, docstrings, or reference documentation.

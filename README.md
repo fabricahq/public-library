@@ -3,7 +3,7 @@
 <p>
   <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://github.com/fabricahq/trailguide"><img alt="A Trail Guide library" src="https://img.shields.io/badge/Trail%20Guide-library-6f42c1"></a>
-  <img alt="17 groups, 148 rules" src="https://img.shields.io/badge/rules-148-brightgreen">
+  <img alt="17 groups, 149 rules" src="https://img.shields.io/badge/rules-149-brightgreen">
 </p>
 
 Fabrica Public Library is a collection of engineering rules and skills that tell coding agents how to write and review production-grade code. Each rule covers one practice, such as reproducing a bug with a test before fixing it, or narrowing unknown values in TypeScript, with examples of what to do, what to avoid, and what a reviewer should check.
@@ -19,7 +19,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Concurrency](.trailguide/rules/practices/concurrency/) | 3 | Keeping shared resources usable, rejecting obsolete results, and honoring cancellation throughout blocking operations |
 | [Performance](.trailguide/rules/practices/performance/) | 1 | Making code faster where measurement shows it matters |
 | [READMEs](.trailguide/rules/practices/readmes/) | 5 | Writing READMEs that say what a product does for the reader, get them to a first result, and fit the product's tier |
-| [Documentation](.trailguide/rules/practices/documentation/) | 5 | Writing comments and agent guidance that carry only what the code and its owners don't already say |
+| [Documentation](.trailguide/rules/practices/documentation/) | 6 | Writing comments and agent guidance that carry only what the code and its owners don't already say, in sentences that read clearly the first time |
 | [AGENTS.md](.trailguide/rules/practices/agents-md/) | 3 | Keeping AGENTS.md and other always-loaded agent instructions short, owned in one place, and enforced by checks where they can be |
 | [Writing](.trailguide/rules/practices/writing/) | 6 | Writing blog posts, announcements, and page copy that readers can follow, believe, and finish |
 | [TypeScript](.trailguide/rules/techs/typescript/) | 20 | Writing type-safe, maintainable TypeScript |
@@ -32,7 +32,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 | [Go](.trailguide/rules/techs/go/) | 6 | Writing clear, maintainable Go |
 | [Goose](.trailguide/rules/techs/goose/) | 1 | Organizing SQL migrations managed by goose |
 
-### Browse all 148 rules
+### Browse all 149 rules
 
 <details>
 <summary><strong>Testing</strong> · 8 rules</summary>
@@ -88,13 +88,14 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 </details>
 
 <details>
-<summary><strong>Documentation</strong> · 5 rules</summary>
+<summary><strong>Documentation</strong> · 6 rules</summary>
 
 - [Comment intent, and point at the owner instead of describing it](.trailguide/rules/practices/documentation/comments-state-intent.md)
 - [Head a file with its purpose only when its name can't say it](.trailguide/rules/practices/documentation/file-header-when-name-falls-short.md)
 - [Give every lint or type-checker suppression a reason](.trailguide/rules/practices/documentation/give-every-suppression-a-reason.md)
 - [Link every TODO and workaround to where it will be resolved](.trailguide/rules/practices/documentation/link-todos-and-workarounds.md)
 - [State the current model and its reasons, not how it got there](.trailguide/rules/practices/documentation/state-the-current-model.md)
+- [Write comments in plain sentences a reader can parse once](.trailguide/rules/practices/documentation/write-comments-a-reader-can-parse-once.md)
 
 </details>
 
