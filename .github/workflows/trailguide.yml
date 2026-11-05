@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS).linux }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -17,7 +17,12 @@ jobs:
         run: |
           version=0.9.0
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
-          archive="trailguide_${version}_linux_amd64.tar.gz"
+          case "$RUNNER_ARCH" in
+            X64) arch=amd64 ;;
+            ARM64) arch=arm64 ;;
+            *) echo "::error::Trail Guide has no Linux build for $RUNNER_ARCH"; exit 1 ;;
+          esac
+          archive="trailguide_${version}_linux_${arch}.tar.gz"
           dir="$RUNNER_TEMP/trailguide"
           mkdir -p "$dir" && cd "$dir"
           gh release download "v$version" --repo fabricahq/trailguide \
