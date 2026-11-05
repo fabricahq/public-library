@@ -8,9 +8,10 @@ tags: "comments, documentation, writing"
 
 ## Write comments in plain sentences a reader can parse once
 
-Write each comment so a maintainer understands it on the first read.
-Give each sentence a subject the reader can find in the code or the world, put its verb right after it, and keep the object close to the verb.
-State one fact or reason per sentence, in words the file's readers already know.
+Build every comment sentence around one actor doing one thing.
+Open with the actor, a name from the code or a concrete party such as a caller or another service, then give the verb at once, then what it acts on.
+Put anything else the reader needs in its own sentence.
+Use the code's names for code and plain words for everything else.
 
 ### Implementation
 
