@@ -1,14 +1,14 @@
 ---
-title: "Write comments a maintainer understands on the first read"
+title: "Write comments in plain, direct language"
 whenToRead: "Before writing, changing, or reviewing a code or configuration comment, such as a file header, package, type, function, or field documentation, or a comment inside a function body."
 impact: "MEDIUM"
 impactDescription: "A comment that readers must parse twice slows every later change to its code, and one they misread leads people and agents to change the code wrongly."
 tags: "comments, documentation, writing"
 ---
 
-## Write comments a maintainer understands on the first read
+## Write comments in plain, direct language
 
-Write comments so a maintainer can understand their meaning on the first read.
+Write comments so the reader gets their meaning without decoding the prose.
 Make the relevant actor, action, condition, and consequence clear.
 Keep related words close together, and split sentences when their structure obscures the meaning.
 Use names from the code and familiar technical terms; explain project-specific shorthand.

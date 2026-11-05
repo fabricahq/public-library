@@ -95,7 +95,7 @@ The rules live in `.trailguide/rules/` and are organized into groups. Practice g
 - [Give every lint or type-checker suppression a reason](.trailguide/rules/practices/documentation/give-every-suppression-a-reason.md)
 - [Link every TODO and workaround to where it will be resolved](.trailguide/rules/practices/documentation/link-todos-and-workarounds.md)
 - [State the current model and its reasons, not how it got there](.trailguide/rules/practices/documentation/state-the-current-model.md)
-- [Write comments a maintainer understands on the first read](.trailguide/rules/practices/documentation/write-comments-for-the-first-read.md)
+- [Write comments in plain, direct language](.trailguide/rules/practices/documentation/write-comments-in-plain-language.md)
 
 </details>
 
