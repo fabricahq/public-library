@@ -1,0 +1,3 @@
+summary: Add setup-pr-10k, which declares a Go repository's layers in a go-arch-lint file with a purpose and review marker per layer, and adds CI checks that keep them current.
+skills:
+  skills/setup-pr-10k: new
