@@ -118,7 +118,11 @@ const root = path.resolve(__dirname, "../.."),
     await clickQuiet(appearance);
     await appearance.selectOption("light");
     await dismissAppearancePicker();
-    await keyboardFocus(appearance);
+    // Tab into Appearance from the preceding canvas control, as a user would.
+    await page.locator("#zoomIn").focus();
+    await page.keyboard.press("Tab");
+    assert(await appearance.evaluate(el => document.activeElement === el));
+    assert(await ring(appearance), "Tab must draw a focus ring on Appearance");
     await clickQuiet(appearance);
     await appearance.selectOption("system");
     await dismissAppearancePicker();
