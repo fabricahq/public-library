@@ -11,6 +11,34 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  grill-me-ui:
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test the canvas server and session contracts
+        run: |
+          python3 --version
+          for test in .trailguide/skills/fabrica/grill-me-ui/tests/test_*.py; do
+            python3 "$test"
+          done
+      - name: Install browser test dependencies
+        working-directory: .github/scripts/grill-me-ui
+        run: |
+          node --version
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium webkit
+      - name: Test canvas behavior and browser journeys
+        working-directory: .github/scripts/grill-me-ui
+        env:
+          NODE_PATH: ${{ github.workspace }}/.github/scripts/grill-me-ui/node_modules
+        run: |
+          npm test
+          npm run test:browser
   ratchet-files:
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     defaults:

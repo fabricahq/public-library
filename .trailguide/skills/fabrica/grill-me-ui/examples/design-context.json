@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "design-context-example",
+  "title": "A focused design interview",
+  "revision": 1,
+  "constraints": [
+    {
+      "id": "C1",
+      "statement": "Keep the canvas focused on decisions.",
+      "reason": "Supporting detail should be available without competing with the current question."
+    },
+    {
+      "id": "C2",
+      "statement": "Allow decisions to be revised as evidence changes.",
+      "reason": "Early assumptions may change as the design develops."
+    }
+  ],
+  "nodes": [
+    {
+      "id": "Q1",
+      "parentId": null,
+      "title": "Details on demand",
+      "question": "Should supporting evidence open only when the reader asks for it?",
+      "answer": "Keep evidence available on demand.",
+      "agentRecommendationSummary": "Yes.",
+      "agentRecommendation": "Show the current response first and reveal supporting context when needed.",
+      "dependsOn": [],
+      "constraintIds": [
+        "C1",
+        "C2"
+      ],
+      "assumptions": [
+        {
+          "id": "A1",
+          "statement": "Most questions can be understood without opening every supporting example."
+        }
+      ],
+      "alternatives": [
+        {
+          "id": "ALT1",
+          "title": "Show everything inline",
+          "description": "Keep the answer, assumptions, and examples visible together. Less clicking, but a much longer panel."
+        },
+        {
+          "id": "ALT2",
+          "title": "A separate reference document",
+          "description": "Keep detailed evidence in a document beside the tree. A quieter panel, but readers must connect the document to each question."
+        }
+      ],
+      "precedents": [
+        {
+          "title": "Brooks on using exemplars",
+          "url": "https://www.informit.com/articles/article.aspx?p=1571355",
+          "insight": "Prior designs can provide alternatives worth examining. Applying that idea here suggests keeping examples available beside the decision. This is a design principle, not evidence that this particular disclosure layout works."
+        },
+        {
+          "title": "Decision and recommendation boundaries (CONTEXT.md)",
+          "insight": "The project glossary separates the user's submitted answer from the agent's proposal. This supports making the response primary. This is a product convention, not evidence from a usability study."
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "parentId": "Q1",
+      "title": "Find the right evidence",
+      "question": "Should each consequential decision link to relevant examples?",
+      "answer": null,
+      "agentRecommendationSummary": "Yes, when relevant.",
+      "agentRecommendation": "Keep the comparison short and explain where the example differs.",
+      "constraintIds": [
+        "C1"
+      ],
+      "notes": "To investigate: Which existing project decisions offer a useful comparison?"
+    }
+  ]
+}

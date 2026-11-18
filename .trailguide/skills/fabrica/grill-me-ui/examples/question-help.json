@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "id": "question-help-example",
+  "title": "Understanding a design decision",
+  "revision": 1,
+  "nodes": [
+    {
+      "id": "Q1",
+      "parentId": null,
+      "title": "Reference import boundary",
+      "question": "Should automatic reference inclusion allow linked regular files anywhere within the same source repository at its recorded revision, including shared documents outside a skill folder, while refusing links that escape that repository or require guessing another source?",
+      "answer": null,
+      "agentRecommendationSummary": "Yes. Use the recorded source repository as the boundary.",
+      "agentRecommendation": "Follow links within that saved version of the source project. Keep the existing file-size and file-type limits. If a link leaves the project or exceeds a limit, explain the problem and stop instead of installing an incomplete skill.",
+      "help": {
+        "basedOnRevision": 1,
+        "sourceQuestion": "Should automatic reference inclusion allow linked regular files anywhere within the same source repository at its recorded revision, including shared documents outside a skill folder, while refusing links that escape that repository or require guessing another source?",
+        "sourceRecommendation": "Yes. Use the recorded source repository as the boundary.\n\nFollow links within that saved version of the source project. Keep the existing file-size and file-type limits. If a link leaves the project or exceeds a limit, explain the problem and stop instead of installing an incomplete skill.",
+        "eli15": {
+          "title": "How far should we follow a skill’s links?",
+          "paragraphs": [
+            "Imagine installing a skill that tells an AI how to review your work. It links to a checklist stored elsewhere in the same project.",
+            "We could bring that checklist along automatically. But if a link points outside the project, we would stop and explain what is missing. We would use the saved version of the project, so the files all match."
+          ],
+          "decision": "Should we include linked files from anywhere in that same project, or keep them inside the skill’s own folder?",
+          "limits": "This does not mean copying every file. We only follow links. Existing file-size and file-type limits still apply; an unsupported link stops the import."
+        },
+        "eli18": {
+          "title": "Choose the boundary for following references",
+          "paragraphs": [
+            "A repository is the source project. A recorded revision is a saved version of that project. A skill can link to a document outside its own folder but still inside that repository.",
+            "The proposal is to follow those links, and any further links, within the same recorded revision. This brings shared documents with the skill while keeping the imported files consistent. A narrower alternative allows only the skill’s own folder, which can leave shared documents unavailable."
+          ],
+          "decision": "May imports follow references across the saved repository, while stopping at links that leave it?",
+          "limits": "Existing import size and file-type limits still apply. A link outside the repository, an unsupported file, or an exceeded limit stops the import with an explanation. The importer does not guess another source or install a partial result."
+        },
+        "walkthrough": {
+          "title": "Illustrative example: installing a review skill",
+          "steps": [
+            {
+              "title": "You install a code-review skill",
+              "paragraphs": [
+                "The skill includes instructions for reviewing code. Those instructions refer to a shared checklist. To use the skill fully, the AI needs both files."
+              ],
+              "visual": {
+                "title": "One saved project version",
+                "items": [
+                  {
+                    "label": "skills/review/SKILL.md",
+                    "detail": "The skill you are installing",
+                    "state": "included"
+                  },
+                  {
+                    "label": "docs/review-checklist.md",
+                    "detail": "A linked checklist outside the skill folder",
+                    "state": "neutral"
+                  }
+                ]
+              }
+            },
+            {
+              "title": "The checklist is in the same project",
+              "paragraphs": [
+                "With the proposed boundary, the importer includes the checklist even though it is outside the skill’s folder. Both files come from the same saved project version."
+              ],
+              "visual": {
+                "title": "Same project: include the linked document",
+                "items": [
+                  {
+                    "label": "skills/review/SKILL.md",
+                    "state": "included"
+                  },
+                  {
+                    "label": "docs/review-checklist.md",
+                    "state": "included"
+                  }
+                ],
+                "caption": "Only linked files are included. Unrelated files stay behind."
+              }
+            },
+            {
+              "title": "Another link leaves the project",
+              "paragraphs": [
+                "Now imagine the checklist links to a policy in a different project. The importer stops and explains which link caused the problem. It does not guess where to fetch that policy or install an incomplete skill."
+              ],
+              "visual": {
+                "title": "Outside the project: stop the import",
+                "items": [
+                  {
+                    "label": "another-project/policy.md",
+                    "state": "excluded",
+                    "detail": "Outside this saved source project"
+                  }
+                ],
+                "caption": "The skill is not installed until the unsupported reference is resolved."
+              }
+            },
+            {
+              "title": "Your choice is where to draw the boundary",
+              "paragraphs": [
+                "The whole saved project lets skills reuse shared documents. The skill folder alone is narrower, but would refuse the checklist in this example.",
+                "Either way, file-size and file-type limits still apply. The question asks whether the whole saved project is the right boundary."
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Q2",
+      "parentId": null,
+      "title": "Explain import failures",
+      "question": "Should a failed import show which link caused the problem?",
+      "answer": null,
+      "agentRecommendationSummary": "Yes.",
+      "agentRecommendation": "Show the source file and the unsupported link so the author knows what to fix.",
+      "help": {
+        "basedOnRevision": 1,
+        "sourceQuestion": "Should a failed import show which link caused the problem?",
+        "sourceRecommendation": "Yes.\n\nShow the source file and the unsupported link so the author knows what to fix.",
+        "eli15": {
+          "title": "Tell me which link needs fixing",
+          "paragraphs": [
+            "Imagine adding a skill that points to a checklist, but the checklist is missing. The import stops. A message could tell you which file contains the broken link and where that link tried to go."
+          ],
+          "decision": "Should the error message point out the exact link, so you know what to fix?"
+        },
+        "eli18": {
+          "title": "Identify the reference that failed",
+          "paragraphs": [
+            "An import can fail when a file references a document that cannot be included. Showing the source file and referenced target makes the problem easier to trace than a generic “Import failed” message."
+          ],
+          "decision": "Should a failed import identify the link that caused it?",
+          "limits": "This choice concerns the error message. It does not change which files the importer permits or authorize installing an incomplete result."
+        },
+        "walkthrough": {
+          "title": "Illustrative example: a missing checklist",
+          "steps": [
+            {
+              "title": "You try to install a review skill",
+              "paragraphs": [
+                "The skill points to docs/checklist.md. Imagine that file is missing. The importer stops."
+              ]
+            },
+            {
+              "title": "Compare the two messages",
+              "paragraphs": [
+                "A generic message says “Import failed.” You still have to find the problem.",
+                "A specific message says “skills/review/SKILL.md links to docs/checklist.md, which could not be found.” Now you know which link to check."
+              ]
+            },
+            {
+              "title": "Choose how much the message tells you",
+              "paragraphs": [
+                "The question asks whether to identify that failed link. It does not change the import boundary or install the skill for you."
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
