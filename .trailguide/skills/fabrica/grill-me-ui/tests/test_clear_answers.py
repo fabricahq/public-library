@@ -83,7 +83,7 @@ with tempfile.TemporaryDirectory(prefix='grill-review-') as tmp:
         assert not g.current_answer(recovered,'Q2')
         rendered=subprocess.run([sys.executable,str(script),'render','--snapshot',str(snapshot),'--output',str(directory/'restored.html')],capture_output=True,text=True)
         assert rendered.returncode==0,rendered.stderr
-        embedded,_=json.JSONDecoder().raw_decode((directory/'restored.html').read_text().split('const initialAppState = ',1)[1])
+        embedded,_=json.JSONDecoder().raw_decode((directory/'restored.html').read_text().split('<script type="application/json" id="initialAppState">',1)[1])
         assert embedded['answerState']==state['answerState'] and embedded['drafts']['Q2']=='Unfinished'
         assert all('needsReview' not in n for n in state['session']['nodes'])
         print('PASS immediate answers, durable review, confirmations, stale edits, retries, atomic receipts, clear, publish, restart and export restoration')

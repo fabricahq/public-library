@@ -30,7 +30,7 @@ python3 scripts/grill_ui.py publish --require-help --session-dir sessions/demo -
 python3 scripts/grill_ui.py serve --session-dir sessions/demo --port 0
 ```
 
-Open the tokenized localhost URL printed by the server. The example is not connected to an agent. To resume it, run only the second command. Keep session directories out of version control: they contain answers, local access tokens, and runtime bindings.
+Open the tokenized localhost URL printed by the server. The example is not connected to an agent. To resume it, run only the second command. It reuses the session port so your browser can recover unfinished drafts. Keep session directories out of version control: they contain answers, local access tokens, and runtime bindings.
 
 The live interview can deliver replies to the exact bound Codex chat when its shared queue is available. Otherwise, the active agent listens to a local inbox, or you copy replies into chat. Claude uses the inbox or copy/paste. A running server alone does not mean an agent is listening. [The session contract](references/session.md) owns binding, delivery, recovery, and standalone export.
 

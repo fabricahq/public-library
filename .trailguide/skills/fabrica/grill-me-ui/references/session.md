@@ -67,7 +67,7 @@ python3 "$SKILL_DIR/scripts/grill_ui.py" publish --require-help --session-dir "$
 python3 "$SKILL_DIR/scripts/grill_ui.py" serve --session-dir "$SESSION_DIR" --port 0
 ```
 
-`serve` keeps a session-local URL token across restarts and prints a tokenized localhost URL and stays in the foreground. Retain its tool process handle. Open the exact returned URL. Use an available browser-open tool, or `open URL` on macOS. The token is a local capability; do not publish it. Only the tokenized UI and API are served, never a workspace directory.
+`serve --port 0` chooses an available port on the first run and records it with the session token. On restart it reuses that port so the same browser profile can restore unfinished drafts. If the port is occupied, free it and retry. For a session last served by an older version, pass the port from its previous URL once to preserve its browser origin. The server prints the tokenized localhost URL and stays in the foreground. Retain its tool process handle. Open the exact returned URL. Use an available browser-open tool, or `open URL` on macOS. The token is a local capability; do not publish it. Only the tokenized UI and API are served, never a workspace directory.
 
 ```sh
 python3 "$SKILL_DIR/scripts/grill_ui.py" wait --session-dir "$SESSION_DIR" --timeout 20

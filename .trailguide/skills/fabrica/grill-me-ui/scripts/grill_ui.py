@@ -2,6 +2,7 @@
 """Local canvas and durable reply inbox for the agent running grill-me-ui."""
 import argparse
 import contextlib
+import errno
 import fcntl
 import hashlib
 import json
@@ -850,7 +851,15 @@ def serve_session(args):
             except (ValueError, TypeError, KeyError) as exc:
                 self.respond(400, {'error': str(exc)})
 
-    server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
+    binding = read(token_path)
+    port = args.port or binding.get('port', 0)
+    try:
+        server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    except OSError as error:
+        if not args.port and port and error.errno == errno.EADDRINUSE:
+            raise ValueError(f'Session port {port} is in use. Free it and resume to recover browser drafts, or explicitly choose a different --port for a new browser origin.') from error
+        raise
+    atomic(token_path, {**binding, 'port': server.server_port})
     worker = DeliveryWorker(directory)
     print(json.dumps({'status': 'serving', 'url': f'http://127.0.0.1:{server.server_port}{prefix}', 'sessionDir': str(directory)}), flush=True)
     try:

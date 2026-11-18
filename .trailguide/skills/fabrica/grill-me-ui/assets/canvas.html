@@ -1388,6 +1388,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       </div>
       <div class="dialog-actions"><button class="secondary" id="closeAbout">Close</button></div>
     </dialog>
+    <script type="application/json" id="initialAppState">__GRILL_APP_STATE__</script>
     <script>
       const $ = (id) => document.getElementById(id),
         esc = (s) =>
@@ -1470,8 +1471,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       });
       applySidebarWidth();
       let session = __GRILL_SESSION__;
-      const initialAppState = __GRILL_APP_STATE__;
-      let answerState = initialAppState.answerState;
+      const initialAppState = JSON.parse(document.getElementById("initialAppState").textContent);
+      const nodeMap = entries => Object.assign(Object.create(null), entries);
+      let answerState = nodeMap(initialAppState.answerState);
       let completedRevision = initialAppState.completedRevision;
       // Native :focus-visible can persist when clicking an already-focused button.
       document.addEventListener('pointerdown', () => {
@@ -1484,27 +1486,29 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       const bridge = __GRILL_BRIDGE__;
       let connection = bridge?.connection || { transport: "inbox" };
       let artifactFiles = [];
-      const answerModes = {};
+      const answerModes = Object.create(null);
       const newQuestionIds = new Set();
       let followupRequest = null;
       let selected = null,
-        drafts = initialAppState.drafts || {},
-        draftContexts = initialAppState.draftContexts || {},
+        drafts = nodeMap(initialAppState.drafts),
+        draftContexts = nodeMap(initialAppState.draftContexts),
         inbox = initialAppState.pending || [],
         acknowledged = [],
         listening = false,
         connected = !!bridge,
         storage = true,
-        positions = {},
+        positions = Object.create(null),
         pan = { x: 0, y: 0, scale: 1 },
         sending = false,
-        submissionCache = {},
+        submissionCache = Object.create(null),
         restored = false;
       const storageKey = "grill-me-ui:" + session.id;
+      const readSaved = () => JSON.parse(localStorage.getItem(storageKey) ?? localStorage.getItem("grill-ui:" + session.id) ?? "null");
+      const draftKey = id => "grill-me-ui-draft:" + JSON.stringify([session.id, id]);
       try {
-        const saved = JSON.parse(localStorage.getItem(storageKey) ?? localStorage.getItem("grill-ui:" + session.id) ?? "null");
+        const saved = readSaved();
         if (saved && saved.drafts && typeof saved.drafts === "object") {
-          drafts = {}; draftContexts = {};
+          drafts = Object.create(null); draftContexts = Object.create(null);
           for (const [id, text] of Object.entries(saved.drafts))
             if (typeof text === "string") {
               drafts[id] = text;
@@ -1516,11 +1520,18 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           if (!bridge && saved.standalone?.session?.id === session.id && saved.standalone.session.revision >= session.revision && Array.isArray(saved.standalone.session.nodes)) {
             session = saved.standalone.session;
             inbox = saved.standalone.inbox || [];
-            answerState = saved.standalone.answerState || answerState;
+            answerState = nodeMap(saved.standalone.answerState || answerState);
             completedRevision = saved.standalone.completedRevision;
           }
-          restored = Object.keys(drafts).length > 0;
         }
+        if (!bridge) for (const {id} of session.nodes) {
+          const raw = localStorage.getItem(draftKey(id));
+          if (raw === null) continue;
+          const draft = JSON.parse(raw);
+          if (draft === null) { delete drafts[id]; delete draftContexts[id]; }
+          else { drafts[id] = draft.text; draftContexts[id] = draft.context; }
+        }
+        restored = Object.keys(drafts).length > 0;
       } catch {
         storage = false;
       }
@@ -1569,21 +1580,38 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         if (resolved) return check;
         return isFrontier(n) ? '<span class="ready-mark" role="img" aria-label="Ready now"></span>' : '<span class="waiting-mark" role="img" aria-label="Waiting"></span>';
       }
-      function saveDrafts() {
+      // Typing in one standalone tab must never write its snapshot over another tab's answers.
+      function saveDrafts(id) {
         try {
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({
-              revision: session.revision,
-              drafts,
-              draftContexts,
-              standalone: !bridge ? {session, inbox, answerState, completedRevision} : undefined,
-            }),
-          );
+          if (bridge) {
+            localStorage.setItem(storageKey, JSON.stringify({revision:session.revision, drafts, draftContexts}));
+          } else {
+            const draft = Object.hasOwn(drafts, id) ? {text:drafts[id], context:draftContexts[id]} : null;
+            localStorage.setItem(draftKey(id), JSON.stringify(draft));
+          }
           storage = true;
         } catch {
           storage = false;
         }
+      }
+      async function commitStandalone(change) {
+        await navigator.locks.request(storageKey, () => {
+          const saved = readSaved();
+          if (saved?.standalone?.session.revision > session.revision)
+            throw Error("Another tab saved an answer. Reload to review its changes before submitting.");
+          // Keep the visible session unchanged if browser storage refuses the write.
+          const previous = {session:structuredClone(session), inbox:[...inbox], answerState:nodeMap(answerState)};
+          try {
+            change();
+            localStorage.setItem(storageKey, JSON.stringify({
+              revision:session.revision, drafts, draftContexts,
+              standalone:{session, inbox, answerState, completedRevision},
+            }));
+          } catch (error) {
+            session = previous.session; inbox = previous.inbox; answerState = previous.answerState;
+            throw error;
+          }
+        });
       }
       function toast(message) {
         $("toast").textContent = message;
@@ -1663,7 +1691,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
       function layout() {
         let leaf = 0, row = 0;
-        positions = {};
+        positions = Object.create(null);
         function place(n, depth) {
           const children = session.nodes.filter((c) => c.parentId === n.id);
           if (compactTree) {
@@ -1979,7 +2007,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           drafts[n.id] = e.target.value;
           answerModes[n.id] = "custom";
           delete submissionCache[n.id];
-          saveDrafts();
+          saveDrafts(n.id);
           renderInterviewStatus();
           $("editStatus").textContent = e.target.value.trim() !== (n.answer || "").trim() ? "Unsaved changes" : "";
           if ($("send")) {
@@ -1989,7 +2017,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           }
         };
         if ($("refreshDraftContext")) $("refreshDraftContext").onclick = () => {
-          draftContexts[n.id] = currentContext(n); delete submissionCache[n.id]; saveDrafts(); renderPanel();
+          draftContexts[n.id] = currentContext(n); delete submissionCache[n.id]; saveDrafts(n.id); renderPanel();
         };
         if ($("keepAnswer")) $("keepAnswer").onclick = () => send(n, n.answer, true);
         if ($("questionConstraints")) $("questionConstraints").onclick = () => openArtifact('design-constraints', true);
@@ -1997,7 +2025,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           if (!Object.hasOwn(drafts, n.id)) {
             drafts[n.id] = n.answer || "";
             draftContexts[n.id] = currentContext(n);
-            saveDrafts();
+            saveDrafts(n.id);
           }
           answerModes[n.id] = "custom";
           $("toast").hidden = true;
@@ -2005,14 +2033,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         };
         if ($("cancelAnswer")) $("cancelAnswer").onclick = () => {
           delete drafts[n.id]; delete draftContexts[n.id]; delete submissionCache[n.id];
-          saveDrafts();
+          saveDrafts(n.id);
           answerModes[n.id] = "saved";
           renderPanel(); $("editAnswer")?.focus();
         };
         if ($("useRecommendation")) $("useRecommendation").onclick = () => {
           if (!Object.hasOwn(drafts, n.id)) {
             drafts[n.id] = n.answer || "";
-            draftContexts[n.id] = currentContext(n); saveDrafts();
+            draftContexts[n.id] = currentContext(n); saveDrafts(n.id);
           }
           answerModes[n.id] = "recommendation";
           $("toast").hidden = true;
@@ -2025,7 +2053,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             if (sending) return;
             answerModes[n.id] = mode;
             if (mode === "custom" && !Object.hasOwn(drafts, n.id)) {
-              drafts[n.id] = ""; draftContexts[n.id] = currentContext(n); saveDrafts();
+              drafts[n.id] = ""; draftContexts[n.id] = currentContext(n); saveDrafts(n.id);
             }
             renderPanel(); $(id).focus();
           };
@@ -2044,7 +2072,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           const hadDraft = !!drafts[n.id]?.trim();
           drafts[n.id] = buildRecommendation(n);
           if (!hadDraft) draftContexts[n.id] = currentContext(n);
-          delete submissionCache[n.id]; answerModes[n.id] = "custom"; saveDrafts();
+          delete submissionCache[n.id]; answerModes[n.id] = "custom"; saveDrafts(n.id);
           renderPanel(); $("draft").focus();
           $("draft").setSelectionRange($("draft").value.length, $("draft").value.length);
         };
@@ -2170,13 +2198,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             if (!response.ok) throw Error(result.error || "Could not clear the answer.");
             await refresh();
           } else {
-            clearLocalAnswer(n);
+            await commitStandalone(() => clearLocalAnswer(n));
           }
           if (!drafts[n.id]?.trim() || drafts[n.id].trim() === oldAnswer || drafts[n.id].trim() === oldReply) {
             delete drafts[n.id]; delete draftContexts[n.id];
           }
           delete submissionCache[n.id]; delete answerModes[n.id];
-          saveDrafts(); draw();
+          saveDrafts(n.id); draw();
           toast("Answer cleared. Dependent answers need review.");
         } catch (error) {
           await refresh(); toast(error.message);
@@ -2219,9 +2247,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             if (confirmation && (context.baseRevision !== session.revision || !n.answer || text !== n.answer || !deps(n).every(id => settled(get(id)))))
               throw Error("Review the current prerequisite answers before keeping this answer.");
             const event = {...payload, sessionId:session.id, title:n.title, question:n.question, createdAt:Date.now()/1000};
-            recordLocalAnswer(n, text);
-            inbox = inbox.filter(e => e.id !== payload.replaces); inbox.push(event);
-            saveDrafts(); draw();
+            await commitStandalone(() => {
+              recordLocalAnswer(n, text);
+              inbox = inbox.filter(e => e.id !== payload.replaces); inbox.push(event);
+            });
+            draw();
           }
           if (drafts[n.id]?.trim() === text) {
             delete drafts[n.id]; delete draftContexts[n.id];
@@ -2229,7 +2259,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           delete submissionCache[n.id];
           answerModes[n.id] = "saved";
           $("toast").hidden = true;
-          saveDrafts();
+          saveDrafts(n.id);
           await refresh();
         } catch (e) {
           if (followupRequest?.eventId === payload.id) followupRequest = null;
@@ -2818,7 +2848,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           listening = data.listening;
           inbox = data.pending;
           acknowledged = data.acknowledged;
-          answerState = data.answerState;
+          answerState = nodeMap(data.answerState);
           completedRevision = data.completedRevision;
           for (const event of oldPending)
             if (

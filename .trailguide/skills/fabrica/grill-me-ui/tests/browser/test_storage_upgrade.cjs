@@ -44,8 +44,11 @@ test("standalone canvas restores prototype work until the renamed key exists", a
   await page.evaluate(() => {
     const saved = localStorage.getItem("grill-me-ui:upgrade");
     if (!saved) throw Error("Missing saved session");
-    localStorage.setItem("grill-ui:upgrade", saved);
-    localStorage.removeItem("grill-me-ui:upgrade");
+    const prototype = JSON.parse(saved);
+    prototype.drafts = {Q2:"Next Tuesday"};
+    prototype.draftContexts = {Q2:{baseRevision:prototype.revision, previousAnswer:null}};
+    localStorage.clear();
+    localStorage.setItem("grill-ui:upgrade", JSON.stringify(prototype));
   });
   await page.reload();
   await open("Q1");

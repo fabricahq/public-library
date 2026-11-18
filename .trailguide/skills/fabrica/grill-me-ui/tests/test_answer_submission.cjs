@@ -6,7 +6,7 @@ const c={session:{id:'test',revision:1,nodes:[n]},answerState:{Q1:{changedAt:1,c
  submissionCache:{},answerModes:{},sending:false,followupRequest:null,bridge:{base:'/'},
  get:id=>c.session.nodes.find(node=>node.id===id),deps:node=>[...(node.parentId?[node.parentId]:[]),...(node.dependsOn||[])],
  pending:()=>null,draftContext:()=>c.draftContexts.Q1,currentContext:()=>({baseRevision:c.session.revision,previousAnswer:n.answer}),
- crypto:{randomUUID:()=> 'test-receipt'},renderPanel:()=>{},saveDrafts:()=>{},draw:()=>{},refresh:async()=>{},toast:()=>{}, $:()=>({hidden:false})};
+ crypto:{randomUUID:()=> 'test-receipt'},commitStandalone:async change=>change(),renderPanel:()=>{},saveDrafts:()=>{},draw:()=>{},refresh:async()=>{},toast:()=>{}, $:()=>({hidden:false})};
 vm.createContext(c);
 vm.runInContext(source.slice(source.indexOf('      function recordLocalAnswer('),source.indexOf('      function clearLocalAnswer(')),c);
 vm.runInContext(source.slice(source.indexOf('      async function send('),source.indexOf('      // Escape source')),c);
