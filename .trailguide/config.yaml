@@ -39,6 +39,7 @@ library:
   skills:
     recommended:
       - skills/build
+      - pstack:pstack/skills/correct
       - skills/grill-me-ui
       - skills/create-verification-skill
       - skills/maintain-verification-skill
