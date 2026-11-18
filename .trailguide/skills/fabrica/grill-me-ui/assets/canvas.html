@@ -1502,7 +1502,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         restored = false;
       const storageKey = "grill-me-ui:" + session.id;
       try {
-        const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+        const saved = JSON.parse(localStorage.getItem(storageKey) ?? localStorage.getItem("grill-ui:" + session.id) ?? "null");
         if (saved && saved.drafts && typeof saved.drafts === "object") {
           drafts = {}; draftContexts = {};
           for (const [id, text] of Object.entries(saved.drafts))
