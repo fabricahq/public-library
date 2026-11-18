@@ -107,11 +107,21 @@ const root = path.resolve(__dirname, "../.."),
     await clickQuiet(page.locator("#finishConfidenceGroups"));
     await clickQuiet(page.locator("#menuButton"));
     const appearance = page.locator("#appearance");
+    const dismissAppearancePicker = async () => {
+      // selectOption does not close Chromium's native popup on Linux. Escape
+      // dismisses it; on macOS it may instead close the surrounding app menu.
+      await page.keyboard.press("Escape");
+      if (!(await page.locator("#menu").isVisible())) {
+        await page.locator("#menuButton").click();
+      }
+    };
     await clickQuiet(appearance);
     await appearance.selectOption("light");
+    await dismissAppearancePicker();
     await keyboardFocus(appearance);
     await clickQuiet(appearance);
     await appearance.selectOption("system");
+    await dismissAppearancePicker();
     await clickQuiet(page.locator("#openAbout"));
     const link = page.locator("#aboutDialog a").first();
     await keyboardFocus(link);
