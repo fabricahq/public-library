@@ -39,6 +39,7 @@ library:
   skills:
     recommended:
       - skills/build
+      - skills/grill-me-ui
       - skills/create-verification-skill
       - skills/maintain-verification-skill
       - skills/ratchet-files

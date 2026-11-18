@@ -1,0 +1,97 @@
+{
+  "id": "grill-ui-example",
+  "title": "Visual grilling, without the clutter",
+  "revision": 1,
+  "nodes": [
+    {
+      "id": "Q2",
+      "parentId": null,
+      "title": "A quiet canvas",
+      "question": "What should be visible while exploring the design?",
+      "answer": "Use a canvas that shows the design tree. Show as little as possible to promote focus.",
+      "agentRecommendation": "Keep question details in an on-demand panel.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "A quiet canvas."
+    },
+    {
+      "id": "Q3",
+      "parentId": null,
+      "title": "Answer inside the UI",
+      "question": "How should answers reach the agent?",
+      "answer": "Prefer sending each UI answer directly into the existing Claude Code or Codex session, with the agent publishing the updated canvas artifact.",
+      "agentRecommendation": "Bind the canvas to an explicit session ID and use a supported session transport. Keep a durable outbox and copy fallback when delivery is unavailable.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "Use the existing session."
+    },
+    {
+      "id": "Q4",
+      "parentId": null,
+      "title": "Invoke it as a skill",
+      "question": "How should this experience be launched?",
+      "answer": "Create a reusable skill. Do not use Lavish.",
+      "agentRecommendation": "Bundle the canvas and a local bridge with the skill.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "A reusable skill."
+    },
+    {
+      "id": "Q5",
+      "parentId": "Q2",
+      "title": "Details only on demand",
+      "question": "Should clicking a node open a small answer panel?",
+      "answer": null,
+      "agentRecommendation": "Keep the canvas unobstructed until a question is selected.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "Yes."
+    },
+    {
+      "id": "Q6",
+      "parentId": "Q2",
+      "title": "Subtle question status",
+      "question": "How should resolved questions and the current frontier be distinguished?",
+      "answer": "A noticeable green checkmark and soft green fill for resolved nodes; amber frontier highlighting; no routine status text. Show small question IDs in each node so questions can be referenced.",
+      "agentRecommendation": "Keep status visible through the checkmark and background treatment.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "Checkmark and color."
+    },
+    {
+      "id": "Q7",
+      "parentId": "Q3",
+      "title": "Revisit dependent answers",
+      "question": "When you clarify an answer, should the agent revisit downstream decisions?",
+      "answer": null,
+      "agentRecommendation": "Preserve answers that still hold and mark potentially invalidated answers for review.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "Yes."
+    },
+    {
+      "id": "Q8",
+      "parentId": "Q3",
+      "title": "When the agent is away",
+      "question": "Should replies remain queued when the agent is not listening?",
+      "answer": null,
+      "agentRecommendation": "Keep the reply and offer copy/paste, while clearly showing that the agent is not currently listening.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "Yes."
+    },
+    {
+      "id": "Q9",
+      "parentId": "Q4",
+      "title": "Resume the interview",
+      "question": "Should a future invocation resume a matching session in the workspace?",
+      "answer": null,
+      "agentRecommendation": "Reuse its stable question IDs and settled answers.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "Yes."
+    },
+    {
+      "id": "Q10",
+      "parentId": "Q9",
+      "title": "Portable session files",
+      "question": "Should export include unfinished drafts as well as settled answers?",
+      "answer": null,
+      "agentRecommendation": "Export the snapshot and unfinished drafts together so they can be recovered.",
+      "dependsOn": [],
+      "agentRecommendationSummary": "Yes."
+    }
+  ]
+}

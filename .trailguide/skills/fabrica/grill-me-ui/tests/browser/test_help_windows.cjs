@@ -1,0 +1,72 @@
+const {chromium}=require('playwright');
+const {spawnSync,spawn}=require('node:child_process');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../..'),script=path.join(root,'scripts/grill_ui.py');
+(async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'help-windows-'));let server,browser;
+ const cli=(...args)=>{const r=spawnSync('python3',[script,...args],{encoding:'utf8'});assert.equal(r.status,0,r.stderr);return JSON.parse(r.stdout)};
+ try{
+ cli('publish','--require-help','--session-dir',dir,'--snapshot',path.join(root,'examples/question-help.json'),'--expected-revision','0');
+ server=spawn('python3',[script,'serve','--session-dir',dir]);
+ const url=await new Promise((resolve,reject)=>{let out='';server.stdout.on('data',b=>{out+=b;if(out.includes('\n'))resolve(JSON.parse(out.split('\n')[0]).url)});server.on('exit',c=>reject(Error('Server exited '+c)))});
+ browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
+ const page=await browser.newPage({viewport:{width:1600,height:1100}});page.setDefaultTimeout(5000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const win=(id,mode)=>page.locator(`[data-artifact-window="question-help:${id}:${mode}"]`);
+ const ctl=(w,name)=>w.locator(`[data-help-control="${name}"]`);
+ const shot=async name=>{if(process.env.HELP_WINDOW_SHOTS){fs.mkdirSync(process.env.HELP_WINDOW_SHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.HELP_WINDOW_SHOTS,name+'.png')});}};
+ await page.goto(url);await page.locator('[data-node="Q1"]').click();await page.locator('#fit').click();
+ await page.locator('#customTab').click();await page.locator('#draft').fill('Keep my draft');
+ const before=await page.locator('#draft').boundingBox();
+ await page.locator('#helpSimple').click();const simple=win('Q1','simple');await simple.waitFor();
+ assert.equal(await page.locator('#panel #questionHelpBody').count(),0);
+ assert.equal((await page.locator('#draft').boundingBox()).y,before.y,'Help must not push the answer down');
+ assert.equal(await page.locator('#draft').inputValue(),'Keep my draft');
+ await ctl(simple,'helpEli18').click();await shot('explanation');
+ const simpleWidth=(await simple.boundingBox()).width;
+ await page.locator('#helpWalk').click();const walk=win('Q1','walk');await walk.waitFor();
+ assert.equal(await page.locator('.help-window').count(),2);assert((await walk.boundingBox()).width>simpleWidth);
+ await ctl(walk,'helpNext').click();await ctl(walk,'helpNext').click();await shot('both-windows');
+ await page.locator('#helpSimple').click();assert.equal(await page.locator('.help-window').count(),2);
+ assert(Number(await simple.evaluate(e=>e.style.zIndex))>Number(await walk.evaluate(e=>e.style.zIndex)));
+ await page.locator('[data-node="Q2"]').press('Enter');
+ assert.match(await page.locator('#panel h2').innerText(),/Explain import failures/);
+ assert.match(await simple.locator('.help-window-context').innerText(),/Q1 · Reference import boundary/);
+ assert.match(await walk.locator('.help-step-heading').innerText(),/Step 3 of 4/);
+ // Drag, keyboard move and keyboard resize share existing window behavior.
+ const handle=simple.locator('.artifact-drag');const old=await simple.boundingBox();const bar=await handle.boundingBox();
+ await page.mouse.move(bar.x+bar.width/2,bar.y+bar.height/2);await page.mouse.down();await page.mouse.move(bar.x+bar.width/2+65,bar.y+bar.height/2+30);await page.mouse.up();
+ assert((await simple.boundingBox()).x>old.x+50);
+ await handle.focus();await page.keyboard.press('ArrowRight');assert((await simple.boundingBox()).x>old.x+70);
+ const width=(await simple.boundingBox()).width;
+ await simple.locator('[data-edge="se"]').focus();await page.keyboard.press('ArrowRight');assert((await simple.boundingBox()).width>width+15);
+ await simple.locator('.artifact-maximize').click();assert.equal(await page.locator('#documentFullscreen').evaluate(e=>e.open),true);
+ assert(Math.abs((await simple.boundingBox()).width-1600)<2);await shot('maximized');
+ await page.keyboard.press('Escape');assert.equal(await page.locator('#documentFullscreen').evaluate(e=>e.open),false);
+ assert((await simple.boundingBox()).width<1000);
+ await simple.locator('.artifact-minimize').click();assert.match(await simple.getAttribute('class'),/is-minimized/);
+ await page.locator('[data-node="Q1"]').press('Enter');await page.locator('#helpSimple').click();assert(!/is-minimized/.test(await simple.getAttribute('class')));
+ await page.emulateMedia({colorScheme:'dark'});await shot('dark');
+ // A live update refreshes a bound window even while another question is selected.
+ await page.locator('[data-node="Q2"]').press('Enter');await page.locator('#customTab').click();await page.locator('#draft').fill('Another draft');
+ const current=JSON.parse(fs.readFileSync(path.join(dir,'state.json'))).session;current.revision++;
+ current.nodes[0].help.basedOnRevision=current.revision;current.nodes[0].help.eli18.title='Updated explanation for the same question';
+ fs.writeFileSync(path.join(dir,'next.json'),JSON.stringify(current));cli('publish','--require-help','--session-dir',dir,'--snapshot',path.join(dir,'next.json'),'--expected-revision','1');
+ await simple.getByText('Updated explanation for the same question',{exact:true}).waitFor();
+ assert.equal(await page.locator('#draft').inputValue(),'Another draft');assert.equal(await page.locator('#draft').evaluate(e=>e===document.activeElement),true);
+ // Desktop-to-mobile changes presentation, preserving the question and progress.
+ await page.locator('[data-node="Q1"]').press('Enter');await page.setViewportSize({width:390,height:900});
+ await page.waitForFunction(()=>document.querySelectorAll('.help-window').length===0);
+ await page.locator('#helpEli18').waitFor();assert.equal(await page.locator('#draft').inputValue(),'Keep my draft');await shot('mobile-inline');
+ await page.locator('#refreshDraftContext').scrollIntoViewIfNeeded();await shot('mobile-warning');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.setViewportSize({width:1600,height:1100});await simple.waitFor();await walk.waitFor();
+ assert.equal(await page.locator('#panel #questionHelpBody').count(),0);
+ await page.locator('#helpSimple').click();await simple.locator('.artifact-close').click();assert.equal(await simple.count(),0);assert.equal(await walk.count(),1);
+ await walk.locator('.artifact-maximize').click();await ctl(walk,'helpShortVersion').click();
+ await simple.waitFor();assert.equal(await page.locator('#documentFullscreen').evaluate(e=>e.open),false,'Cross-window navigation exits fullscreen');
+ await simple.locator('.artifact-close').click();await walk.locator('.artifact-drag').focus();await page.keyboard.press('Escape');assert.equal(await walk.count(),0);assert.equal(await page.locator('#panel h2').count(),1);
+ const state=JSON.parse(fs.readFileSync(path.join(dir,'state.json')));assert.deepEqual(state.events,[]);assert(state.session.nodes.every(n=>n.answer===null));
+ assert.deepEqual(errors,[]);console.log('PASS separate bound help windows, dedup/front, drag/resize/minimize/maximize, draft and focus preservation, live updates, responsive inline fallback and no answer mutation');
+ }finally{await browser?.close();server?.kill();fs.rmSync(dir,{recursive:true,force:true})}
+})().catch(e=>{console.error(e);process.exitCode=1});

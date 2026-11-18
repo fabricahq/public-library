@@ -37,3 +37,8 @@ jobs:
           echo "$installed" && echo "$installed" >> "$GITHUB_STEP_SUMMARY"
           echo "$dir" >> "$GITHUB_PATH"
       - run: trailguide library check
+      - name: Install grill-me-ui in a clean consumer project
+        env:
+          SOURCE_REPOSITORY: ${{ github.server_url }}/${{ github.event.pull_request.head.repo.full_name }}.git
+          SOURCE_REVISION: ${{ github.event.pull_request.head.sha }}
+        run: bash .github/scripts/grill-me-ui/test-install.sh
