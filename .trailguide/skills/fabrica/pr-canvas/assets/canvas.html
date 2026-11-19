@@ -293,7 +293,8 @@ pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line);
 .ask-src.none .link { font-size: 12px; }
 .src-chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 2px 9px; font-size: 12px; cursor: pointer; }
 .src-chip:hover { background: var(--hover); color: var(--ink); border-color: var(--accent); }
-.ctx-search { width: 100%; font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-bottom: 10px; }
+.ctx-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.ctx-search { flex: 1 1 220px; min-width: 0; font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 .ctx-search:focus { outline: 2px solid var(--focus-ring); border-color: var(--accent); }
 .ctx-tree { font: 12.5px/1.55 var(--mono); }
 .ctx-node > summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; padding: 1px 4px; border-radius: 5px; }
@@ -1161,14 +1162,20 @@ function openContext() {
   const json = snapshotForAsk(), data = JSON.parse(json), kb = Math.round(json.length / 1024);
   const win = openWindow({ id: 'claude-context', title: "Claude's context", kind: `${kb} KB snapshot`, tabs: [
     { id: 'browse', label: 'Browse', html: `<p class="hint" style="margin:0 0 10px">Everything Claude reads to answer questions on this page. If something isn't here, Claude doesn't know it. The agent that built the canvas can answer from the code.</p>
-      <input class="ctx-search" type="search" placeholder="Find in the context, such as a field name" aria-label="Find in Claude's context" autocomplete="off" data-1p-ignore data-lpignore="true">
+      <div class="ctx-bar"><input class="ctx-search" type="search" placeholder="Find in the context, such as a field name" aria-label="Find in Claude's context" autocomplete="off" data-1p-ignore data-lpignore="true"><button class="tool-btn" data-ctx-all="open">Expand all</button><button class="tool-btn" data-ctx-all="close">Collapse all</button></div>
       <p class="ctx-none hint" hidden>Not in Claude's context.</p>
       <div class="ctx-tree">${Object.entries(data).map(([k, v]) => ctxTree(k, v, 0)).join('')}</div>` },
     { id: 'raw', label: 'Raw JSON', html: `<p style="margin:0 0 10px"><button class="tool-btn" data-ctx-copy>Copy JSON</button> <span class="hint" data-ctx-msg></span></p><pre class="code">${esc(JSON.stringify(data, null, 2))}</pre>` },
   ] });
   if (!win || win.dataset.ctxReady) return; win.dataset.ctxReady = '1';
   const tree = $('.ctx-tree', win), none = $('.ctx-none', win);
-  const initial = [...tree.querySelectorAll('details')].map(d => d.open);
+  let initial = [...tree.querySelectorAll('details')].map(d => d.open);
+  win.querySelectorAll('[data-ctx-all]').forEach(b => b.addEventListener('click', () => {
+    const open = b.dataset.ctxAll === 'open', ds = [...tree.querySelectorAll('details')];
+    ds.forEach(d => { if (!d.hidden) d.open = open; });
+    // With no search, this becomes the state the tree returns to when a search is cleared.
+    if (!$('.ctx-search', win).value.trim()) initial = ds.map(d => d.open);
+  }));
   $('.ctx-search', win).addEventListener('input', e => {
     const q = e.target.value.trim().toLowerCase(), ds = [...tree.querySelectorAll('details')];
     tree.querySelectorAll('.ctx-hit').forEach(x => x.classList.remove('ctx-hit'));
