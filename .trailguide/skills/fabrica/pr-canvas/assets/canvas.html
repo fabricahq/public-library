@@ -1166,7 +1166,7 @@ function openContext() {
       <div class="ctx-tree">${Object.entries(data).map(([k, v]) => ctxTree(k, v, 0)).join('')}</div>` },
     { id: 'raw', label: 'Raw JSON', html: `<p style="margin:0 0 10px"><button class="tool-btn" data-ctx-copy>Copy JSON</button> <span class="hint" data-ctx-msg></span></p><pre class="code">${esc(JSON.stringify(data, null, 2))}</pre>` },
   ] });
-  if (!win || win.dataset.ctx) return; win.dataset.ctx = '1';
+  if (!win || win.dataset.ctxReady) return; win.dataset.ctxReady = '1';
   const tree = $('.ctx-tree', win), none = $('.ctx-none', win);
   const initial = [...tree.querySelectorAll('details')].map(d => d.open);
   $('.ctx-search', win).addEventListener('input', e => {
