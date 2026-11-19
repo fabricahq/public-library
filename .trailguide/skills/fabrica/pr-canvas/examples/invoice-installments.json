@@ -851,7 +851,32 @@
         "after": "Recording a payment updates the installment, and one function works out the invoice status in the same transaction.",
         "why": "A partly paid invoice has many paths to `paid`, and only one place decides.",
         "tradeoff": "The status is stored for queries, so the function and the column must agree. A test checks every combination.",
-        "source": "PR description"
+        "source": "PR description",
+        "diagram": {
+          "before": [
+            [
+              "Caller",
+              "→ sets",
+              {
+                "label": "`paid = true`",
+                "tone": "removed"
+              }
+            ]
+          ],
+          "after": [
+            [
+              "Record a payment",
+              "→",
+              "Installment `paid_at`",
+              "→ `invoiceStatus()`",
+              {
+                "label": "`status`",
+                "sub": "same transaction",
+                "tone": "new"
+              }
+            ]
+          ]
+        }
       },
       {
         "id": "A2",
@@ -860,7 +885,32 @@
         "after": "Moving a date writes `due_on` and keeps `original_due_on`.",
         "why": "Bookkeepers asked to see which installments were moved.",
         "tradeoff": "Two dates per installment, and the page has to explain which one shows.",
-        "source": "Commit 9b02f7a"
+        "source": "Commit 9b02f7a",
+        "diagram": {
+          "before": [
+            [
+              {
+                "label": "No plans",
+                "tone": "muted"
+              }
+            ]
+          ],
+          "after": [
+            [
+              {
+                "label": "Installment 2",
+                "sub": "`due_on` 2026-12-22",
+                "tone": "changed"
+              },
+              "→ keeps",
+              {
+                "label": "`original_due_on`",
+                "sub": "2026-12-15",
+                "tone": "new"
+              }
+            ]
+          ]
+        }
       },
       {
         "id": "A3",
@@ -869,7 +919,38 @@
         "after": "`total_cents` and `amount_cents`. Splitting never uses floating point.",
         "why": "Splitting must add up to the total exactly.",
         "tradeoff": "A rename that touches every reader of `amount`.",
-        "source": "Commit 1e7c440"
+        "source": "Commit 1e7c440",
+        "diagram": {
+          "before": [
+            [
+              {
+                "label": "`amount`",
+                "sub": "cents, but the name does not say so"
+              }
+            ]
+          ],
+          "after": [
+            [
+              {
+                "label": "`total_cents`",
+                "sub": "100000",
+                "tone": "changed"
+              },
+              "→ `splitInvoice`",
+              {
+                "stack": [
+                  "`amount_cents` 33333",
+                  "`amount_cents` 33333",
+                  {
+                    "label": "`amount_cents` 33334",
+                    "sub": "takes the leftover cent",
+                    "tone": "new"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
       }
     ]
   },
@@ -1042,7 +1123,39 @@
       {
         "name": "Information leakage",
         "seen": true,
-        "where": "The status list is in the CHECK constraint and in `InvoiceStatus`, held together by a test."
+        "where": "The status list is in the CHECK constraint and in `InvoiceStatus`, held together by a test.",
+        "issue": [
+          [
+            "The list of statuses",
+            "→ copied into",
+            {
+              "stack": [
+                {
+                  "label": "CHECK constraint",
+                  "tone": "changed"
+                },
+                {
+                  "label": "`InvoiceStatus`",
+                  "tone": "changed"
+                }
+              ]
+            }
+          ]
+        ],
+        "fix": {
+          "text": "Generate the CHECK constraint from `InvoiceStatus` in the migration helper, so the list exists once.",
+          "diagram": [
+            [
+              {
+                "label": "`InvoiceStatus`",
+                "sub": "the one list",
+                "tone": "new"
+              },
+              "→ generates",
+              "CHECK constraint"
+            ]
+          ]
+        }
       },
       {
         "name": "Shallow module",
