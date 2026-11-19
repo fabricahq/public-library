@@ -368,6 +368,7 @@ body.chat-resizing { cursor: col-resize; user-select: none; }
 .chat-btn[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
 .set-choice { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: none; padding: 11px 14px; font-size: 13.5px; color: var(--ink); cursor: pointer; text-align: left; }
 .set-choice:hover { background: var(--hover); }
+.set-choice-text { display: grid; gap: 1px; } .set-choice-text .hint { font-weight: 400; }
 .set-choice svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .set-choice .check { margin-left: auto; visibility: hidden; color: var(--accent); }
 .set-choice[aria-checked="true"] { font-weight: 600; }
@@ -468,6 +469,12 @@ let theme = 'system', onThemeChange = null;
 function applyTheme(v) { if (v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', v); }
 function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('pr-canvas-theme', v); } catch (e) {} onThemeChange?.(); }
 try { const saved = localStorage.getItem('pr-canvas-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
+/* Which tab a detail window opens on: its Summary, or its fields (Properties, Columns or Changes). Kept per browser. */
+const OPEN_TABS = [['summary', 'Summary', 'What it is and what this PR changes.'], ['fields', 'Fields', 'Properties for code, Columns or Changes for a table.']];
+const FIELD_TABS = ['props', 'columns'];
+let openTab = 'summary';
+try { const saved = localStorage.getItem('pr-canvas-open-tab'); if (OPEN_TABS.some(([v]) => v === saved)) openTab = saved; } catch (e) {}
+function setOpenTab(v) { openTab = v; try { localStorage.setItem('pr-canvas-open-tab', v); } catch (e) {} }
 
 /* Toolbar. */
 const pr = D.pr;
@@ -488,7 +495,7 @@ function settingsYaml() {
   return `# Settings for the pr-canvas skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`;
 }
 /* Settings window: a sidebar of sections, Personas first. A persona's small form saves on Done; Cancel discards. */
-const SETTINGS_SECTIONS = [{ id: 'personas', label: 'Personas', icon: CAP_ICONS.people }, { id: 'appearance', label: 'Appearance', icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>' }];
+const SETTINGS_SECTIONS = [{ id: 'personas', label: 'Personas', icon: CAP_ICONS.people }, { id: 'windows', label: 'Windows', icon: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17"/><path d="M8 5v4"/>' }, { id: 'appearance', label: 'Appearance', icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>' }];
 const PENCIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
 function openSettings(section = 'personas') {
   if (wins.has('settings')) { const w = wins.get('settings').el; focusWin(w); $(`[data-sec="${section}"]`, w)?.click(); return; }
@@ -512,7 +519,12 @@ function openSettings(section = 'personas') {
     main.innerHTML = `<header class="set-head"><h2>Appearance</h2><p>How this page looks in this browser.</p></header>
       <section class="set-group"><h3>Theme</h3><div class="set-list" role="radiogroup" aria-label="Theme">${THEMES.map(([v, label]) => `<button class="set-choice" role="radio" aria-checked="${v === theme}" data-theme-value="${v}">${THEME_ICONS[v]}<span>${label}${v === 'system' ? ' <span class="hint">(match your computer)</span>' : ''}</span>${CHECK}</button>`).join('')}</div></section>`;
   };
-  const draw = () => sec === 'appearance' ? drawAppearance() : drawPersonas();
+  const drawWindows = () => {
+    main.innerHTML = `<header class="set-head"><h2>Windows</h2><p>How detail windows open in this browser.</p></header>
+      <section class="set-group"><h3>Open on</h3><div class="set-list" role="radiogroup" aria-label="Open windows on">${OPEN_TABS.map(([v, label, hint]) => `<button class="set-choice" role="radio" aria-checked="${v === openTab}" data-open-tab="${v}"><span class="set-choice-text"><span>${label}</span><span class="hint">${hint}</span></span>${CHECK}</button>`).join('')}</div>
+      <p class="hint" style="margin-top:8px">A window without that tab opens on its first tab.</p></section>`;
+  };
+  const draw = () => sec === 'appearance' ? drawAppearance() : sec === 'windows' ? drawWindows() : drawPersonas();
   onThemeChange = () => { if (sec === 'appearance' && document.body.contains(main)) drawAppearance(); };
   const drawPersonas = () => {
     const edited = (() => { try { return !!localStorage.getItem(PERSONA_KEY); } catch (e) { return false; } })();
@@ -540,6 +552,7 @@ function openSettings(section = 'personas') {
   main.addEventListener('click', async e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.themeValue) { setTheme(t.dataset.themeValue); return; }
+    if (t.dataset.openTab) { setOpenTab(t.dataset.openTab); drawWindows(); return; }
     if (t.dataset.edit !== undefined) { editing = { i: +t.dataset.edit }; draw(); }
     else if (t.dataset.add !== undefined) { editing = { group: t.dataset.add }; draw(); }
     else if (t.hasAttribute('data-cancel')) { editing = null; draw(); }
@@ -604,14 +617,15 @@ function openWindow({ id, title, status, statusWord, kind, file, body, tabs }) {
   id = id || selectedId || title;
   if (wins.has(id)) { focusWin(wins.get(id).el); return wins.get(id).el; }
   tabs = (tabs || [{ id: 'details', label: 'Details', html: body }]).filter(t => t.html);
+  const first = Math.max(0, openTab === 'fields' ? tabs.findIndex(t => FIELD_TABS.includes(t.id)) : 0);
   const el = document.createElement('section');
   el.className = 'win'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
   const meta = [kind, file].filter(Boolean).join(' · ');
   el.innerHTML = `<header class="win-bar" tabindex="0" title="Drag to move. Double-click to fill the canvas. Arrow keys move it; Shift and arrow keys resize it.">
       <span class="win-title">${esc(title)}</span>${pill(status, statusWord)}<span class="win-kind">${esc(meta)}</span>
       <div class="win-actions"><button data-act="max" aria-label="Fill the canvas">${WIN_ICONS.max}</button><button data-act="close" aria-label="Close">${WIN_ICONS.close}</button></div></header>
-    ${tabs.length > 1 ? `<div class="win-tabs" role="tablist">${tabs.map((t, i) => `<button role="tab" aria-selected="${i === 0}" data-tab="${esc(t.id)}">${t.label}</button>`).join('')}</div>` : ''}
-    ${tabs.map((t, i) => `<div class="win-body" data-pane="${esc(t.id)}" role="tabpanel"${i ? ' hidden' : ''}><div class="insp-body">${t.html}</div></div>`).join('')}
+    ${tabs.length > 1 ? `<div class="win-tabs" role="tablist">${tabs.map((t, i) => `<button role="tab" aria-selected="${i === first}" data-tab="${esc(t.id)}">${t.label}</button>`).join('')}</div>` : ''}
+    ${tabs.map((t, i) => `<div class="win-body" data-pane="${esc(t.id)}" role="tabpanel"${i !== first ? ' hidden' : ''}><div class="insp-body">${t.html}</div></div>`).join('')}
     ${['e', 'w', 's', 'se', 'sw'].map(d => `<div class="win-edge ${d}" data-edge="${d}"></div>`).join('')}`;
   host().appendChild(el);
   const b = hostBox(), n = wins.size % 5;
