@@ -111,7 +111,6 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .col .m { font-weight: 600; text-align: center; }
 .col.new { background: var(--new-bg); } .col.new .m { color: var(--new); }
 .col.changed .m { color: var(--changed); } .col.renamed { background: var(--renamed-bg); } .col.renamed .m { color: var(--renamed); }
-.col.more .n { color: var(--faint); font-style: italic; }
 .col.removed .n { text-decoration: line-through; color: var(--removed); } .col.removed .m { color: var(--removed); }
 .col .from, .col .ref { color: var(--faint); font-size: 11px; }
 .col .ref { color: var(--accent); }
@@ -886,11 +885,7 @@ const views = {
     mountBoard(() => {
       if (db.summary) { const el = placeText('board-intro', db.summary, 0, 0); el.style.width = '1180px'; }
       db.tables.forEach(t => {
-        // A long changed table shows its changes and first few columns on the board; the window lists every column.
-        const long = t.status === 'changed' && t.columns.length > 18;
-        const onBoard = long ? t.columns.filter((c, i) => c.status !== 'same' || i < 6) : t.columns;
-        const hiddenN = t.columns.length - onBoard.length;
-        const cols = onBoard.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span></li>`).join('') + (hiddenN ? `<li class="col same more"><span class="m"></span><span class="n">… ${hiddenN} more unchanged</span><span class="t"></span></li>` : '');
+        const cols = t.columns.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span></li>`).join('');
         const foot = [t.policies?.length ? `${t.policies.length} access ${t.policies.length > 1 ? 'policies' : 'policy'}` : '', t.constraints?.length ? `${t.constraints.length} ${t.constraints.length > 1 ? 'rules' : 'rule'}` : '', t.examples?.length ? `${t.examples.length} example rows` : '', t.migrations?.length ? `migr. ${t.migrations.join(', ')}` : ''].filter(Boolean);
         const html = `<div class="node-head"><span class="node-title">${esc(t.name)}</span>${pill(t.status)}</div><ul class="cols">${cols}</ul>${foot.length ? `<div class="node-foot">${foot.map(esc).join('<span>·</span>')}</div>` : ''}`;
         placeNode(html, t.x, t.y + 70, t.id, `table st-${t.status}`);
