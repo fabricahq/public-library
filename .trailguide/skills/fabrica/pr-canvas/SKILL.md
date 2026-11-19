@@ -5,7 +5,7 @@ metadata:
   trailguide-skill-type: review
   display-name: PR Canvas
   short-description: Understand what a pull request created and changed
-  default-prompt: Use $pr-canvas to help me understand pull request 371.
+  default-prompt: Use $pr-canvas to help me understand this pull request.
 ---
 
 # PR Canvas
@@ -25,8 +25,8 @@ The output is one self-contained page: a section rail, a pannable canvas, and an
 
 Write each section that has content. Leave a section out rather than inventing it.
 
-- **database**: every table the PR creates or changes, plus the unchanged tables they reference, shown as context. Get the schema by running every migration on a fresh database at the base and at the head and diffing the dumps; never reconstruct columns from reading migrations alone. For each table say what one row is in a few words (`row`, such as "One task, assignable to a person."), what the PR changes as short bullets (`explain`, a list), each column's status (`new`, `changed`, `renamed` with `from`, `removed`, `same`), the column it references (`ref`), its constraints and access policies in plain words, and the migrations that touch it. Write example rows with realistic values that show each new column doing its job, load them into the head database, and keep only rows it accepts. Try at least one row each new constraint should refuse and confirm it does. When a migration rewrites existing data, insert a row at the base, run the PR's migrations over it, and show it before and after.
-- **backend**: new and changed types, enums, views, rules, store interfaces and API operations, grouped by what they are for. Give each property with its status and a one-line meaning, and a JSON example that matches the database example where they overlap.
+- **database**: every table the PR creates or changes, plus the unchanged tables they reference, shown as context. Get the schema by running every migration on a fresh database at the base and at the head and diffing the dumps; never reconstruct columns from reading migrations alone. For each table say what one row is in a few words (`row`, such as "One task, assignable to a person."), what the PR changes as short bullets (`explain`, a list), each column's status (`new`, `changed`, `renamed` with `from`, `removed`, `same`), the column it references (`ref`), the values a check constraint allows (`values`, with the constraint's name in `valuesRule`), its constraints and access policies in plain words, and the migrations that touch it. Write example rows with realistic values that show each new column doing its job, load them into the head database, and keep only rows it accepts. Try at least one row each new constraint should refuse and confirm it does. When a migration rewrites existing data, insert a row at the base, run the PR's migrations over it, and show it before and after in `dataMigration`, naming the table it belongs to in `table`.
+- **backend**: new and changed types, enums, views, rules, store interfaces and API operations, grouped by what they are for. Give each property with its status (`renamed` with `from`), a one-line meaning and any fixed set of `values`, and a JSON example that matches the database example where they overlap.
 - **frontend**: new and changed components, hooks and the modules that own a decision. Say where each shows, what it takes, and a short example. Mark hand-drawn text examples `"lang": "text"`, which the page labels as a sketch.
 - **architecture**: decisions that change how the system is shaped. Each has before, after, why, trade-off and its source.
 - **principles**: rate the PR against each principle in [references/principles.md](references/principles.md) as `strong`, `mixed` or `weak`, with a one-line verdict and concrete evidence from this PR. List each red flag with whether you saw it and where. Rate design, not correctness.
@@ -36,7 +36,7 @@ Write each section that has content. Leave a section out rather than inventing i
 
 ## Render and deliver
 
-1. Write the snapshot to match [examples/pr-371.json](examples/pr-371.json). Keep example ids and names consistent across sections, and list them in `people` so the page can name the person beside each id.
+1. Write the snapshot to match [examples/invoice-installments.json](examples/invoice-installments.json), a made-up PR that uses every field. Keep example ids and names consistent across sections, and list them in `people` so the page can name the person beside each id.
 2. Render it: `python3 scripts/render.py SNAPSHOT.json OUT.html`.
 3. Open the page in a browser once and check that the schema view lays out without overlapping tables, then give the reader the page.
 4. When you publish it as a claude.ai Artifact, declare `capabilities: {"sample": {}, "comments": {}}`. The reader can then chat about the PR from the toolbar, or highlight any text and ask about it: Claude answers in a bubble from the snapshot alone, so the page never waits on you. A question that needs the code goes to you as a comment on the highlighted text; you are woken by it, answer from the repository in that comment thread, and never poll for questions. Opened as a plain file, the page works without asking.

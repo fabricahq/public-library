@@ -325,6 +325,17 @@ pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line);
 .colrow[data-col] { cursor: pointer; }
 .colrow[data-col]:hover { background: var(--hover); }
 .colrow[data-col]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.vals { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+.vals > summary { cursor: pointer; width: fit-content; color: var(--accent); user-select: none; }
+.vals > summary:hover { text-decoration: underline; text-underline-offset: 2px; }
+.vals[open] > summary { margin-bottom: 6px; }
+.vals-chips { display: flex; flex-wrap: wrap; gap: 4px 5px; }
+.vals-chips code { font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--hover); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+.vals-rule { margin-top: 6px; }
+.vals-rule .link { font-size: 12.5px; }
+.link.mono { font-family: var(--mono); font-size: 12px; }
+.fact code { font-family: var(--mono); font-size: .9em; background: var(--hover); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.fact.flash { animation: flash 1.6s ease-out; border-radius: 6px; }
 .kv .flash { animation: flash 1.6s ease-out; }
 @keyframes flash { 0%, 35% { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); } 100% { box-shadow: inset 0 0 0 1px transparent; } }
 @media (prefers-reduced-motion: reduce) { .kv .flash { animation: none; background: var(--accent-soft); } }
@@ -668,10 +679,15 @@ function codeBlock(ex, heading = true) {
   const label = ex.lang === 'text' ? '<span class="sketch-tag">sketch</span>' : '';
   return heading ? `<section><h3>Example${label}</h3><pre class="code">${esc(text)}</pre></section>` : `${label ? `<p class="hint" style="margin-bottom:8px">${label} A hand-drawn sketch of what shows, not real output.</p>` : ''}<pre class="code">${esc(text)}</pre>`;
 }
+/* Properties, grouped like a table's Changes tab: New, Renamed, Changed, Removed, then Unchanged. All new shows one list. */
+const PROP_GROUPS = [['New', 'new'], ['Renamed', 'renamed'], ['Changed', 'changed'], ['Removed', 'removed'], ['Unchanged', 'same']];
 function propsTable(props, heading = true) {
   if (!props?.length) return '';
-  return `${heading ? '<section><h3>Properties</h3>' : '<section>'}<div class="tbl-wrap"><table class="props"><tbody>${props.map(p =>
-    `<tr><td>${esc(p.name)}</td><td>${p.status && p.status !== 'same' ? pill(p.status) + ' ' : ''}${p.type ? `<span class="ty">${esc(p.type)}</span>` : ''}${p.desc ? `<div class="ds">${esc(p.desc)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div></section>`;
+  const row = p => `<div class="colrow"><div class="colrow-top">${p.from ? `<span class="colname old">${esc(p.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(p.name)}</span>${p.type ? `<span class="ty">${esc(p.type)}</span>` : ''}</div>${p.desc ? `<div class="colrow-note">${md(p.desc)}</div>` : ''}${colValues(p)}</div>`;
+  const st = p => p.status || 'same';
+  const body = props.every(p => st(p) === 'new') ? `<div class="colgroup"><div class="collist">${props.map(row).join('')}</div></div>`
+    : PROP_GROUPS.map(([label, k]) => { const ps = props.filter(p => st(p) === k); return ps.length ? `<section class="colgroup"><h3><span class="dot st-${k}"></span>${label} <span class="tab-n">${ps.length}</span></h3><div class="collist">${ps.map(row).join('')}</div></section>` : ''; }).join('');
+  return heading ? `<section><h3>Properties</h3>${body}</section>` : body;
 }
 
 /* Pan and zoom board. */
@@ -878,17 +894,17 @@ function inspectTable(t, db) {
   const shown = t.columns.filter(c => c.name !== '…' && (isNew || c.status !== 'same'));
   const marks = {}; t.columns.forEach(c => { if (c.status !== 'same') c.name.split(' / ').forEach(n => { marks[n] = c.status; }); });
   const colKeys = c => c.name.split(' / ').filter(k => (t.examples || []).some(r => k in r));
-  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top">${c.from ? `<span class="colname old">${esc(c.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(c.name)}</span><span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}</div>`;
+  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top">${c.from ? `<span class="colname old">${esc(c.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(c.name)}</span><span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
   const COL_GROUPS = [['New', ['new']], ['Renamed', ['renamed']], ['Changed', ['changed']], ['Removed', ['removed']]];
   const cols = !shown.length ? '' : isNew ? `<div class="colgroup"><div class="collist">${shown.map(colRow).join('')}</div></div>`
     : COL_GROUPS.map(([label, sts]) => { const cs = shown.filter(c => sts.includes(c.status)); return cs.length ? `<section class="colgroup"><h3><span class="dot st-${sts[0]}"></span>${label} <span class="tab-n">${cs.length}</span></h3><div class="collist">${cs.map(colRow).join('')}</div></section>` : ''; }).join('');
-  const rules = t.constraints?.length ? `<section><h3>Rules the database enforces</h3><div class="facts">${t.constraints.map(c => `<div class="fact"><b class="mono">${esc(c.name)}</b>${esc(c.plain)}</div>`).join('')}</div></section>` : '';
+  const rules = t.constraints?.length ? `<section><h3>Rules the database enforces</h3><div class="facts">${t.constraints.map(c => `<div class="fact" data-rule-name="${esc(c.name)}"><b class="mono">${esc(c.name)}</b>${md(c.plain)}</div>`).join('')}</div></section>` : '';
   const pol = t.policies?.length ? `<section><h3>Who can do what (row-level security)</h3><div class="facts">${t.policies.map(c => `<div class="fact"><b class="mono">${esc(c.name)} ${c.status ? pill(c.status) : ''}</b>${esc(c.plain)}</div>`).join('')}</div></section>` : '';
   const migs = db.migrations.filter(m => (t.migrations || []).includes(m.id));
   const mig = migs.length ? `<div class="facts">${migs.map(m => `<div class="fact"><b class="mono">${esc(m.id)}_${esc(m.title)}.sql</b>${esc(m.summary)}</div>`).join('')}</div>` : '';
   const rowCap = r => r.title || r.kind || r.body?.slice(0, 40) || r.snoozed_until || '';
   const ex = t.examples?.length ? `<p class="hint" style="margin-bottom:8px">Loaded into the migrated schema and accepted by its constraints. Names beside ids are the example people${isNew ? '' : '; tinted fields are new or changed'}.</p>${t.examples.map((r, i) => `<div class="ex-row"><div class="ex-cap">${i + 1}. ${esc(rowCap(r))}</div>${kvTable(r, isNew ? {} : marks)}</div>`).join('')}` : '';
-  const dmd = t.id === 'tasks' && db.dataMigration;
+  const dmd = db.dataMigration?.table === t.id && db.dataMigration;
   const dm = dmd ? `<section><h3>${esc(dmd.title)}</h3>${bullets(dmd.explain)}</section>${lineDiff(JSON.stringify(dmd.before, null, 2), JSON.stringify(dmd.after, null, 2))}` : '';
   const win = openWindow({ title: t.name, status: t.status, kind: 'Table', tabs: [
     { id: 'summary', label: 'Summary', html: `<section><h3>Each row is</h3><p>${md(t.row || t.purpose)}</p></section>${points(t.status === 'context' ? 'Why it is shown' : 'What this PR changes', t.explain)}` },
@@ -899,7 +915,16 @@ function inspectTable(t, db) {
     { id: 'migrations', label: tabLabel('Migrations', migs), html: mig },
   ] });
   if (win && !win.dataset.colJump) { win.dataset.colJump = '1'; const jump = e => {
-    const r = e.target.closest('[data-col]'); if (!r || (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ')) return;
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    const ruleBtn = e.target.closest('[data-rule]');
+    if (ruleBtn && e.type === 'click') {
+      e.preventDefault(); $('[data-tab="rules"]', win)?.click();
+      const f = [...win.querySelectorAll('[data-rule-name]')].find(x => x.dataset.ruleName === ruleBtn.dataset.rule); if (!f) return;
+      f.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      f.classList.remove('flash'); void f.offsetWidth; f.classList.add('flash'); return;
+    }
+    if (e.target.closest('.vals')) return;
+    const r = e.target.closest('[data-col]'); if (!r) return;
     e.preventDefault(); $('[data-tab="examples"]', win)?.click();
     const key = r.dataset.col, vals = [...win.querySelectorAll('[data-pane="examples"] .v[data-key]')].filter(x => x.dataset.key === key);
     const v = vals.find(x => !['null', '""', '[]', '{}'].includes(x.textContent.trim())) || vals[0];
@@ -925,6 +950,14 @@ function snapshotForAsk() { return JSON.stringify(D, (k, v) => (k === 'src' && t
 function askSection() {
   const a = askRange?.commonAncestorContainer, el = a?.nodeType === 1 ? a : a?.parentElement, w = el?.closest('.win');
   return w ? `the "${w.getAttribute('aria-label')}" window` : `the ${currentSection()} section`;
+}
+/* A column's allowed values, as literals. A short list shows inline; a long one opens from a toggle. The rule that enforces them links to Rules and access. */
+function colValues(c) {
+  if (!c.values?.length) return '';
+  const chips = `<div class="vals-chips">${c.values.map(v => `<code>${esc(v)}</code>`).join('')}</div>`;
+  const rule = c.valuesRule ? `<div class="vals-rule">Enforced by <button type="button" class="link mono" data-rule="${esc(c.valuesRule)}">${esc(c.valuesRule)}</button></div>` : '';
+  if (c.values.length <= 5) return `<div class="vals">${chips}${rule}</div>`;
+  return `<details class="vals"><summary>${c.values.length} allowed values</summary>${chips}${rule}</details>`;
 }
 /* A unified line diff, GitHub style: unchanged lines stay grey, removed lines red, added lines green. */
 function lineDiff(a, b) {
