@@ -111,6 +111,7 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .col .m { font-weight: 600; text-align: center; }
 .col.new { background: var(--new-bg); } .col.new .m { color: var(--new); }
 .col.changed .m { color: var(--changed); } .col.renamed { background: var(--renamed-bg); } .col.renamed .m { color: var(--renamed); }
+.col.more .n { color: var(--faint); font-style: italic; }
 .col.removed .n { text-decoration: line-through; color: var(--removed); } .col.removed .m { color: var(--removed); }
 .col .from, .col .ref { color: var(--faint); font-size: 11px; }
 .col .ref { color: var(--accent); }
@@ -283,6 +284,30 @@ pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line);
 .ask-form textarea { flex: 1; resize: none; font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; max-height: 120px; min-height: 36px; }
 .ask-form button { border: 0; border-radius: 10px; background: var(--accent); color: var(--surface); padding: 8px 12px; font-size: 13px; cursor: pointer; }
 .ask-form button:disabled { opacity: .5; cursor: default; }
+/* Claude's context and answer sources. */
+.chat-ctx { padding: 8px 16px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.chat-ctx .link, .ask-ctx .link { font-size: 12.5px; }
+.ask-ctx { padding: 0 12px 10px; font-size: 12px; color: var(--muted); }
+.ask-src { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 10px !important; font-size: 12px; color: var(--faint); }
+.ask-src.none { color: var(--changed); display: block; }
+.ask-src.none .link { font-size: 12px; }
+.src-chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 2px 9px; font-size: 12px; cursor: pointer; }
+.src-chip:hover { background: var(--hover); color: var(--ink); border-color: var(--accent); }
+.ctx-search { width: 100%; font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-bottom: 10px; }
+.ctx-search:focus { outline: 2px solid var(--focus-ring); border-color: var(--accent); }
+.ctx-tree { font: 12.5px/1.55 var(--mono); }
+.ctx-node > summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; padding: 1px 4px; border-radius: 5px; }
+.ctx-node > summary::-webkit-details-marker { display: none; }
+.ctx-node > summary::before { content: "▸"; color: var(--faint); width: 10px; flex: none; }
+.ctx-node[open] > summary::before { content: "▾"; }
+.ctx-node > summary:hover { background: var(--hover); }
+.ctx-kids { margin-left: 9px; padding-left: 10px; border-left: 1px solid var(--line); }
+.ctx-leaf { display: flex; gap: 10px; padding: 1px 4px 1px 22px; }
+.ctx-k { color: var(--ink); font-weight: 600; flex: none; }
+.ctx-h { color: var(--faint); font-family: var(--font); font-size: 11.5px; }
+.ctx-v { color: var(--muted); white-space: pre-wrap; word-break: break-word; min-width: 0; }
+.ctx-v.t-number, .ctx-v.t-boolean { color: var(--renamed); } .ctx-v.t-null { color: var(--faint); font-style: italic; }
+.ctx-hit { background: var(--accent-soft); border-radius: 4px; }
 .ask-foot { padding: 0 12px 10px; font-size: 12px; color: var(--muted); }
 .ask-foot button { border: 0; background: none; padding: 0; color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 @media (max-width: 820px) { .ask-bubble { left: 16px !important; right: 16px; bottom: 16px; top: auto !important; width: auto; } }
@@ -860,7 +885,11 @@ const views = {
     mountBoard(() => {
       if (db.summary) { const el = placeText('board-intro', db.summary, 0, 0); el.style.width = '1180px'; }
       db.tables.forEach(t => {
-        const cols = t.columns.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span></li>`).join('');
+        // A long changed table shows its changes and first few columns on the board; the window lists every column.
+        const long = t.status === 'changed' && t.columns.length > 18;
+        const onBoard = long ? t.columns.filter((c, i) => c.status !== 'same' || i < 6) : t.columns;
+        const hiddenN = t.columns.length - onBoard.length;
+        const cols = onBoard.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span></li>`).join('') + (hiddenN ? `<li class="col same more"><span class="m"></span><span class="n">… ${hiddenN} more unchanged</span><span class="t"></span></li>` : '');
         const foot = [t.policies?.length ? `${t.policies.length} access ${t.policies.length > 1 ? 'policies' : 'policy'}` : '', t.constraints?.length ? `${t.constraints.length} ${t.constraints.length > 1 ? 'rules' : 'rule'}` : '', t.examples?.length ? `${t.examples.length} example rows` : '', t.migrations?.length ? `migr. ${t.migrations.join(', ')}` : ''].filter(Boolean);
         const html = `<div class="node-head"><span class="node-title">${esc(t.name)}</span>${pill(t.status)}</div><ul class="cols">${cols}</ul>${foot.length ? `<div class="node-foot">${foot.map(esc).join('<span>·</span>')}</div>` : ''}`;
         placeNode(html, t.x, t.y + 70, t.id, `table st-${t.status}`);
@@ -971,11 +1000,12 @@ function tabLabel(name, list) { return list?.length ? `${name} <span class="tab-
 
 function inspectTable(t, db) {
   const isNew = t.status === 'new';
-  const shown = t.columns.filter(c => c.name !== '…' && (isNew || c.status !== 'same'));
+  const shown = t.columns.filter(c => c.name !== '…');
+  const changedCols = isNew ? shown : shown.filter(c => c.status !== 'same');
   const marks = {}; t.columns.forEach(c => { if (c.status !== 'same') c.name.split(' / ').forEach(n => { marks[n] = c.status; }); });
   const colKeys = c => c.name.split(' / ').filter(k => (t.examples || []).some(r => k in r));
   const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top">${c.from ? `<span class="colname old">${esc(c.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(c.name)}</span><span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
-  const COL_GROUPS = [['New', ['new']], ['Renamed', ['renamed']], ['Changed', ['changed']], ['Removed', ['removed']]];
+  const COL_GROUPS = [['New', ['new']], ['Renamed', ['renamed']], ['Changed', ['changed']], ['Removed', ['removed']], ['Unchanged', ['same']]];
   const cols = !shown.length ? '' : isNew ? `<div class="colgroup"><div class="collist">${shown.map(colRow).join('')}</div></div>`
     : COL_GROUPS.map(([label, sts]) => { const cs = shown.filter(c => sts.includes(c.status)); return cs.length ? `<section class="colgroup"><h3><span class="dot st-${sts[0]}"></span>${label} <span class="tab-n">${cs.length}</span></h3><div class="collist">${cs.map(colRow).join('')}</div></section>` : ''; }).join('');
   const rules = t.constraints?.length ? `<section><h3>Rules the database enforces</h3><div class="facts">${t.constraints.map(c => `<div class="fact" data-rule-name="${esc(c.name)}"><b class="mono">${esc(c.name)}</b>${md(c.plain)}</div>`).join('')}</div></section>` : '';
@@ -988,7 +1018,7 @@ function inspectTable(t, db) {
   const dm = dmd ? `<section><h3>${esc(dmd.title)}</h3>${bullets(dmd.explain)}</section>${lineDiff(JSON.stringify(dmd.before, null, 2), JSON.stringify(dmd.after, null, 2))}` : '';
   const win = openWindow({ title: t.name, status: t.status, kind: 'Table', tabs: [
     { id: 'summary', label: 'Summary', html: `<section><h3>Each row is</h3><p>${md(t.row || t.purpose)}</p></section>${points(t.status === 'context' ? 'Why it is shown' : 'What this PR changes', t.explain)}` },
-    { id: 'columns', label: tabLabel(isNew ? 'Columns' : 'Changes', shown), html: cols },
+    { id: 'columns', label: tabLabel(isNew ? 'Columns' : 'Changes', changedCols), html: cols },
     { id: 'examples', label: tabLabel('Examples', t.examples), html: ex },
     { id: 'migrated', label: 'Before and after', html: dm },
     { id: 'rules', label: 'Rules and access', html: rules + pol },
@@ -1116,10 +1146,99 @@ document.addEventListener('keydown', e => {
 }, true);
 document.addEventListener('pointerdown', e => { if (askPill && !e.target.closest('.ask-pill')) hideAskPill(); });
 
+/* Claude's context: the snapshot Claude answers from, browsable in a window, so a reader can see what it knows and what it doesn't. */
+function ctxLabel(v, i) { return v && typeof v === 'object' && !Array.isArray(v) ? (v.name || v.title || v.id || v.phase || v.group || '') : ''; }
+function ctxTree(k, v, depth) {
+  if (v && typeof v === 'object') {
+    const entries = Array.isArray(v) ? v.map((x, i) => [ctxLabel(x) ? `${i + 1}. ${ctxLabel(x)}` : String(i + 1), x]) : Object.entries(v);
+    const hint = Array.isArray(v) ? `${v.length} ${v.length === 1 ? 'item' : 'items'}` : `${entries.length} ${entries.length === 1 ? 'field' : 'fields'}`;
+    return `<details class="ctx-node"${depth < 1 ? ' open' : ''}><summary><span class="ctx-k">${esc(k)}</span><span class="ctx-h">${hint}</span></summary><div class="ctx-kids">${entries.map(([ck, cv]) => ctxTree(ck, cv, depth + 1)).join('') || '<div class="ctx-leaf ctx-h">empty</div>'}</div></details>`;
+  }
+  const t = v === null ? 'null' : typeof v;
+  return `<div class="ctx-leaf"><span class="ctx-k">${esc(k)}</span><span class="ctx-v t-${t}">${esc(t === 'string' ? v : String(v))}</span></div>`;
+}
+function openContext() {
+  const json = snapshotForAsk(), data = JSON.parse(json), kb = Math.round(json.length / 1024);
+  const win = openWindow({ id: 'claude-context', title: "Claude's context", kind: `${kb} KB snapshot`, tabs: [
+    { id: 'browse', label: 'Browse', html: `<p class="hint" style="margin:0 0 10px">Everything Claude reads to answer questions on this page. If something isn't here, Claude doesn't know it. The agent that built the canvas can answer from the code.</p>
+      <input class="ctx-search" type="search" placeholder="Find in the context, such as a field name" aria-label="Find in Claude's context" autocomplete="off" data-1p-ignore data-lpignore="true">
+      <p class="ctx-none hint" hidden>Not in Claude's context.</p>
+      <div class="ctx-tree">${Object.entries(data).map(([k, v]) => ctxTree(k, v, 0)).join('')}</div>` },
+    { id: 'raw', label: 'Raw JSON', html: `<p style="margin:0 0 10px"><button class="tool-btn" data-ctx-copy>Copy JSON</button> <span class="hint" data-ctx-msg></span></p><pre class="code">${esc(JSON.stringify(data, null, 2))}</pre>` },
+  ] });
+  if (!win || win.dataset.ctx) return; win.dataset.ctx = '1';
+  const tree = $('.ctx-tree', win), none = $('.ctx-none', win);
+  const initial = [...tree.querySelectorAll('details')].map(d => d.open);
+  $('.ctx-search', win).addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase(), ds = [...tree.querySelectorAll('details')];
+    tree.querySelectorAll('.ctx-hit').forEach(x => x.classList.remove('ctx-hit'));
+    if (!q) { ds.forEach((d, i) => { d.open = initial[i]; d.hidden = false; }); tree.querySelectorAll('.ctx-leaf').forEach(l => { l.hidden = false; }); none.hidden = true; return; }
+    let hits = 0;
+    tree.querySelectorAll('.ctx-leaf').forEach(l => { const m = l.textContent.toLowerCase().includes(q); l.hidden = !m; if (m) { hits++; l.classList.add('ctx-hit'); } });
+    ds.reverse().forEach(d => { const own = d.querySelector(':scope > summary').textContent.toLowerCase().includes(q); const kid = !!d.querySelector(':scope > .ctx-kids > :not([hidden])'); d.hidden = !own && !kid; d.open = kid; if (own) { hits++; d.querySelectorAll('[hidden]').forEach(x => { x.hidden = false; }); } });
+    none.hidden = hits > 0;
+  });
+  $('[data-ctx-copy]', win).addEventListener('click', async () => {
+    const msg = $('[data-ctx-msg]', win);
+    try { await navigator.clipboard.writeText(JSON.stringify(data, null, 2)); msg.textContent = 'Copied.'; } catch (x) { msg.textContent = 'Copying is blocked here. Select the text below instead.'; }
+  });
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-ctx]')) { e.preventDefault(); openContext(); } });
+
+/* Sources: each answer ends with the parts of the snapshot it used, shown as chips that open the matching window. */
+const TAB_WORDS = { columns: 'Columns', examples: 'Examples', migrated: 'Before and after', rules: 'Rules and access', migrations: 'Migrations', props: 'Properties', example: 'Example', summary: 'Summary' };
+function sourceCatalog() {
+  const out = ['overview', 'verification', 'media'];
+  (D.database?.tables || []).forEach(t => out.push(`database:${t.id}`));
+  ['backend', 'frontend'].forEach(s => (D[s]?.groups || []).forEach(g => g.items.forEach(i => out.push(`${s}:${i.id}`))));
+  (D.architecture?.decisions || []).forEach(d => out.push(`architecture:${d.id}`));
+  (D.principles?.items || []).forEach(p => out.push(`principles:p${p.n}`));
+  (D.principles?.redFlags || []).filter(f => f.seen).forEach(f => out.push(`principles:flag-${f.name}`));
+  return out;
+}
+function sourcesRule() {
+  return ['After your answer, on its own last line, write "Sources:" and then the parts of the snapshot you used, each in square brackets, such as [database:tasks:examples] [backend:Task].',
+    `Use only these ids: ${sourceCatalog().join(', ')}. After a database id you may add :columns, :examples, :migrated, :rules or :migrations; after a backend or frontend id you may add :props or :example.`,
+    'If the snapshot does not hold the answer, write "Sources: none". Keep this line for every answer in the conversation.'].join(' ');
+}
+function sourceLabel(id) {
+  const [sec, item, tab] = id.split(':');
+  const name = { overview: 'Overview', database: 'Database', backend: 'Backend', frontend: 'Frontend', architecture: 'Architecture', principles: 'Design principles', verification: 'Verification', media: 'Screenshots and demos' }[sec] || sec;
+  const itemName = sec === 'principles' && item?.startsWith('flag-') ? item.slice(5) : sec === 'principles' && item ? (D.principles.items.find(p => 'p' + p.n === item)?.title || item) : item;
+  return [name, itemName, tab && (TAB_WORDS[tab] || tab)].filter(Boolean).map(esc).join(' › ');
+}
+function splitSources(text, done) {
+  const m = String(text).match(/\n?[ \t]*\**Sources:?\**:?(.*)$/is);
+  let body = m ? text.slice(0, m.index) : text;
+  if (!done) body = body.replace(/\n[ \t]*\**S(o(u(r(c(es?)?)?)?)?)?$/i, '');
+  if (!m) return { body, ids: null };
+  const valid = new Set(sourceCatalog());
+  const ids = [...new Set([...m[1].matchAll(/\[([^\]]+)\]/g)].map(x => x[1].trim()))].filter(id => valid.has(id.split(':').slice(0, 2).join(':')) || valid.has(id.split(':')[0]));
+  return { body, ids };
+}
+function answerHtml(text, done) {
+  const { body, ids } = splitSources(text, done);
+  if (!done) return mdBlock(body);
+  const src = ids?.length ? `<div class="ask-src"><span>From</span>${ids.map(id => `<button type="button" class="src-chip" data-src="${esc(id)}">${sourceLabel(id)}</button>`).join('')}</div>`
+    : `<div class="ask-src none">Not from Claude's context, so treat this answer with care. <button type="button" class="link" data-ctx>See Claude's context</button></div>`;
+  return mdBlock(body) + src;
+}
+async function openSource(id) {
+  const [sec, item, tab] = id.split(':');
+  if (currentSection() !== sec) { location.hash = sec; await new Promise(r => setTimeout(r, 60)); }
+  if (!item) return;
+  if (!nodeHandlers[item]) return;
+  selectNode(item);
+  const w = wins.get(item)?.el; if (w && tab) $(`[data-tab="${CSS.escape(tab)}"]`, w)?.click();
+  world?.querySelector(`.node[data-id="${CSS.escape(item)}"]`)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+}
+document.addEventListener('click', e => { const c = e.target.closest('[data-src]'); if (c) { e.preventDefault(); openSource(c.dataset.src); } });
+
 function askPrompt(quote, q) {
   return [
     'You help someone understand a pull request before they review its code. Answer only from the snapshot below, which describes what the PR created and changed. Do not review the code for bugs.',
     'Write plain, short sentences in the product\'s own words, no em dashes: two short paragraphs or a short list at most. Put field, column, type and operation names in backticks. If the snapshot does not hold the answer, say so in one sentence and say that the agent that built the canvas can answer from the code.',
+    sourcesRule(),
     '',
     `The reader highlighted this text in ${askSection()}:`,
     `<highlight>${quote}</highlight>`,
@@ -1138,7 +1257,7 @@ async function openAsk(range) {
   askBubble.innerHTML = `<div class="ask-head">${ASK_ICON}<span>Ask about this</span><button aria-label="Close" data-close>${WIN_ICONS.close}</button></div>
     <div class="ask-log" aria-live="polite"><div class="ask-quote">${md(quote.length > 400 ? quote.slice(0, 400) + '…' : quote)}</div></div>
     <form class="ask-form"><textarea rows="1" placeholder="What do you want to know?" aria-label="Your question"></textarea><button type="submit">Ask</button></form>
-    <div class="ask-foot" hidden></div>`;
+    <div class="ask-foot" hidden></div><div class="ask-ctx"><button type="button" class="link" data-ctx>See Claude's context</button></div>`;
   document.body.appendChild(askBubble);
   const b = range.getBoundingClientRect(), bw = askBubble.offsetWidth;
   askBubble.style.left = Math.max(16, Math.min(innerWidth - bw - 16, b.left)) + 'px';
@@ -1195,8 +1314,8 @@ async function openAsk(range) {
     turns.push({ role: 'user', content: turns.length ? q : askPrompt(quote, q) });
     btn.disabled = true; askAbort = new AbortController();
     try {
-      const res = await sample(turns, { cache: false, signal: askAbort.signal, onText: ({ text }) => { out.className = 'ask-a'; out.innerHTML = mdBlock(text); log.scrollTop = log.scrollHeight; } });
-      out.className = 'ask-a'; out.innerHTML = mdBlock(res.text);
+      const res = await sample(turns, { cache: false, signal: askAbort.signal, onText: ({ text }) => { out.className = 'ask-a'; out.innerHTML = answerHtml(text, false); log.scrollTop = log.scrollHeight; } });
+      out.className = 'ask-a'; out.innerHTML = answerHtml(res.text, true);
       turns.push({ role: 'assistant', content: res.text });
     } catch (err) {
       turns.pop();
@@ -1219,6 +1338,7 @@ function chatPrompt(q) {
   return [
     'You help someone understand a pull request before they review its code. Answer only from the snapshot below, which describes what the PR created and changed. Do not review the code for bugs.',
     'Write plain, short sentences in the product\'s own words, no em dashes: two short paragraphs or a short list at most. Put field, column, type and operation names in backticks. If the snapshot does not hold the answer, say so in one sentence and say that the agent that built the canvas can answer from the code.',
+    sourcesRule(),
     `The reader is looking at the ${currentSection()} section.`,
     '',
     `<snapshot>${snapshotForAsk()}</snapshot>`,
@@ -1263,7 +1383,8 @@ function initChatResize(panel) {
 function initChat() {
   const panel = $('#chat');
   panel.innerHTML = `<div class="chat-head">${CHAT_ICON}<span>Chat about this PR</span><button data-chat-close aria-label="Close chat">${WIN_ICONS.close}</button></div>
-    <div class="chat-log" aria-live="polite"><div class="chat-empty"><p>Ask anything about what this PR created and changed. Answers come from this canvas, in a few seconds.</p>
+    <div class="chat-ctx">Answers come only from what this canvas holds. <button type="button" class="link" data-ctx>See Claude's context</button></div>
+    <div class="chat-log" aria-live="polite"><div class="chat-empty"><p>Ask anything about what this PR created and changed. Answers take a few seconds.</p>
       <div class="chat-starters">${CHAT_STARTERS.map(q => `<button data-starter>${esc(q)}</button>`).join('')}</div></div></div>
     <form class="ask-form"><textarea rows="1" placeholder="Ask about this PR" aria-label="Your question" autocomplete="off" data-1p-ignore data-lpignore="true"></textarea><button type="submit">Ask</button></form>
     <div class="ask-foot" hidden></div>`;
@@ -1297,8 +1418,8 @@ function initChat() {
     chatTurns.push({ role: 'user', content: chatTurns.length ? q : chatPrompt(q) });
     btn.disabled = true; chatAbort = new AbortController();
     try {
-      const res = await sample(chatTurns, { cache: false, signal: chatAbort.signal, onText: ({ text }) => { out.className = 'ask-a'; out.innerHTML = mdBlock(text); log.scrollTop = log.scrollHeight; } });
-      out.className = 'ask-a'; out.innerHTML = mdBlock(res.text);
+      const res = await sample(chatTurns, { cache: false, signal: chatAbort.signal, onText: ({ text }) => { out.className = 'ask-a'; out.innerHTML = answerHtml(text, false); log.scrollTop = log.scrollHeight; } });
+      out.className = 'ask-a'; out.innerHTML = answerHtml(res.text, true);
       chatTurns.push({ role: 'assistant', content: res.text });
     } catch (err) {
       chatTurns.pop();
