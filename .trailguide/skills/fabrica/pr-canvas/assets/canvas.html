@@ -1,0 +1,1215 @@
+<title>__PR_TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: toolbar across the top, section rail at left, a pannable canvas filling the rest; details open as windows on the canvas. */
+:root {
+  --ink: #272b27; --muted: #6f776c; --faint: #9aa196;
+  --canvas: #f4f4ef; --surface: #fbfbf8; --node: #ffffff; --line: #dce0d6; --hover: #eaeee4;
+  --accent: #4d638b; --accent-soft: #e8edf5; --focus-ring: #4d638b33;
+  --new: #3f7a49; --new-bg: #e6f1e3; --changed: #9a6417; --changed-bg: #fbf0dc;
+  --renamed: #3f5f93; --renamed-bg: #e5ecf7; --removed: #a64438; --removed-bg: #f8e4e1;
+  --context: #7b8278; --context-bg: #eef0eb; --connector: #b3beaa; --code-bg: #f1f2ec;
+  --strong: #3f7a49; --mixed: #9a6417; --weak: #a64438;
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --toolbar: 52px; --rail: 224px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ink: #e4e7e1; --muted: #a0a89c; --faint: #757d72;
+  --canvas: #161816; --surface: #1d201d; --node: #232723; --line: #343a33; --hover: #2b302a;
+  --accent: #93a9d3; --accent-soft: #263042; --focus-ring: #93a9d340;
+  --new: #8cc493; --new-bg: #22351f; --changed: #e0b26a; --changed-bg: #3a2e18;
+  --renamed: #9db7e6; --renamed-bg: #22304a; --removed: #ec9488; --removed-bg: #432520;
+  --context: #a0a89c; --context-bg: #2a2e29; --connector: #4f5a4c; --code-bg: #1a1d1a;
+  --strong: #8cc493; --mixed: #e0b26a; --weak: #ec9488; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --ink: #e4e7e1; --muted: #a0a89c; --faint: #757d72;
+  --canvas: #161816; --surface: #1d201d; --node: #232723; --line: #343a33; --hover: #2b302a;
+  --accent: #93a9d3; --accent-soft: #263042; --focus-ring: #93a9d340;
+  --new: #8cc493; --new-bg: #22351f; --changed: #e0b26a; --changed-bg: #3a2e18;
+  --renamed: #9db7e6; --renamed-bg: #22304a; --removed: #ec9488; --removed-bg: #432520;
+  --context: #a0a89c; --context-bg: #2a2e29; --connector: #4f5a4c; --code-bg: #1a1d1a;
+  --strong: #8cc493; --mixed: #e0b26a; --weak: #ec9488; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--canvas); color: var(--ink); font: 14px/1.5 var(--font); overflow: hidden; }
+button { font: inherit; color: inherit; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: 12px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { position: fixed; inset: 0; display: grid; grid-template-rows: var(--toolbar) minmax(0, 1fr); grid-template-columns: var(--rail) minmax(0, 1fr); }
+.toolbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); min-width: 0; }
+.pr-num { font-family: var(--mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+.pr-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.open-gh { display: inline-flex; align-items: center; gap: 6px; }
+.open-gh .gh { width: 15px; height: 15px; fill: currentColor; flex: none; }
+.tool-btn { border: 1px solid var(--line); background: var(--node); border-radius: 7px; padding: 4px 10px; font-size: 13px; cursor: pointer; white-space: nowrap; text-decoration: none; color: var(--ink); }
+.tool-btn:hover { background: var(--hover); }
+.theme { position: relative; }
+.theme-btn { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--hover); display: grid; place-items: center; cursor: pointer; color: var(--ink); }
+.theme-btn:hover, .theme-btn[aria-expanded="true"] { background: var(--line); }
+.theme-btn svg, .theme-item svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+[hidden] { display: none !important; }
+.theme-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: 184px; background: var(--node); border: 1px solid var(--line); border-radius: 14px; padding: 6px; box-shadow: 0 10px 30px #0000001f; display: grid; gap: 2px; }
+.theme-item { display: flex; align-items: center; gap: 12px; width: 100%; border: 1px solid transparent; background: none; border-radius: 10px; padding: 9px 12px; cursor: pointer; color: var(--muted); font-size: 14px; text-align: left; }
+.theme-item:hover { background: var(--hover); color: var(--ink); }
+.theme-item[aria-checked="true"] { border-color: var(--connector); color: var(--ink); font-weight: 500; }
+.theme-item .check { margin-left: auto; width: 16px; height: 16px; visibility: hidden; }
+.theme-item[aria-checked="true"] .check { visibility: visible; }
+.menu-toggle { display: none; }
+
+.rail { background: var(--surface); border-right: 1px solid var(--line); overflow-y: auto; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+.rail-label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 10px 8px 4px; }
+.nav { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left; padding: 7px 8px; border-radius: 7px; cursor: pointer; color: var(--ink); }
+.nav:hover { background: var(--hover); }
+.nav[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav svg { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.6; }
+.nav .count { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; }
+.legend { display: grid; gap: 6px; padding: 6px 8px; font-size: 12px; color: var(--muted); }
+.legend span { display: flex; align-items: center; gap: 8px; }
+
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; border-radius: 999px; padding: 1px 8px; white-space: nowrap; line-height: 18px; }
+.pill.new { color: var(--new); background: var(--new-bg); } .pill.changed { color: var(--changed); background: var(--changed-bg); }
+.pill.renamed { color: var(--renamed); background: var(--renamed-bg); } .pill.removed { color: var(--removed); background: var(--removed-bg); }
+.pill.context, .pill.same { color: var(--context); background: var(--context-bg); }
+.pill.strong { color: var(--strong); background: var(--new-bg); } .pill.mixed { color: var(--mixed); background: var(--changed-bg); } .pill.weak { color: var(--weak); background: var(--removed-bg); }
+.pill.pass { color: var(--new); background: var(--new-bg); } .pill.warn { color: var(--changed); background: var(--changed-bg); } .pill.skip, .pill.fail { color: var(--removed); background: var(--removed-bg); }
+
+.main { position: relative; overflow: hidden; min-width: 0; }
+.viewport { position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: none; }
+.viewport.dragging { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.edges path { fill: none; stroke: var(--connector); stroke-width: 1.5; }
+.edges path.dashed { stroke-dasharray: 5 4; }
+.edge-label { position: absolute; font-size: 11px; color: var(--muted); background: var(--canvas); padding: 0 5px; border-radius: 4px; white-space: nowrap; transform: translate(-50%, -50%); pointer-events: none; }
+.group-title { position: absolute; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.board-intro { position: absolute; font-size: 13px; color: var(--muted); max-width: 760px; }
+
+.node { position: absolute; width: 300px; background: var(--node); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; text-align: left; box-shadow: 0 1px 2px #0000000a; }
+.node:hover { border-color: var(--connector); }
+.node.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.node.st-new { background: linear-gradient(var(--node), var(--node)) padding-box; border-color: color-mix(in srgb, var(--new) 45%, var(--line)); }
+.node.st-context { opacity: .78; border-style: dashed; }
+.node-head { display: flex; align-items: center; gap: 8px; }
+.node-title { font-weight: 600; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.node-head .pill { margin-left: auto; }
+.node-kind { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.node-sum { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.node-num { font-family: var(--mono); font-size: 11px; color: var(--faint); min-width: 18px; }
+.node.table { width: 340px; padding: 0; overflow: hidden; }
+.node.table .node-head { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.node.table .node-title { font-family: var(--mono); font-size: 13px; }
+.cols { list-style: none; margin: 0; padding: 6px 0; }
+.col { display: grid; grid-template-columns: 16px 1fr auto; gap: 6px; align-items: baseline; padding: 2px 14px; font-family: var(--mono); font-size: 12px; }
+.col .t { color: var(--faint); font-size: 11px; white-space: nowrap; }
+.col .m { font-weight: 600; text-align: center; }
+.col.new { background: var(--new-bg); } .col.new .m { color: var(--new); }
+.col.changed .m { color: var(--changed); } .col.renamed { background: var(--renamed-bg); } .col.renamed .m { color: var(--renamed); }
+.col.removed .n { text-decoration: line-through; color: var(--removed); } .col.removed .m { color: var(--removed); }
+.col .from, .col .ref { color: var(--faint); font-size: 11px; }
+.col .ref { color: var(--accent); }
+.node-foot { border-top: 1px solid var(--line); padding: 7px 14px; font-size: 11px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+.node.rating-strong { border-left: 3px solid var(--strong); } .node.rating-mixed { border-left: 3px solid var(--mixed); } .node.rating-weak { border-left: 3px solid var(--weak); }
+.node.flag { border-left: 3px solid var(--removed); }
+
+.zoom { position: absolute; left: max(14px, env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+.zoom button { border: 0; background: none; border-radius: 6px; padding: 3px 9px; cursor: pointer; font-size: 13px; }
+.zoom button:hover { background: var(--hover); }
+.zoom .lvl { font-family: var(--mono); font-size: 11px; color: var(--muted); align-self: center; padding: 0 6px; min-width: 44px; text-align: center; }
+
+.doc { position: absolute; inset: 0; overflow-y: auto; padding-block: 28px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.doc-inner { max-width: 880px; margin: 0 auto; display: grid; gap: 28px; }
+.doc h1 { font-size: 22px; line-height: 1.3; margin: 0; text-wrap: balance; }
+.doc h2 { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+.doc p { margin: 0; max-width: 68ch; }
+.sub { color: var(--muted); }
+.list { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.jump { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.jump button { border: 1px solid var(--line); background: var(--node); border-radius: 10px; padding: 12px 14px; text-align: left; cursor: pointer; display: grid; gap: 4px; }
+.jump button:hover { border-color: var(--connector); }
+.jump b { font-size: 14px; } .jump span { font-size: 12px; color: var(--muted); }
+.diffline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.diffline .sep { color: var(--faint); }
+.diffstat { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.diffstat .add { color: var(--new); } .diffstat .del { color: var(--removed); }
+.sqs { display: inline-flex; gap: 2px; }
+.sq { width: 10px; height: 10px; border-radius: 2px; background: var(--context-bg); border: 1px solid var(--line); }
+.sq.g { background: var(--new); border-color: var(--new); } .sq.r { background: var(--removed); border-color: var(--removed); }
+.caps { display: grid; gap: 22px; max-width: 760px; }
+.cap-head { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 650; color: var(--ink); margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.cap-head svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.cap ul { margin: 0; padding-left: 21px; display: grid; gap: 2px; font-size: 13.5px; line-height: 1.5; }
+.cap li::marker { color: var(--faint); }
+.points { margin: 0; padding-left: 18px; display: grid; gap: 6px; line-height: 1.5; }
+.points li::marker { color: var(--faint); }
+.cap-sub { margin: 14px 0 4px; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.cap-head + .cap-sub { margin-top: 0; }
+.caps code, .insp-body code { font-family: var(--mono); font-size: .88em; background: var(--hover); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.subhead { margin: 14px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.subhead:first-of-type { margin-top: 0; }
+.stack { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.stack a { color: inherit; text-decoration: none; border-radius: 4px; padding: 1px 3px; margin: -1px -3px; }
+.stack a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.stack .cur { color: var(--ink); font-weight: 600; }
+.rows { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 64px 1fr; gap: 4px 12px; align-items: start; background: var(--node); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.row .row-title { font-weight: 600; }
+.row .row-detail { grid-column: 2; color: var(--muted); font-size: 13px; }
+.media-card { display: grid; gap: 4px; background: var(--node); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.callout { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; font-size: 13px; }
+
+.insp-body, .insp-body > *, .ba > * { min-width: 0; }
+.win { position: absolute; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 36px #0000002b, 0 1px 3px #0000001a; overflow: hidden; min-width: 0; }
+.win.focused { border-color: var(--connector); }
+.win.max { left: 12px !important; top: 12px !important; width: calc(100% - 24px) !important; height: calc(100% - 24px) !important; }
+.win-bar { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; background: var(--code-bg); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; touch-action: none; min-width: 0; }
+.win-bar:active { cursor: grabbing; }
+.win.max .win-bar { cursor: default; }
+.win-title { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.win-kind { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.win-actions { display: flex; gap: 2px; margin-left: auto; flex: none; }
+.win-actions button { border: 0; background: none; width: 30px; height: 30px; border-radius: 7px; cursor: pointer; color: var(--muted); display: grid; place-items: center; }
+.win-actions button:hover { background: var(--hover); color: var(--ink); }
+.win-actions svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.win-tabs { display: flex; gap: 2px; padding: 6px 10px 0; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; background: var(--surface); }
+.win-tabs button { border: 0; background: none; padding: 7px 10px 9px; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.win-tabs button:hover { color: var(--ink); }
+.tab-n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 3px; border-radius: 9px; background: var(--hover); font-size: 11px; font-weight: 500; line-height: 18px; text-align: center; color: var(--muted); }
+.win-tabs button[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.win-body { flex: 1; overflow: auto; min-height: 0; }
+.win-meta { padding: 10px 18px 0; font-family: var(--mono); font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.win-edge { position: absolute; z-index: 2; touch-action: none; }
+.win-edge.e { top: 0; right: 0; bottom: 0; width: 7px; cursor: ew-resize; }
+.win-edge.w { top: 0; left: 0; bottom: 0; width: 7px; cursor: ew-resize; }
+.win-edge.s { left: 0; right: 0; bottom: 0; height: 7px; cursor: ns-resize; }
+.win-edge.se { right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; }
+.win-edge.sw { left: 0; bottom: 0; width: 16px; height: 16px; cursor: nesw-resize; }
+.win.max .win-edge { display: none; }
+@media (max-width: 820px) { .win { left: 8px !important; top: 8px !important; width: calc(100% - 16px) !important; height: calc(100% - 16px) !important; } .win-edge, .win-actions [data-act="max"] { display: none; } }
+.insp-body { padding: 16px 18px 40px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.insp-body h3 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+.insp-body p { margin: 0; }
+.lead { font-weight: 500; }
+table.props { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.props td { border-top: 1px solid var(--line); padding: 7px 6px 7px 0; vertical-align: top; }
+table.props td:first-child { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+table.props .ty { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+table.props .ds { color: var(--muted); }
+.tbl-wrap { overflow-x: auto; }
+pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: 12px/1.55 var(--mono); overflow-x: auto; white-space: pre; }
+.ex-row { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--node); }
+.ex-row + .ex-row { margin-top: 10px; }
+.ex-row .ex-cap { font-size: 12px; font-weight: 600; padding: 7px 10px; background: var(--code-bg); border-bottom: 1px solid var(--line); }
+.kv { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; font-size: 12px; }
+.kv > div { padding: 4px 10px; border-top: 1px solid var(--line); min-width: 0; overflow-wrap: anywhere; }
+.kv > div:nth-child(-n+2) { border-top: 0; }
+.kv .k { font-family: var(--mono); color: var(--muted); font-size: 11.5px; }
+.kv .v { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; }
+.kv .v.null { color: var(--faint); }
+.kv .mark-new { background: var(--new-bg); } .kv .mark-changed { background: var(--changed-bg); } .kv .mark-renamed { background: var(--renamed-bg); }
+.who { font-family: var(--font); color: var(--accent); font-size: 11px; margin-left: 4px; }
+.ldiff { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--code-bg); }
+.ldiff-head { padding: 6px 12px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); background: var(--surface); }
+.ldiff-head .add { color: var(--new); font-weight: 600; } .ldiff-head .del { color: var(--removed); font-weight: 600; }
+.ldiff-body { overflow-x: auto; } .ldiff-body table { min-width: 100%; border-collapse: collapse; font: 12px/1.6 var(--mono); }
+.ldiff td { padding: 0 8px; white-space: pre; vertical-align: top; }
+.ldiff td.ln { width: 1%; min-width: 28px; text-align: right; color: var(--faint); user-select: none; font-size: 11px; }
+.ldiff td.sg { width: 1%; padding: 0 2px 0 4px; user-select: none; }
+.ldiff td.tx { width: 100%; padding-right: 16px; }
+.ldiff tr.add { background: var(--new-bg); } .ldiff tr.add td.sg, .ldiff tr.add td.tx { color: var(--new); }
+.ldiff tr.del { background: var(--removed-bg); } .ldiff tr.del td.sg, .ldiff tr.del td.tx { color: var(--removed); }
+.ba { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.ba-label { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.facts { display: grid; gap: 10px; }
+.fact b { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+.ev { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+.hint { font-size: 12px; color: var(--faint); }
+.sketch-tag { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-left: 6px; }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; }
+  .menu-toggle { display: inline-flex; }
+  .rail { position: fixed; top: var(--toolbar); bottom: 0; left: 0; width: min(280px, 86vw); z-index: 20; transform: translateX(-105%); transition: transform .18s ease; padding-left: max(10px, env(safe-area-inset-left, 0px)); }
+  .rail.open { transform: none; box-shadow: 4px 0 24px #0003; }
+  .open-gh { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .rail { transition: none; } }
+
+/* Ask about a highlight. */
+.ask-pill { position: fixed; z-index: 10001; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 16px; border: 1px solid var(--line); background: var(--node); color: var(--ink); font-size: 13px; cursor: pointer; box-shadow: 0 4px 14px #0000001f; }
+.ask-pill:hover { background: var(--hover); }
+.ask-pill svg, .ask-head > svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ask-bubble { position: fixed; z-index: 10000; width: min(400px, calc(100vw - 32px)); max-height: min(520px, calc(100vh - 80px)); display: flex; flex-direction: column; background: var(--node); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 40px #00000029; overflow: hidden; }
+.ask-head { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.ask-head button { margin-left: auto; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 6px; display: grid; place-items: center; }
+.ask-head button:hover { background: var(--hover); color: var(--ink); }
+.ask-head button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ask-log { overflow-y: auto; padding: 12px 14px; display: grid; gap: 10px; font-size: 13.5px; line-height: 1.5; }
+.ask-quote { border-left: 3px solid var(--line); padding: 2px 0 2px 10px; color: var(--muted); font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ask-q { justify-self: end; max-width: 88%; background: var(--hover); border-radius: 12px 12px 4px 12px; padding: 7px 11px; white-space: pre-wrap; }
+.ask-a { min-width: 0; } .ask-a > * { margin: 0 0 8px; } .ask-a > :last-child { margin-bottom: 0; } .ask-a ul, .ask-a ol { padding-left: 20px; } .ask-a li + li { margin-top: 2px; }
+.ask-a pre.code { margin: 2px 0 10px; font-size: 12px; line-height: 1.5; max-height: 360px; overflow: auto; } .ask-a .ask-h { font-weight: 650; color: var(--ink); }
+.ask-a code, .ask-quote code { font-family: var(--mono); font-size: .88em; background: var(--hover); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.ask-a.thinking { color: var(--faint); }
+.ask-a.err { color: var(--removed); }
+.ask-form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); align-items: flex-end; }
+.ask-form textarea { flex: 1; resize: none; font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; max-height: 120px; min-height: 36px; }
+.ask-form button { border: 0; border-radius: 10px; background: var(--accent); color: var(--surface); padding: 8px 12px; font-size: 13px; cursor: pointer; }
+.ask-form button:disabled { opacity: .5; cursor: default; }
+.ask-foot { padding: 0 12px 10px; font-size: 12px; color: var(--muted); }
+.ask-foot button { border: 0; background: none; padding: 0; color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 820px) { .ask-bubble { left: 16px !important; right: 16px; bottom: 16px; top: auto !important; width: auto; } }
+.win-body:has(.set) { overflow: hidden; }
+.insp-body:has(> .set) { padding: 0; display: block; height: 100%; }
+.set { display: grid; grid-template-columns: 180px minmax(0, 1fr); height: 100%; }
+.set-nav { border-right: 1px solid var(--line); background: var(--canvas); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+.set-nav button { display: flex; align-items: center; gap: 9px; border: 0; background: none; border-radius: 8px; padding: 7px 10px; font-size: 13.5px; color: var(--muted); cursor: pointer; text-align: left; }
+.set-nav button:hover { background: var(--hover); color: var(--ink); }
+.set-nav button[aria-current="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.set-nav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.set-main { overflow: auto; padding: 22px 26px 0; display: flex; flex-direction: column; gap: 22px; }
+.set-head h2 { margin: 0 0 4px; font-size: 17px; font-weight: 650; color: var(--ink); letter-spacing: 0; text-transform: none; }
+.set-head p { margin: 0; font-size: 13px; color: var(--muted); max-width: 560px; }
+.set-group h3 { margin: 0 0 8px; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+.set-list { border: 1px solid var(--line); border-radius: 10px; background: var(--node); }
+.set-list > * + * { border-top: 1px solid var(--line); }
+.set-row { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 14px; }
+.set-row-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.set-row-text b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.set-row-text span { font-size: 12.5px; color: var(--muted); }
+.icon-btn { border: 0; background: none; color: var(--faint); border-radius: 7px; width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer; flex: none; }
+.icon-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.set-row:hover .icon-btn, .icon-btn:focus-visible { color: var(--ink); }
+.icon-btn:hover { background: var(--hover); }
+.set-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 14px; background: var(--surface); border-radius: 10px; }
+.set-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.set-form label.wide { grid-column: 1 / -1; }
+.set-form input, .set-form textarea { font: inherit; font-size: 13.5px; font-weight: 400; color: var(--ink); background: var(--node); border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; min-width: 0; }
+.set-form input:focus, .set-form textarea:focus { outline: 2px solid var(--focus-ring); border-color: var(--accent); }
+.set-form textarea { resize: vertical; }
+.set-form-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
+.set-form-actions span { flex: 1; }
+.tool-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.tool-btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+.link { border: 0; background: none; padding: 0; font-size: 13px; color: var(--accent); cursor: pointer; }
+.link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.link.danger { color: var(--removed); }
+.set-group > .link { margin-top: 8px; }
+.set-foot { position: sticky; bottom: 0; margin-top: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 0 14px; border-top: 1px solid var(--line); background: var(--surface); font-size: 12.5px; color: var(--muted); }
+.set-foot [data-msg] { flex: 1; min-width: 200px; }
+.set-foot code { font-family: var(--mono); font-size: .9em; }
+@media (max-width: 820px) { .set { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .set-nav { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--line); } .set-form { grid-template-columns: 1fr; } }
+.colgroup + .colgroup { margin-top: 4px; }
+.colgroup h3 { display: flex; align-items: center; gap: 8px; }
+.colgroup .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.colgroup .dot.st-new { background: var(--new); } .colgroup .dot.st-changed { background: var(--changed); } .colgroup .dot.st-removed { background: var(--removed); }
+.collist { border: 1px solid var(--line); border-radius: 10px; background: var(--node); }
+.colrow { padding: 9px 14px; display: grid; gap: 2px; }
+.colrow + .colrow { border-top: 1px solid var(--line); }
+.colrow-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.colname { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); }
+.colrow .ty { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.colname.old { color: var(--muted); font-weight: 500; text-decoration: line-through; text-decoration-color: var(--faint); }
+.colrow .arrow { color: var(--faint); font-size: 13px; }
+.colgroup .dot.st-renamed { background: var(--renamed); }
+.colrow-note code { font-family: var(--mono); font-size: .9em; background: var(--hover); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.colrow-note { font-size: 13px; color: var(--muted); }
+.colrow[data-col] { cursor: pointer; }
+.colrow[data-col]:hover { background: var(--hover); }
+.colrow[data-col]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.kv .flash { animation: flash 1.6s ease-out; }
+@keyframes flash { 0%, 35% { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); } 100% { box-shadow: inset 0 0 0 1px transparent; } }
+@media (prefers-reduced-motion: reduce) { .kv .flash { animation: none; background: var(--accent-soft); } }
+.ask-head { cursor: grab; user-select: none; touch-action: none; }
+.ask-head.dragging { cursor: grabbing; }
+.ask-head button { cursor: pointer; }
+
+/* Chat about the PR. */
+.app.chat-open { grid-template-columns: var(--rail) minmax(0, 1fr) var(--chat-w, min(400px, 34vw)); }
+.chat { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface); border-left: 1px solid var(--line); }
+.chat-resize { position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; z-index: 2; touch-action: none; }
+.chat-resize::after { content: ""; position: absolute; left: 3px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background .12s; }
+.chat-resize:hover::after, .chat-resize:focus-visible::after, .chat-resize.dragging::after { background: var(--accent); }
+.chat-resize:focus-visible { outline: none; }
+body.chat-resizing { cursor: col-resize; user-select: none; }
+.chat-head { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; }
+.chat-head > svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.chat-head button { margin-left: auto; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 5px; border-radius: 6px; display: grid; place-items: center; }
+.chat-head button:hover { background: var(--hover); color: var(--ink); }
+.chat-head button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.chat-log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; line-height: 1.55; }
+.chat-log .ask-q { align-self: flex-end; }
+.chat-empty p { margin: 0 0 12px; color: var(--muted); }
+.chat-starters { display: grid; gap: 6px; }
+.chat-starters button { text-align: left; border: 1px solid var(--line); background: var(--node); color: var(--ink); border-radius: 10px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+.chat-starters button:hover { background: var(--hover); }
+.chat .ask-form { border-top: 1px solid var(--line); }
+.chat-btn { display: inline-flex; align-items: center; gap: 6px; }
+.chat-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.chat-btn[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.set-choice { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: none; padding: 11px 14px; font-size: 13.5px; color: var(--ink); cursor: pointer; text-align: left; }
+.set-choice:hover { background: var(--hover); }
+.set-choice svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.set-choice .check { margin-left: auto; visibility: hidden; color: var(--accent); }
+.set-choice[aria-checked="true"] { font-weight: 600; }
+.set-choice[aria-checked="true"] .check { visibility: visible; }
+.set-list > .set-choice:first-child { border-radius: 10px 10px 0 0; } .set-list > .set-choice:last-child { border-radius: 0 0 10px 10px; }
+@media (max-width: 820px) { .app.chat-open { grid-template-columns: 1fr; } .chat { position: fixed; inset: var(--toolbar) 0 0 0; z-index: 30; border-left: 0; } .chat-resize { display: none; } .chat-btn span { display: none; } }
+</style>
+
+<div class="app">
+  <header class="toolbar">
+    <button class="tool-btn menu-toggle" id="menuToggle" aria-label="Sections">☰</button>
+    <span class="pr-num" id="prNum"></span>
+    <span class="pr-title" id="prTitle"></span>
+    <a class="tool-btn open-gh" id="prLink" target="_blank" rel="noopener noreferrer"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Open on GitHub ↗</a>
+    <button class="tool-btn chat-btn" id="chatBtn" aria-expanded="false" aria-controls="chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/></svg><span>Chat</span></button>
+    <button class="theme-btn" id="settingsBtn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </header>
+  <nav class="rail" id="rail" aria-label="Sections"></nav>
+  <main class="main" id="main"></main>
+  <aside class="chat" id="chat" aria-label="Chat about this PR" hidden></aside>
+</div>
+
+<script type="application/json" id="pr-data">__PR_DATA__</script>
+<script>
+(() => {
+const D = JSON.parse(document.getElementById('pr-data').textContent);
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const people = D.people || {};
+const STATUS_WORD = { new: 'New', changed: 'Changed', renamed: 'Renamed', removed: 'Removed', context: 'Context', same: 'Unchanged' };
+const MARK = { new: '+', changed: '~', renamed: '→', removed: '−', same: '' };
+const pill = (st, word) => st ? `<span class="pill ${esc(st)}">${esc(word || STATUS_WORD[st] || st)}</span>` : '';
+const ICONS = {
+  overview: '<path d="M3 4h14M3 10h14M3 16h9"/>',
+  database: '<ellipse cx="10" cy="4.5" rx="6.5" ry="2.5"/><path d="M3.5 4.5v11c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-11M3.5 10c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5"/>',
+  backend: '<rect x="3" y="3" width="14" height="5" rx="1.5"/><rect x="3" y="12" width="14" height="5" rx="1.5"/><path d="M6 5.5h.01M6 14.5h.01"/>',
+  frontend: '<rect x="2.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M7 17.5h6M10 14.5v3"/>',
+  architecture: '<rect x="7" y="2.5" width="6" height="4" rx="1"/><rect x="2.5" y="13.5" width="6" height="4" rx="1"/><rect x="11.5" y="13.5" width="6" height="4" rx="1"/><path d="M10 6.5v3.5M5.5 13.5V10h9v3.5"/>',
+  principles: '<path d="M4 3.5h9.5L16 6v10.5H4z"/><path d="M7 8h6M7 11h6M7 14h3"/>',
+  verification: '<path d="M10 2.5l6 2.5v4.5c0 4-2.7 6.8-6 8-3.3-1.2-6-4-6-8V5z"/><path d="M7.2 10l2 2 3.8-4"/>',
+  media: '<rect x="2.5" y="4" width="15" height="12" rx="1.5"/><path d="M8.5 7.8v4.4L12.3 10z"/>',
+};
+const SECTIONS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'database', label: 'Database', count: () => (D.database?.tables || []).filter(t => t.status !== 'context').length },
+  { id: 'backend', label: 'Backend', count: () => countItems(D.backend) },
+  { id: 'frontend', label: 'Frontend', count: () => countItems(D.frontend) },
+  { id: 'architecture', label: 'Architecture', count: () => (D.architecture?.decisions || []).length },
+  { id: 'principles', label: 'Design principles', count: () => (D.principles?.items || []).length },
+  { id: 'verification', label: 'Verification', count: () => (D.verification?.runs || []).length },
+  { id: 'media', label: 'Screenshots and demos', count: () => (D.media?.items || []).length },
+];
+/* Lines added and deleted as GitHub shows them: the two counts, then five squares split by their share. */
+function diffstat(add, del) {
+  const total = add + del, n = 5;
+  let g = total ? Math.floor(add / total * n) : 0, r = total ? Math.floor(del / total * n) : 0;
+  const boxes = Array.from({ length: n }, (_, i) => `<span class="sq ${i < g ? 'g' : i < g + r ? 'r' : ''}"></span>`).join('');
+  return `<span class="diffstat"><span class="add">+${add.toLocaleString()}</span><span class="del">−${del.toLocaleString()}</span><span class="sqs" aria-hidden="true">${boxes}</span></span>`;
+}
+/* Items in their groups, in first-seen order; ungrouped items form one unnamed group. */
+function groupBy(items) {
+  const m = new Map(); items.forEach(i => { const g = i.group || ''; if (!m.has(g)) m.set(g, []); m.get(g).push(i); }); return [...m];
+}
+const CAP_ICONS = {
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  status: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
+  task: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
+  people: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.8 5.5-4.8s4.9 1.8 5.5 4.8"/><circle cx="17" cy="9.5" r="2.4"/><path d="M16 14.4c2.3.1 3.9 1.6 4.5 4.1"/>',
+  flow: '<rect x="3" y="4" width="7" height="5" rx="1.2"/><rect x="14" y="15" width="7" height="5" rx="1.2"/><path d="M6.5 9v3.5a2 2 0 0 0 2 2h9v.5"/>',
+};
+/* Inline text: backticks mark a field, type or operation name, shown as code. */
+function md(t) { return esc(t).replace(/`([^`]+)`/g, '<code>$1</code>'); }
+
+/* What users can now do, grouped by the system's things (Tasks, Workflows), then subgroups.
+   A group holds items or subgroups of items. */
+function capGroups(caps) {
+  const norm = i => typeof i === 'string' ? { text: i } : i;
+  const groups = typeof caps[0] === 'string' ? [{ group: '', items: caps }] : caps;
+  return groups.map(g => ({ ...g, subgroups: (g.subgroups || [{ group: '', items: g.items || [] }]).map(sg => ({ ...sg, items: sg.items.map(norm) })) }));
+}
+function groupedList(caps) {
+    const groups = capGroups(caps).map(g => ({ ...g, subgroups: g.subgroups.filter(sg => sg.items.length) })).filter(g => g.subgroups.length);
+  if (!groups.length) return '';
+  const li = i => `<li>${md(i.text)}</li>`;
+  return `<div class="caps">${groups.map(g => `<div class="cap">${g.group ? `<h3 class="cap-head">${g.icon && CAP_ICONS[g.icon] ? `<svg viewBox="0 0 24 24" aria-hidden="true">${CAP_ICONS[g.icon]}</svg>` : ''}${esc(g.group)}</h3>` : ''}${g.subgroups.map(sg => `${sg.group ? `<h4 class="cap-sub">${esc(sg.group)}</h4>` : ''}<ul>${sg.items.map(li).join('')}</ul>`).join('')}</div>`).join('')}</div>`;
+}
+function countItems(sec) { return (sec?.groups || []).reduce((n, g) => n + g.items.length, 0); }
+
+/* Theme, remembered per viewer. */
+const THEME_ICONS = {
+  light: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>',
+  dark: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+  system: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8.5 20h7M12 16v4"/></svg>',
+};
+const CHECK = '<svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']];
+let theme = 'system', onThemeChange = null;
+function applyTheme(v) { if (v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', v); }
+function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('pr-canvas-theme', v); } catch (e) {} onThemeChange?.(); }
+try { const saved = localStorage.getItem('pr-canvas-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
+
+/* Toolbar. */
+const pr = D.pr;
+
+/* Personas: who the product serves, from the project's settings file. Edits here stay in this browser until copied back into it. */
+const PERSONA_KEY = 'pr-canvas-personas:' + pr.repo;
+const filePersonas = D.personas || [];
+let personas = filePersonas;
+try { const saved = JSON.parse(localStorage.getItem(PERSONA_KEY)); if (Array.isArray(saved)) personas = saved; } catch (e) {}
+function personaName(id) { return personas.find(p => p.id === id)?.name || id; }
+$('#settingsBtn').addEventListener('click', () => openSettings('personas'));
+function slug(t) { return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'persona'; }
+function currentSection() { const id = (location.hash || '').slice(1); return views[id] ? id : (D.database ? 'database' : 'overview'); }
+function redrawOverview() { if (currentSection() !== 'overview') return; const doc = $('#main .doc'); if (doc) doc.outerHTML = overviewHtml(); }
+function savePersonas() { try { localStorage.setItem(PERSONA_KEY, JSON.stringify(personas)); } catch (e) {} redrawOverview(); }
+function settingsYaml() {
+  const q = v => JSON.stringify(v ?? '');
+  return `# Settings for the pr-canvas skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`;
+}
+/* Settings window: a sidebar of sections, Personas first. A persona's small form saves on Done; Cancel discards. */
+const SETTINGS_SECTIONS = [{ id: 'personas', label: 'Personas', icon: CAP_ICONS.people }, { id: 'appearance', label: 'Appearance', icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>' }];
+const PENCIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
+function openSettings(section = 'personas') {
+  if (wins.has('settings')) { const w = wins.get('settings').el; focusWin(w); $(`[data-sec="${section}"]`, w)?.click(); return; }
+  openWindow({ id: 'settings', title: 'Settings', body: `<div class="set">
+      <nav class="set-nav" aria-label="Settings">${SETTINGS_SECTIONS.map(s => `<button data-sec="${s.id}" aria-current="${s.id === section}"><svg viewBox="0 0 24 24" aria-hidden="true">${s.icon}</svg>${esc(s.label)}</button>`).join('')}</nav>
+      <div class="set-main"></div></div>` });
+  const el = wins.get('settings').el, main = $('.set-main', el);
+  $('.set-nav', el).addEventListener('click', e => { const b = e.target.closest('[data-sec]'); if (!b) return; sec = b.dataset.sec; editing = null; $('.set-nav', el).querySelectorAll('[data-sec]').forEach(x => x.setAttribute('aria-current', String(x === b))); draw(); });
+  let editing = null, sec = section; // editing: { i } for an existing persona, or { group } for a new one
+  const groups = () => [...new Set(personas.map(p => p.group || ''))];
+  const form = (p, isNew) => `<form class="set-form" data-form autocomplete="off">
+      <label>Name<input name="pname" value="${esc(p.name || '')}" required placeholder="Field agent" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></label>
+      <label>Group<input name="pgroup" value="${esc(p.group || '')}" list="set-groups" placeholder="Their customers" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></label>
+      <label class="wide">Description<textarea name="pabout" rows="2" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" placeholder="One line on who they are and what they do">${esc(p.about || '')}</textarea></label>
+      <div class="set-form-actions">${isNew ? '' : '<button type="button" class="link danger" data-remove>Remove persona</button>'}<span></span><button type="button" class="tool-btn" data-cancel>Cancel</button><button type="submit" class="tool-btn primary">Done</button></div>
+    </form>`;
+  const row = (p, i) => editing && editing.i === i ? form(p, false) : `<div class="set-row">
+      <div class="set-row-text"><b>${esc(p.name)}</b>${p.about ? `<span>${esc(p.about)}</span>` : ''}</div>
+      <button class="icon-btn" data-edit="${i}" aria-label="Edit ${esc(p.name)}">${PENCIL}</button></div>`;
+  const drawAppearance = () => {
+    main.innerHTML = `<header class="set-head"><h2>Appearance</h2><p>How this page looks in this browser.</p></header>
+      <section class="set-group"><h3>Theme</h3><div class="set-list" role="radiogroup" aria-label="Theme">${THEMES.map(([v, label]) => `<button class="set-choice" role="radio" aria-checked="${v === theme}" data-theme-value="${v}">${THEME_ICONS[v]}<span>${label}${v === 'system' ? ' <span class="hint">(match your computer)</span>' : ''}</span>${CHECK}</button>`).join('')}</div></section>`;
+  };
+  const draw = () => sec === 'appearance' ? drawAppearance() : drawPersonas();
+  onThemeChange = () => { if (sec === 'appearance' && document.body.contains(main)) drawAppearance(); };
+  const drawPersonas = () => {
+    const edited = (() => { try { return !!localStorage.getItem(PERSONA_KEY); } catch (e) { return false; } })();
+    const gs = groups(); if (editing && 'group' in editing && !gs.includes(editing.group)) gs.push(editing.group);
+    main.innerHTML = `<header class="set-head"><h2>Personas</h2><p>Who the product serves. The skill names them when it describes what a change lets people do.</p></header>
+      ${gs.map(g => `<section class="set-group"><h3>${esc(g || 'Other')}</h3><div class="set-list">
+        ${personas.map((p, i) => [p, i]).filter(([p]) => (p.group || '') === g).map(([p, i]) => row(p, i)).join('')}
+        ${editing && 'group' in editing && editing.group === g ? form({ group: g }, true) : ''}
+        </div><button class="link" data-add="${esc(g)}">+ Add persona</button></section>`).join('')}
+      ${gs.length ? '' : `<p class="hint">No personas yet. <button class="link" data-add="">Add the first one</button></p>`}
+      <datalist id="set-groups">${groups().filter(Boolean).map(g => `<option value="${esc(g)}">`).join('')}</datalist>
+      <footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.pr-canvas/settings.yaml</code> in the repository.'}</span>
+        ${edited ? '<button class="link" data-reset>Undo my edits</button>' : ''}<button class="tool-btn" data-copy>Copy settings file</button></footer>`;
+    const f = $('[data-form]', main); if (f) { f.elements.pname.focus(); f.elements.pname.select(); }
+  };
+  draw();
+  main.addEventListener('submit', e => {
+    e.preventDefault(); const f = e.target.elements, v = { name: f.pname.value.trim(), group: f.pgroup.value.trim(), about: f.pabout.value.trim() };
+    if (!v.name) { f.pname.focus(); return; }
+    if ('i' in editing) personas = personas.map((p, i) => i === editing.i ? { ...p, ...v } : p);
+    else { let id = slug(v.name), n = 2; while (personas.some(p => p.id === id)) id = slug(v.name) + '-' + n++; personas = [...personas, { id, ...v }]; }
+    editing = null; savePersonas(); draw();
+  });
+  main.addEventListener('keydown', e => { if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; draw(); } });
+  main.addEventListener('click', async e => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.themeValue) { setTheme(t.dataset.themeValue); return; }
+    if (t.dataset.edit !== undefined) { editing = { i: +t.dataset.edit }; draw(); }
+    else if (t.dataset.add !== undefined) { editing = { group: t.dataset.add }; draw(); }
+    else if (t.hasAttribute('data-cancel')) { editing = null; draw(); }
+    else if (t.hasAttribute('data-remove')) { personas = personas.filter((_, i) => i !== editing.i); editing = null; savePersonas(); draw(); }
+    else if (t.hasAttribute('data-reset')) { personas = filePersonas; try { localStorage.removeItem(PERSONA_KEY); } catch (x) {} redrawOverview(); editing = null; draw(); }
+    else if (t.hasAttribute('data-copy')) {
+      const msg = $('[data-msg]', main);
+      try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.pr-canvas/settings.yaml</code> at the repository root and commit it.'; }
+      catch (x) { msg.innerHTML = `Copy this into <code>.pr-canvas/settings.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
+    }
+  });
+}
+$('#prNum').textContent = `${pr.repo.split('/')[1]} #${pr.number}`;
+$('#prTitle').textContent = pr.title;
+$('#prLink').href = pr.url;
+const st = pr.stats || {};
+
+/* Rail. */
+const rail = $('#rail');
+rail.innerHTML = SECTIONS.filter(s => s.id === 'overview' || D[s.id]).map(s =>
+  `<button class="nav" data-sec="${s.id}"><svg viewBox="0 0 20 20">${ICONS[s.id]}</svg>${esc(s.label)}${s.count ? `<span class="count">${s.count()}</span>` : ''}</button>`).join('') +
+  `<div class="rail-label">Key</div><div class="legend">${['new','changed','renamed','removed','context'].map(k => `<span>${pill(k)}</span>`).join('')}</div>`;
+rail.addEventListener('click', e => { const b = e.target.closest('.nav'); if (b) { location.hash = b.dataset.sec; rail.classList.remove('open'); } });
+$('#menuToggle').addEventListener('click', () => rail.classList.toggle('open'));
+
+/* Detail windows: each opens on the canvas, moves by its title bar, resizes from its edges, and can fill the canvas. */
+const wins = new Map();
+let zTop = 20, selectedId = null;
+const WIN_MIN_W = 460, WIN_MIN_H = 260;
+const WIN_ICONS = {
+  max: '<svg viewBox="0 0 16 16"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5L9 7M2.5 13.5L7 9"/></svg>',
+  restore: '<svg viewBox="0 0 16 16"><path d="M13.5 6.5h-4v-4M2.5 9.5h4v4M9.5 6.5l4-4M6.5 9.5l-4 4"/></svg>',
+  close: '<svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+};
+let lastSize = { w: 560 };
+try { const v = JSON.parse(localStorage.getItem('pr-canvas-window') || 'null'); if (v?.w) lastSize = v; } catch (e) {}
+const host = () => $('#main');
+function hostBox() { const h = host(); return { w: h.clientWidth, h: h.clientHeight }; }
+function minW() { return Math.min(WIN_MIN_W, hostBox().w - 24); }
+function markSelected() {
+  document.querySelectorAll('.node.selected').forEach(n => n.classList.remove('selected'));
+  wins.forEach((_, id) => world?.querySelector(`.node[data-id="${CSS.escape(id)}"]`)?.classList.add('selected'));
+}
+function focusWin(el) {
+  el.style.zIndex = ++zTop;
+  document.querySelectorAll('.win.focused').forEach(w => w.classList.remove('focused')); el.classList.add('focused');
+}
+function closeWindow(id) { const w = wins.get(id); if (!w) return; w.el.remove(); wins.delete(id); markSelected(); }
+function closeAllWindows() { [...wins.keys()].forEach(closeWindow); }
+function place(el, g) {
+  const b = hostBox();
+  g.w = Math.max(minW(), Math.min(g.w, b.w - 16)); g.h = Math.max(Math.min(WIN_MIN_H, b.h - 24), Math.min(g.h, b.h - 16));
+  g.x = Math.min(Math.max(g.x, 8 - g.w + 120), b.w - 120); g.y = Math.min(Math.max(g.y, 8), b.h - 44);
+  Object.assign(el.style, { left: g.x + 'px', top: g.y + 'px', width: g.w + 'px', height: g.h + 'px' });
+}
+function rememberSize(g) { lastSize = { w: Math.round(g.w) }; try { localStorage.setItem('pr-canvas-window', JSON.stringify(lastSize)); } catch (e) {} }
+function toggleMax(w) {
+  const on = !w.el.classList.contains('max'); w.el.classList.toggle('max', on);
+  const b = $('[data-act="max"]', w.el); b.innerHTML = on ? WIN_ICONS.restore : WIN_ICONS.max; b.setAttribute('aria-label', on ? 'Restore window size' : 'Fill the canvas');
+}
+function openWindow({ id, title, status, statusWord, kind, file, body, tabs }) {
+  id = id || selectedId || title;
+  if (wins.has(id)) { focusWin(wins.get(id).el); return wins.get(id).el; }
+  tabs = (tabs || [{ id: 'details', label: 'Details', html: body }]).filter(t => t.html);
+  const el = document.createElement('section');
+  el.className = 'win'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
+  const meta = [kind, file].filter(Boolean).join(' · ');
+  el.innerHTML = `<header class="win-bar" tabindex="0" title="Drag to move. Double-click to fill the canvas. Arrow keys move it; Shift and arrow keys resize it.">
+      <span class="win-title">${esc(title)}</span>${pill(status, statusWord)}<span class="win-kind">${esc(meta)}</span>
+      <div class="win-actions"><button data-act="max" aria-label="Fill the canvas">${WIN_ICONS.max}</button><button data-act="close" aria-label="Close">${WIN_ICONS.close}</button></div></header>
+    ${tabs.length > 1 ? `<div class="win-tabs" role="tablist">${tabs.map((t, i) => `<button role="tab" aria-selected="${i === 0}" data-tab="${esc(t.id)}">${t.label}</button>`).join('')}</div>` : ''}
+    ${tabs.map((t, i) => `<div class="win-body" data-pane="${esc(t.id)}" role="tabpanel"${i ? ' hidden' : ''}><div class="insp-body">${t.html}</div></div>`).join('')}
+    ${['e', 'w', 's', 'se', 'sw'].map(d => `<div class="win-edge ${d}" data-edge="${d}"></div>`).join('')}`;
+  host().appendChild(el);
+  const b = hostBox(), n = wins.size % 5;
+  const g = { w: lastSize.w, h: b.h - 32 - n * 28, x: 0, y: 16 + n * 28 };
+  g.w = Math.max(minW(), Math.min(g.w, b.w - 32)); g.x = b.w - g.w - 16 - n * 28;
+  place(el, g);
+  const w = { el, g }; wins.set(id, w); focusWin(el); markSelected();
+
+  el.addEventListener('pointerdown', () => focusWin(el));
+  $('[data-act="close"]', el).addEventListener('click', () => closeWindow(id));
+  $('[data-act="max"]', el).addEventListener('click', () => toggleMax(w));
+  el.querySelector('.win-tabs')?.addEventListener('click', e => {
+    const t = e.target.closest('[data-tab]'); if (!t) return;
+    el.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === t)));
+    el.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== t.dataset.tab; });
+  });
+  const bar = $('.win-bar', el);
+  bar.addEventListener('dblclick', e => { if (!e.target.closest('button')) toggleMax(w); });
+  const drag = (handle, apply) => handle.addEventListener('pointerdown', e => {
+    if (e.target.closest('button') || el.classList.contains('max') || e.button !== 0) return;
+    e.preventDefault(); handle.setPointerCapture(e.pointerId);
+    const start = { x: e.clientX, y: e.clientY, g: { ...w.g } };
+    const move = ev => { apply(ev.clientX - start.x, ev.clientY - start.y, start.g); place(el, w.g); };
+    const up = () => { handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); rememberSize(w.g); };
+    handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', up);
+  });
+  drag(bar, (dx, dy, s0) => { w.g.x = s0.x + dx; w.g.y = s0.y + dy; });
+  el.querySelectorAll('.win-edge').forEach(h => drag(h, (dx, dy, s0) => {
+    const d = h.dataset.edge, mw = minW();
+    if (d.includes('e')) w.g.w = s0.w + dx;
+    if (d.includes('s')) w.g.h = s0.h + dy;
+    if (d.includes('w')) { const nw = Math.max(mw, s0.w - dx); w.g.x = s0.x + (s0.w - nw); w.g.w = nw; }
+  }));
+  bar.addEventListener('keydown', e => {
+    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!k || el.classList.contains('max')) return; e.preventDefault();
+    if (e.shiftKey) { w.g.w += k[0] * 24; w.g.h += k[1] * 24; rememberSize(w.g); } else { w.g.x += k[0] * 24; w.g.y += k[1] * 24; }
+    place(el, w.g);
+  });
+  return el;
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !wins.size) return;
+  const inWin = e.target.closest?.('.win');
+  const top = inWin || [...wins.values()].map(w => w.el).sort((a, b) => b.style.zIndex - a.style.zIndex)[0];
+  const id = [...wins].find(([, w]) => w.el === top)?.[0];
+  if (id) closeWindow(id);
+});
+
+/* Values. */
+function who(v) { return typeof v === 'string' && people[v] ? `<span class="who">${esc(people[v])}</span>` : ''; }
+function fmtVal(v) {
+  if (v === null || v === undefined) return { cls: 'null', html: 'null' };
+  if (typeof v === 'object') return { cls: '', html: esc(JSON.stringify(v, null, 2)) };
+  if (typeof v === 'string') return { cls: '', html: (v === '' ? '<span class="null">""</span>' : esc(v)) + who(v) };
+  return { cls: '', html: esc(String(v)) };
+}
+function kvTable(obj, marks = {}) {
+  return `<div class="kv">${Object.entries(obj).map(([k, v]) => { const f = fmtVal(v); const m = marks[k] ? ` mark-${marks[k]}` : '';
+    return `<div class="k${m}" data-key="${esc(k)}">${esc(k)}</div><div class="v ${f.cls}${m}" data-key="${esc(k)}">${f.html}</div>`; }).join('')}</div>`;
+}
+function codeBlock(ex, heading = true) {
+  if (!ex) return '';
+  const text = typeof ex.code === 'string' ? ex.code : JSON.stringify(ex.code, null, 2);
+  const label = ex.lang === 'text' ? '<span class="sketch-tag">sketch</span>' : '';
+  return heading ? `<section><h3>Example${label}</h3><pre class="code">${esc(text)}</pre></section>` : `${label ? `<p class="hint" style="margin-bottom:8px">${label} A hand-drawn sketch of what shows, not real output.</p>` : ''}<pre class="code">${esc(text)}</pre>`;
+}
+function propsTable(props, heading = true) {
+  if (!props?.length) return '';
+  return `${heading ? '<section><h3>Properties</h3>' : '<section>'}<div class="tbl-wrap"><table class="props"><tbody>${props.map(p =>
+    `<tr><td>${esc(p.name)}</td><td>${p.status && p.status !== 'same' ? pill(p.status) + ' ' : ''}${p.type ? `<span class="ty">${esc(p.type)}</span>` : ''}${p.desc ? `<div class="ds">${esc(p.desc)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+
+/* Pan and zoom board. */
+let cam = { x: 40, y: 40, k: 1 };
+let world, viewport, zoomLabel;
+function setCam() { world.style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.k})`; if (zoomLabel) zoomLabel.textContent = Math.round(cam.k * 100) + '%'; }
+function zoomAt(f, px, py) {
+  const k = Math.min(2, Math.max(0.25, cam.k * f));
+  cam.x = px - (px - cam.x) * (k / cam.k); cam.y = py - (py - cam.y) * (k / cam.k); cam.k = k; setCam();
+}
+/* Fit shows everything; the first view keeps text readable and starts at the top left when everything would be too small. */
+function fit(readable) {
+  const w = world.scrollWidth, h = world.scrollHeight;
+  const vw = viewport.clientWidth, vh = viewport.clientHeight;
+  const whole = Math.min(1, (vw - 48) / w, (vh - 72) / h);
+  cam.k = readable ? Math.min(1, Math.max(0.8, whole)) : Math.max(0.25, whole);
+  cam.x = Math.max(24, (vw - w * cam.k) / 2); cam.y = 24; setCam();
+}
+function mountBoard(build) {
+  const main = $('#main');
+  main.innerHTML = `<div class="viewport" id="viewport"><div class="world" id="world"><svg class="edges" id="edges"></svg></div></div>
+    <div class="zoom"><button data-z="out" aria-label="Zoom out">−</button><span class="lvl" id="zoomLvl">100%</span><button data-z="in" aria-label="Zoom in">+</button><button data-z="fit">Fit</button></div>`;
+  viewport = $('#viewport'); world = $('#world'); zoomLabel = $('#zoomLvl');
+  const edges = build(world);
+  world.style.width = world.scrollWidth + 'px'; world.style.height = world.scrollHeight + 'px';
+  drawEdges(edges || []);
+  fit(true);
+  $('.zoom').addEventListener('click', e => { const z = e.target.closest('button')?.dataset.z; if (!z) return; const r = viewport.getBoundingClientRect();
+    if (z === 'fit') fit(); else zoomAt(z === 'in' ? 1.2 : 1 / 1.2, r.width / 2, r.height / 2); });
+  let gesture = null;
+  viewport.addEventListener('wheel', e => { e.preventDefault(); const r = viewport.getBoundingClientRect();
+    if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top);
+    else { cam.x -= e.deltaX; cam.y -= e.deltaY; setCam(); } }, { passive: false });
+  viewport.addEventListener('gesturestart', e => { e.preventDefault(); gesture = cam.k; });
+  viewport.addEventListener('gesturechange', e => { e.preventDefault(); if (gesture == null) return; const r = viewport.getBoundingClientRect(); zoomAt((gesture * e.scale) / cam.k, e.clientX - r.left, e.clientY - r.top); });
+  viewport.addEventListener('gestureend', () => { gesture = null; });
+  let drag = null;
+  viewport.addEventListener('pointerdown', e => { if (e.target.closest('.node')) return; drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; viewport.setPointerCapture(e.pointerId); viewport.classList.add('dragging'); });
+  viewport.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; cam.x = drag.cx + dx; cam.y = drag.cy + dy; setCam(); });
+  viewport.addEventListener('pointerup', () => { drag = null; viewport.classList.remove('dragging'); });
+  world.addEventListener('click', e => { const n = e.target.closest('.node'); if (!n) return; selectNode(n.dataset.id); });
+  world.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('node')) { e.preventDefault(); selectNode(e.target.dataset.id); } });
+}
+let nodeHandlers = {};
+function selectNode(id) {
+  selectedId = id; nodeHandlers[id]?.(); markSelected();
+}
+function placeNode(html, x, y, id, extraClass = '') {
+  const el = document.createElement('div');
+  el.className = 'node ' + extraClass; el.dataset.id = id; el.tabIndex = 0; el.setAttribute('role', 'button');
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.innerHTML = html; world.appendChild(el); return el;
+}
+function placeText(cls, text, x, y) { const el = document.createElement('div'); el.className = cls; el.style.left = x + 'px'; el.style.top = y + 'px'; el.textContent = text; world.appendChild(el); return el; }
+function drawEdges(list) {
+  const svg = $('#edges'); svg.setAttribute('width', world.scrollWidth); svg.setAttribute('height', world.scrollHeight);
+  const box = (id, col) => { const n = world.querySelector(`.node[data-id="${CSS.escape(id)}"]`); if (!n) return null;
+    const row = col && n.querySelector(`[data-col="${CSS.escape(col)}"]`);
+    return { x: n.offsetLeft, y: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight, ay: row ? row.offsetTop + row.offsetHeight / 2 : 40 }; };
+  let paths = '';
+  list.forEach(e => {
+    const a = box(e.from, e.fromCol), b = box(e.to, e.toCol); if (!a || !b) return;
+    let p1, p2, c1, c2;
+    if (a.x + a.w < b.x) { p1 = [a.x + a.w, a.y + a.ay]; p2 = [b.x, b.y + b.ay]; }
+    else if (b.x + b.w < a.x) { p1 = [a.x, a.y + a.ay]; p2 = [b.x + b.w, b.y + b.ay]; }
+    else if (a.y + a.h < b.y) { p1 = [a.x + a.w / 2, a.y + a.h]; p2 = [b.x + b.w / 2, b.y]; }
+    else { p1 = [a.x + a.w / 2, a.y]; p2 = [b.x + b.w / 2, b.y + b.h]; }
+    const horiz = Math.abs(p2[0] - p1[0]) > Math.abs(p2[1] - p1[1]);
+    const d = horiz ? (p2[0] - p1[0]) / 2 : (p2[1] - p1[1]) / 2;
+    c1 = horiz ? [p1[0] + d, p1[1]] : [p1[0], p1[1] + d]; c2 = horiz ? [p2[0] - d, p2[1]] : [p2[0], p2[1] - d];
+    paths += `<path class="${e.dashed ? 'dashed' : ''}" d="M${p1} C${c1} ${c2} ${p2}"/>`;
+    if (e.label) { const l = document.createElement('div'); l.className = 'edge-label'; l.textContent = e.label; l.style.left = (p1[0] + p2[0]) / 2 + 'px'; l.style.top = (p1[1] + p2[1]) / 2 + 'px'; world.appendChild(l); }
+  });
+  svg.innerHTML = paths;
+}
+/* Columns of compact nodes for every board that is not the schema. */
+function columnBoard(intro, groups, makeNode, opts = {}) {
+  mountBoard(() => {
+    const W = opts.width || 300, GAP = opts.gap || 56, top = intro ? 70 : 0;
+    if (intro) { const el = placeText('board-intro', intro, 0, 0); el.style.width = Math.max(560, groups.length * (W + GAP) - GAP) + 'px'; }
+    let col = 0;
+    groups.forEach(g => {
+      const per = opts.perColumn || g.items.length || 1;
+      for (let start = 0; start < Math.max(g.items.length, 1); start += per) {
+        const x = col * (W + GAP);
+        placeText('group-title', start === 0 ? g.title : '', x, top);
+        let y = top + 26;
+        g.items.slice(start, start + per).forEach(it => {
+          const { html, id, cls, onSelect } = makeNode(it, g);
+          const el = placeNode(html, x, y, id, cls); el.style.width = W + 'px'; nodeHandlers[id] = onSelect;
+          y += el.offsetHeight + 14;
+        });
+        col++;
+      }
+    });
+    return opts.edges || [];
+  });
+}
+
+/* Sections. */
+function overviewHtml() {
+  const o = D.overview || {};
+  return `<div class="doc"><div class="doc-inner">
+      <div style="display:grid;gap:8px"><div class="stack">${(pr.stack || []).map(s => { const n = String(s).replace(/^#/, ''); const cur = n === String(pr.number);
+          return `<a class="${cur ? 'cur' : ''}" href="https://github.com/${esc(pr.repo)}/pull/${esc(n)}" target="_blank" rel="noopener noreferrer" title="Open #${esc(n)} on GitHub"${cur ? ' aria-current="page"' : ''}>#${esc(n)}</a>`; }).join('<span aria-hidden="true">›</span>')}</div>
+      <h1>${esc(o.headline || pr.title)}</h1>
+      <p class="sub diffline"><span>${(st.files||0).toLocaleString()} files changed</span><span class="sep">·</span>${diffstat(st.additions || 0, st.deletions || 0)}<span class="sep">·</span><span>${(st.commits||0).toLocaleString()} commits</span></p></div>
+      ${o.capabilities ? `<section><h2>What users can now do</h2>${groupedList(o.capabilities)}</section>` : ''}
+    </div></div>`;
+}
+
+const views = {
+  overview() { $('#main').innerHTML = overviewHtml(); },
+
+  database() {
+    const db = D.database;
+    const byId = Object.fromEntries(db.tables.map(t => [t.id, t]));
+    mountBoard(() => {
+      if (db.summary) { const el = placeText('board-intro', db.summary, 0, 0); el.style.width = '1180px'; }
+      db.tables.forEach(t => {
+        const cols = t.columns.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span></li>`).join('');
+        const foot = [t.policies?.length ? `${t.policies.length} access ${t.policies.length > 1 ? 'policies' : 'policy'}` : '', t.constraints?.length ? `${t.constraints.length} ${t.constraints.length > 1 ? 'rules' : 'rule'}` : '', t.examples?.length ? `${t.examples.length} example rows` : '', t.migrations?.length ? `migr. ${t.migrations.join(', ')}` : ''].filter(Boolean);
+        const html = `<div class="node-head"><span class="node-title">${esc(t.name)}</span>${pill(t.status)}</div><ul class="cols">${cols}</ul>${foot.length ? `<div class="node-foot">${foot.map(esc).join('<span>·</span>')}</div>` : ''}`;
+        placeNode(html, t.x, t.y + 70, t.id, `table st-${t.status}`);
+        nodeHandlers[t.id] = () => inspectTable(t, db);
+      });
+      return db.relations;
+    });
+  },
+
+  backend() { entityBoard(D.backend); },
+  frontend() { entityBoard(D.frontend); },
+
+  architecture() {
+    const a = D.architecture;
+    columnBoard(a.summary, [{ title: 'Decisions', items: a.decisions }], d => ({
+      id: d.id, cls: '',
+      html: `<div class="node-head"><span class="node-num">${esc(d.id)}</span><span class="node-title">${esc(d.title)}</span></div><div class="node-sum">${esc(d.after)}</div>`,
+      onSelect: () => openWindow({ title: d.title, kind: d.id, file: d.source, body: `<div class="facts">
+        <div class="fact"><b>Before</b>${esc(d.before)}</div><div class="fact"><b>After</b>${esc(d.after)}</div>
+        <div class="fact"><b>Why</b>${esc(d.why)}</div><div class="fact"><b>Trade-off</b>${esc(d.tradeoff)}</div></div>` }),
+    }), { perColumn: 4, width: 320 });
+  },
+
+  principles() {
+    const p = D.principles;
+    const groups = [
+      { title: 'Applied well', items: p.items.filter(i => i.rating === 'strong') },
+      { title: 'Mixed', items: p.items.filter(i => i.rating === 'mixed') },
+      { title: 'Weak', items: p.items.filter(i => i.rating === 'weak') },
+      { title: 'Red flags seen', items: (p.redFlags || []).filter(f => f.seen).map(f => ({ ...f, flag: true })) },
+    ].filter(g => g.items.length);
+    columnBoard(p.method, groups, it => it.flag ? ({
+      id: 'flag-' + it.name, cls: 'flag',
+      html: `<div class="node-head"><span class="node-title">${esc(it.name)}</span></div><div class="node-sum">${esc(it.where)}</div>`,
+      onSelect: () => openWindow({ title: it.name, statusWord: 'Red flag', status: 'removed', kind: 'Red flag', body: `<p>${esc(it.where)}</p><p class="hint">${esc(p.source)}</p>` }),
+    }) : ({
+      id: 'p' + it.n, cls: 'rating-' + it.rating,
+      html: `<div class="node-head"><span class="node-num">${it.n}</span><span class="node-title">${esc(it.title)}</span></div><div class="node-sum">${esc(it.verdict)}</div>`,
+      onSelect: () => openWindow({ title: it.title, status: it.rating, statusWord: { strong: 'Applied well', mixed: 'Mixed', weak: 'Weak' }[it.rating], kind: `Principle ${it.n}`, file: it.page,
+        body: `<p class="lead">${esc(it.verdict)}</p><section><h3>Evidence in this PR</h3><ul class="ev">${it.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section><p class="hint">${esc(p.source)}</p>` }),
+    }), { perColumn: 5, width: 300 });
+  },
+
+  verification() {
+    const v = D.verification;
+    const vs = v.verifySkill;
+    $('#main').innerHTML = `<div class="doc"><div class="doc-inner">
+      <h1>Verification</h1>
+      ${v.agentNote ? `<div class="callout">${esc(v.agentNote)}</div>` : ''}
+      ${vs ? `<section><h2>${esc(vs.name)} runs</h2><div class="rows"><div class="row"><span>${pill(vs.walked ? 'pass' : 'warn', vs.walked ? 'Walked' : 'Not walked')}</span><span class="row-title">${esc(vs.journeys)}</span><span class="row-detail">${esc(vs.detail)}</span></div></div></section>` : ''}
+      <section><h2>Found, then fixed</h2><div class="rows">${(v.foundAndFixed || []).map(f => `<div class="row"><span>${pill('new', 'Fixed')}</span><span class="row-title">${esc(f.found)}</span><span class="row-detail"><b>Found by</b> ${esc(f.by)}. <b>Fix:</b> ${esc(f.fix)} <span class="chip">${esc(f.ref)}</span></span></div>`).join('')}</div></section>
+      <section><h2>Checks run</h2>${groupBy(v.runs || []).map(([g, runs]) => `${g ? `<h4 class="subhead">${esc(g)}</h4>` : ''}<div class="rows">${runs.map(r => `<div class="row"><span>${pill(r.result, { pass: 'Pass', warn: 'Partly', skip: 'Not run', fail: 'Fail' }[r.result])}</span><span class="row-title">${esc(r.name)}</span>${r.detail ? `<span class="row-detail">${esc(r.detail)}</span>` : ''}</div>`).join('')}</div>`).join('')}</section>
+      ${v.gaps?.length ? `<section><h2>Not verified</h2><ul class="list">${v.gaps.map(g => `<li>${esc(g)}</li>`).join('')}</ul></section>` : ''}
+      ${v.canvasChecks?.length ? `<section><h2>How this canvas checked itself</h2><ul class="list">${v.canvasChecks.map(g => `<li>${esc(g)}</li>`).join('')}</ul></section>` : ''}
+    </div></div>`;
+  },
+
+  media() {
+    const m = D.media;
+    $('#main').innerHTML = `<div class="doc"><div class="doc-inner"><h1>Screenshots and demos</h1>${m.note ? `<p class="sub">${esc(m.note)}</p>` : ''}
+      <div class="jump">${(m.items || []).map(i => i.kind === 'image' && i.src ? `<div class="media-card"><img src="${esc(i.src)}" alt="${esc(i.title)}"><b>${esc(i.title)}</b><span class="sub">${esc(i.detail || '')}</span></div>`
+        : `<div class="media-card"><b>${esc(i.title)}</b><span class="sub">${esc(i.detail || '')}</span>${i.url ? `<a href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open ↗</a>` : ''}</div>`).join('')}</div></div></div>`;
+  },
+};
+
+function entityBoard(sec) {
+  columnBoard(sec.summary, sec.groups, it => ({
+    id: it.id, cls: 'st-' + it.status,
+    html: `<div class="node-head"><span class="node-title">${esc(it.title)}</span>${pill(it.status)}</div><div class="node-kind">${esc(it.kind)}</div><div class="node-sum">${esc(it.summary)}</div>`,
+    onSelect: () => openWindow({ title: it.title, status: it.status, kind: it.kind, file: it.file, tabs: [
+      { id: 'summary', label: 'Summary', html: `<section><h3>What it is</h3><p>${md(it.summary)}</p></section>${points('Worth knowing', it.notes)}` },
+      { id: 'props', label: tabLabel('Properties', it.properties), html: propsTable(it.properties, false) },
+      { id: 'example', label: 'Example', html: codeBlock(it.example, false) },
+    ] }),
+  }), { width: 290 });
+}
+/* A heading over a short bulleted list; a string still renders, as one paragraph. */
+function bullets(v) { return !v?.length ? '' : Array.isArray(v) ? `<ul class="points">${v.map(x => `<li>${md(x)}</li>`).join('')}</ul>` : `<p>${md(v)}</p>`; }
+function points(title, v) { return v?.length ? `<section><h3>${esc(title)}</h3>${bullets(v)}</section>` : ''; }
+function tabLabel(name, list) { return list?.length ? `${name} <span class="tab-n">${list.length}</span>` : name; }
+
+function inspectTable(t, db) {
+  const isNew = t.status === 'new';
+  const shown = t.columns.filter(c => c.name !== '…' && (isNew || c.status !== 'same'));
+  const marks = {}; t.columns.forEach(c => { if (c.status !== 'same') c.name.split(' / ').forEach(n => { marks[n] = c.status; }); });
+  const colKeys = c => c.name.split(' / ').filter(k => (t.examples || []).some(r => k in r));
+  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top">${c.from ? `<span class="colname old">${esc(c.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(c.name)}</span><span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}</div>`;
+  const COL_GROUPS = [['New', ['new']], ['Renamed', ['renamed']], ['Changed', ['changed']], ['Removed', ['removed']]];
+  const cols = !shown.length ? '' : isNew ? `<div class="colgroup"><div class="collist">${shown.map(colRow).join('')}</div></div>`
+    : COL_GROUPS.map(([label, sts]) => { const cs = shown.filter(c => sts.includes(c.status)); return cs.length ? `<section class="colgroup"><h3><span class="dot st-${sts[0]}"></span>${label} <span class="tab-n">${cs.length}</span></h3><div class="collist">${cs.map(colRow).join('')}</div></section>` : ''; }).join('');
+  const rules = t.constraints?.length ? `<section><h3>Rules the database enforces</h3><div class="facts">${t.constraints.map(c => `<div class="fact"><b class="mono">${esc(c.name)}</b>${esc(c.plain)}</div>`).join('')}</div></section>` : '';
+  const pol = t.policies?.length ? `<section><h3>Who can do what (row-level security)</h3><div class="facts">${t.policies.map(c => `<div class="fact"><b class="mono">${esc(c.name)} ${c.status ? pill(c.status) : ''}</b>${esc(c.plain)}</div>`).join('')}</div></section>` : '';
+  const migs = db.migrations.filter(m => (t.migrations || []).includes(m.id));
+  const mig = migs.length ? `<div class="facts">${migs.map(m => `<div class="fact"><b class="mono">${esc(m.id)}_${esc(m.title)}.sql</b>${esc(m.summary)}</div>`).join('')}</div>` : '';
+  const rowCap = r => r.title || r.kind || r.body?.slice(0, 40) || r.snoozed_until || '';
+  const ex = t.examples?.length ? `<p class="hint" style="margin-bottom:8px">Loaded into the migrated schema and accepted by its constraints. Names beside ids are the example people${isNew ? '' : '; tinted fields are new or changed'}.</p>${t.examples.map((r, i) => `<div class="ex-row"><div class="ex-cap">${i + 1}. ${esc(rowCap(r))}</div>${kvTable(r, isNew ? {} : marks)}</div>`).join('')}` : '';
+  const dmd = t.id === 'tasks' && db.dataMigration;
+  const dm = dmd ? `<section><h3>${esc(dmd.title)}</h3>${bullets(dmd.explain)}</section>${lineDiff(JSON.stringify(dmd.before, null, 2), JSON.stringify(dmd.after, null, 2))}` : '';
+  const win = openWindow({ title: t.name, status: t.status, kind: 'Table', tabs: [
+    { id: 'summary', label: 'Summary', html: `<section><h3>Each row is</h3><p>${md(t.row || t.purpose)}</p></section>${points(t.status === 'context' ? 'Why it is shown' : 'What this PR changes', t.explain)}` },
+    { id: 'columns', label: tabLabel(isNew ? 'Columns' : 'Changes', shown), html: cols },
+    { id: 'examples', label: tabLabel('Examples', t.examples), html: ex },
+    { id: 'migrated', label: 'Before and after', html: dm },
+    { id: 'rules', label: 'Rules and access', html: rules + pol },
+    { id: 'migrations', label: tabLabel('Migrations', migs), html: mig },
+  ] });
+  if (win && !win.dataset.colJump) { win.dataset.colJump = '1'; const jump = e => {
+    const r = e.target.closest('[data-col]'); if (!r || (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault(); $('[data-tab="examples"]', win)?.click();
+    const key = r.dataset.col, vals = [...win.querySelectorAll('[data-pane="examples"] .v[data-key]')].filter(x => x.dataset.key === key);
+    const v = vals.find(x => !['null', '""', '[]', '{}'].includes(x.textContent.trim())) || vals[0];
+    if (!v) return;
+    const cells = [v.previousElementSibling, v];
+    cells[0].scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    cells.forEach(c => { c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); });
+  }; win.addEventListener('click', jump); win.addEventListener('keydown', jump); }
+}
+
+
+/* Ask about a highlight. Highlight any text, ask a question, and Claude answers in a bubble from this page's
+   own snapshot, so the page never waits on an agent. A question that needs the code goes to the agent
+   that built the canvas as a comment on the highlight; its reply arrives in that comment thread. */
+const ASK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M9.5 8.2a2.5 2.5 0 1 1 3.2 2.4c-.5.2-.7.6-.7 1.1v.3M12 14.2v.1"/></svg>';
+let askPill = null, askBubble = null, askRange = null, askAbort = null;
+const caps = {};
+async function capability(name) {
+  if (!(name in caps)) caps[name] = Promise.resolve(window.claude?.use?.(name) ?? null).catch(() => null);
+  return caps[name];
+}
+function snapshotForAsk() { return JSON.stringify(D, (k, v) => (k === 'src' && typeof v === 'string' && v.startsWith('data:')) ? '[image]' : v); }
+function askSection() {
+  const a = askRange?.commonAncestorContainer, el = a?.nodeType === 1 ? a : a?.parentElement, w = el?.closest('.win');
+  return w ? `the "${w.getAttribute('aria-label')}" window` : `the ${currentSection()} section`;
+}
+/* A unified line diff, GitHub style: unchanged lines stay grey, removed lines red, added lines green. */
+function lineDiff(a, b) {
+  const A = a.split('\n'), B = b.split('\n'), n = A.length, m = B.length;
+  const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const rows = []; let i = 0, j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && A[i] === B[j]) { rows.push([' ', A[i], i + 1, j + 1]); i++; j++; }
+    else if (j < m && (i === n || L[i][j + 1] >= L[i + 1][j])) { rows.push(['+', B[j], '', j + 1]); j++; }
+    else { rows.push(['-', A[i], i + 1, '']); i++; }
+  }
+  // Within a run of changes, list removals before additions, as GitHub does.
+  for (let k = 0; k < rows.length;) {
+    if (rows[k][0] === ' ') { k++; continue; }
+    let e = k; while (e < rows.length && rows[e][0] !== ' ') e++;
+    const run = rows.slice(k, e); rows.splice(k, e - k, ...run.filter(r => r[0] === '-'), ...run.filter(r => r[0] === '+')); k = e;
+  }
+  const adds = rows.filter(r => r[0] === '+').length, dels = rows.filter(r => r[0] === '-').length;
+  const cls = { '+': 'add', '-': 'del', ' ': '' };
+  return `<div class="ldiff"><div class="ldiff-head"><span class="add">+${adds}</span> <span class="del">−${dels}</span> lines</div><div class="ldiff-body"><table>${rows.map(([t, x, ln, rn]) =>
+    `<tr class="${cls[t]}"><td class="ln">${ln}</td><td class="ln">${rn}</td><td class="sg">${t.trim()}</td><td class="tx">${esc(x)}</td></tr>`).join('')}</table></div></div>`;
+}
+function mdBlock(t) {
+  const inline = x => md(x).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  const out = []; let list = null, code = null;
+  const flush = () => { if (list) { out.push(`<${list.tag}>${list.items.join('')}</${list.tag}>`); list = null; } };
+  String(t).split('\n').forEach(line => {
+    if (code) {
+      if (/^\s*```/.test(line)) { out.push(`<pre class="code">${esc(code.join('\n'))}</pre>`); code = null; } else code.push(line);
+      return;
+    }
+    if (/^\s*```/.test(line)) { flush(); code = []; return; }
+    const h = line.match(/^\s*#{1,6}\s+(.*)/);
+    if (h) { flush(); out.push(`<p class="ask-h">${inline(h[1])}</p>`); return; }
+    const m = line.match(/^\s*([-*•]|\d+[.)])\s+(.*)/);
+    if (m) {
+      const tag = /\d/.test(m[1]) ? 'ol' : 'ul';
+      if (list && list.tag !== tag) flush();
+      list = list || { tag, items: [] }; list.items.push(`<li>${inline(m[2])}</li>`); return;
+    }
+    flush();
+    if (line.trim()) out.push(`<p>${inline(line)}</p>`);
+  });
+  flush();
+  if (code) out.push(`<pre class="code">${esc(code.join('\n'))}</pre>`);
+  return out.join('');
+}
+function hideAskPill() { askPill?.remove(); askPill = null; }
+function closeAsk() { askAbort?.abort(); askAbort = null; askBubble?.remove(); askBubble = null; }
+function selectedRange() {
+  const sel = getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const r = sel.getRangeAt(0);
+  if (sel.toString().trim().length < 3) return null;
+  const el = r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement;
+  if (!el || !el.closest('#main') || el.closest('.ask-bubble, input, textarea, .win-bar')) return null;
+  return r;
+}
+document.addEventListener('pointerup', e => {
+  if (e.target.closest?.('.ask-pill, .ask-bubble')) return;
+  setTimeout(() => {
+    hideAskPill(); const r = selectedRange(); if (!r) return;
+    const b = r.getBoundingClientRect();
+    askPill = document.createElement('button'); askPill.className = 'ask-pill'; askPill.innerHTML = `${ASK_ICON}Ask`;
+    askPill.setAttribute('aria-label', 'Ask about the highlighted text');
+    document.body.appendChild(askPill);
+    const pw = askPill.offsetWidth;
+    askPill.style.left = Math.max(8, Math.min(innerWidth - pw - 8, b.left + b.width / 2 - pw / 2)) + 'px';
+    askPill.style.top = (b.top > 52 ? b.top - 40 : b.bottom + 8) + 'px';
+    askPill.addEventListener('pointerdown', ev => ev.preventDefault());
+    askPill.addEventListener('click', () => { const range = r.cloneRange(); hideAskPill(); openAsk(range); });
+  }, 0);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && (askBubble || askPill)) { e.stopImmediatePropagation(); hideAskPill(); closeAsk(); }
+}, true);
+document.addEventListener('pointerdown', e => { if (askPill && !e.target.closest('.ask-pill')) hideAskPill(); });
+
+function askPrompt(quote, q) {
+  return [
+    'You help someone understand a pull request before they review its code. Answer only from the snapshot below, which describes what the PR created and changed. Do not review the code for bugs.',
+    'Write plain, short sentences in the product\'s own words, no em dashes: two short paragraphs or a short list at most. Put field, column, type and operation names in backticks. If the snapshot does not hold the answer, say so in one sentence and say that the agent that built the canvas can answer from the code.',
+    '',
+    `The reader highlighted this text in ${askSection()}:`,
+    `<highlight>${quote}</highlight>`,
+    '',
+    `<snapshot>${snapshotForAsk()}</snapshot>`,
+    '',
+    `Question: ${q}`,
+  ].join('\n');
+}
+
+async function openAsk(range) {
+  closeAsk(); askRange = range;
+  const quote = range.toString().trim().replace(/\s+/g, ' ');
+  const turns = [];
+  askBubble = document.createElement('section'); askBubble.className = 'ask-bubble'; askBubble.setAttribute('role', 'dialog'); askBubble.setAttribute('aria-label', 'Ask about this');
+  askBubble.innerHTML = `<div class="ask-head">${ASK_ICON}<span>Ask about this</span><button aria-label="Close" data-close>${WIN_ICONS.close}</button></div>
+    <div class="ask-log" aria-live="polite"><div class="ask-quote">${md(quote.length > 400 ? quote.slice(0, 400) + '…' : quote)}</div></div>
+    <form class="ask-form"><textarea rows="1" placeholder="What do you want to know?" aria-label="Your question"></textarea><button type="submit">Ask</button></form>
+    <div class="ask-foot" hidden></div>`;
+  document.body.appendChild(askBubble);
+  const b = range.getBoundingClientRect(), bw = askBubble.offsetWidth;
+  askBubble.style.left = Math.max(16, Math.min(innerWidth - bw - 16, b.left)) + 'px';
+  askBubble.style.top = Math.max(60, Math.min(innerHeight - 300, b.bottom + 10)) + 'px';
+  const log = $('.ask-log', askBubble), ta = $('textarea', askBubble), form = $('form', askBubble), btn = $('button[type=submit]', form), foot = $('.ask-foot', askBubble);
+  $('[data-close]', askBubble).addEventListener('click', closeAsk);
+  const head = $('.ask-head', askBubble);
+  head.title = 'Drag to move';
+  head.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    e.preventDefault(); head.setPointerCapture(e.pointerId);
+    const r = askBubble.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = ev => {
+      askBubble.style.left = Math.max(8 - r.width + 80, Math.min(innerWidth - 80, ev.clientX - dx)) + 'px';
+      askBubble.style.top = Math.max(8, Math.min(innerHeight - 44, ev.clientY - dy)) + 'px';
+    };
+    const up = () => { head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); head.classList.remove('dragging'); };
+    head.classList.add('dragging'); head.addEventListener('pointermove', move); head.addEventListener('pointerup', up);
+  });
+  ta.focus();
+  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
+  ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+
+  const offerAgent = async question => {
+    const c = await capability('comments');
+    if (!askBubble || !c) return;
+    let state = 'off'; try { state = await c.canSendToClaude(); } catch (e) {}
+    foot.hidden = false;
+    if (state === 'available') {
+      foot.innerHTML = 'Needs the code? <button data-agent>Ask the agent that built this canvas</button>';
+      $('[data-agent]', foot).addEventListener('click', async () => {
+        try {
+          const node = askRange.startContainer.nodeType === 1 ? askRange.startContainer : askRange.startContainer.parentElement;
+          const anchor = await c.anchorFor(node);
+          await c.sendToClaude({ anchor, text: `About "${quote.slice(0, 300)}": ${question}` });
+          foot.textContent = 'Sent. The agent answers in the comment thread on this text, so you can keep reading.';
+        } catch (e) { foot.textContent = e?.code === 'not_granted' ? 'Sending was not allowed.' : 'Could not send it. Leave a comment instead.'; }
+      });
+    } else {
+      foot.innerHTML = 'Needs the code? <button data-comment>Leave a comment for the agent</button>';
+      $('[data-comment]', foot).addEventListener('click', () => c.openComposer({ range: askRange }).catch(() => { foot.hidden = true; }));
+    }
+  };
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const q = ta.value.trim(); if (!q || btn.disabled) return;
+    ta.value = ''; ta.style.height = 'auto';
+    log.insertAdjacentHTML('beforeend', `<div class="ask-q">${esc(q)}</div><div class="ask-a thinking">Thinking…</div>`);
+    const out = log.lastElementChild; log.scrollTop = log.scrollHeight;
+    const sample = await capability('sample');
+    if (!askBubble) return;
+    if (!sample) { out.className = 'ask-a err'; out.textContent = 'Answers need this page open on claude.ai with Claude allowed.'; offerAgent(q); return; }
+    turns.push({ role: 'user', content: turns.length ? q : askPrompt(quote, q) });
+    btn.disabled = true; askAbort = new AbortController();
+    try {
+      const res = await sample(turns, { cache: false, signal: askAbort.signal, onText: ({ text }) => { out.className = 'ask-a'; out.innerHTML = mdBlock(text); log.scrollTop = log.scrollHeight; } });
+      out.className = 'ask-a'; out.innerHTML = mdBlock(res.text);
+      turns.push({ role: 'assistant', content: res.text });
+    } catch (err) {
+      turns.pop();
+      if (!askBubble) return;
+      out.className = 'ask-a err';
+      out.textContent = { not_granted: 'Asking Claude was not allowed on this page.', rate_limited: 'Too many questions just now. Try again in a minute.' }[err?.code] || 'Could not get an answer.';
+    } finally { askAbort = null; if (askBubble) { btn.disabled = false; ta.focus(); } }
+    offerAgent(q);
+  });
+}
+
+
+/* Chat about the PR: a docked panel for any question. Claude answers from this page's snapshot, like Ask about this,
+   so nothing waits on an agent; a question that needs the code goes to the agent as a comment on the PR title. */
+const CHAT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/></svg>';
+const CHAT_STARTERS = ['What is this PR for, in two sentences?', 'What changed about tasks?', 'How does blocking a task work now?', 'What should I look at first?'];
+const chatTurns = [];
+let chatAbort = null;
+function chatPrompt(q) {
+  return [
+    'You help someone understand a pull request before they review its code. Answer only from the snapshot below, which describes what the PR created and changed. Do not review the code for bugs.',
+    'Write plain, short sentences in the product\'s own words, no em dashes: two short paragraphs or a short list at most. Put field, column, type and operation names in backticks. If the snapshot does not hold the answer, say so in one sentence and say that the agent that built the canvas can answer from the code.',
+    `The reader is looking at the ${currentSection()} section.`,
+    '',
+    `<snapshot>${snapshotForAsk()}</snapshot>`,
+    '',
+    `Question: ${q}`,
+  ].join('\n');
+}
+function setChatOpen(open) {
+  $('.app').classList.toggle('chat-open', open);
+  $('#chat').hidden = !open; $('#chatBtn').setAttribute('aria-expanded', String(open));
+  try { localStorage.setItem('pr-canvas-chat', open ? '1' : ''); } catch (e) {}
+  if (open) $('#chat textarea').focus();
+}
+/* Drag the chat's left edge to widen it; the width is kept per browser. Double-click resets it. */
+function initChatResize(panel) {
+  const app = $('.app'), KEY = 'pr-canvas-chat-w';
+  const clamp = w => Math.round(Math.max(320, Math.min(w, innerWidth * 0.7, innerWidth - 420)));
+  const setW = (w, keep) => {
+    if (w == null) { app.style.removeProperty('--chat-w'); try { localStorage.removeItem(KEY); } catch (e) {} return; }
+    w = clamp(w); app.style.setProperty('--chat-w', w + 'px'); handle.setAttribute('aria-valuenow', String(w));
+    if (keep) try { localStorage.setItem(KEY, String(w)); } catch (e) {}
+  };
+  const handle = document.createElement('div');
+  Object.assign(handle, { className: 'chat-resize', tabIndex: 0, title: 'Drag to resize. Double-click to reset.' });
+  handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'vertical'); handle.setAttribute('aria-label', 'Resize chat');
+  panel.prepend(handle);
+  handle.addEventListener('pointerdown', e => {
+    e.preventDefault(); handle.setPointerCapture(e.pointerId); handle.classList.add('dragging'); document.body.classList.add('chat-resizing');
+    const right = app.getBoundingClientRect().right;
+    const move = ev => setW(right - ev.clientX, false);
+    const up = ev => { handle.removeEventListener('pointermove', move); handle.classList.remove('dragging'); document.body.classList.remove('chat-resizing'); setW(right - ev.clientX, true); };
+    handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', up, { once: true }); handle.addEventListener('pointercancel', up, { once: true });
+  });
+  handle.addEventListener('dblclick', () => setW(null));
+  handle.addEventListener('keydown', e => {
+    const d = { ArrowLeft: 24, ArrowRight: -24 }[e.key]; if (!d) return;
+    e.preventDefault(); setW(panel.getBoundingClientRect().width + d, true);
+  });
+  let saved = 0; try { saved = +localStorage.getItem(KEY) || 0; } catch (e) {}
+  if (saved) setW(saved, false);
+}
+function initChat() {
+  const panel = $('#chat');
+  panel.innerHTML = `<div class="chat-head">${CHAT_ICON}<span>Chat about this PR</span><button data-chat-close aria-label="Close chat">${WIN_ICONS.close}</button></div>
+    <div class="chat-log" aria-live="polite"><div class="chat-empty"><p>Ask anything about what this PR created and changed. Answers come from this canvas, in a few seconds.</p>
+      <div class="chat-starters">${CHAT_STARTERS.map(q => `<button data-starter>${esc(q)}</button>`).join('')}</div></div></div>
+    <form class="ask-form"><textarea rows="1" placeholder="Ask about this PR" aria-label="Your question" autocomplete="off" data-1p-ignore data-lpignore="true"></textarea><button type="submit">Ask</button></form>
+    <div class="ask-foot" hidden></div>`;
+  const log = $('.chat-log', panel), ta = $('textarea', panel), form = $('form', panel), btn = $('button[type=submit]', form), foot = $('.ask-foot', panel);
+  $('[data-chat-close]', panel).addEventListener('click', () => { setChatOpen(false); $('#chatBtn').focus(); });
+  panel.addEventListener('click', e => { const s = e.target.closest('[data-starter]'); if (s) { ta.value = s.textContent; form.requestSubmit(); } });
+  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; });
+  ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+  const offerAgent = async question => {
+    const c = await capability('comments'); if (!c) return;
+    let state = 'off'; try { state = await c.canSendToClaude(); } catch (e) {}
+    if (state !== 'available') { foot.hidden = true; return; }
+    foot.hidden = false;
+    foot.innerHTML = 'Needs the code? <button data-agent>Ask the agent that built this canvas</button>';
+    $('[data-agent]', foot).addEventListener('click', async () => {
+      try {
+        const anchor = await c.anchorFor($('#prTitle'));
+        await c.sendToClaude({ anchor, text: question });
+        foot.textContent = 'Sent. The agent answers in a comment thread on the PR title, so you can keep reading.';
+      } catch (e) { foot.textContent = e?.code === 'not_granted' ? 'Sending was not allowed.' : 'Could not send it.'; }
+    });
+  };
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const q = ta.value.trim(); if (!q || btn.disabled) return;
+    ta.value = ''; ta.style.height = 'auto'; $('.chat-empty', log)?.remove(); foot.hidden = true;
+    log.insertAdjacentHTML('beforeend', `<div class="ask-q">${esc(q)}</div><div class="ask-a thinking">Thinking…</div>`);
+    const out = log.lastElementChild; log.scrollTop = log.scrollHeight;
+    const sample = await capability('sample');
+    if (!sample) { out.className = 'ask-a err'; out.textContent = 'Answers need this page open on claude.ai with Claude allowed.'; return; }
+    chatTurns.push({ role: 'user', content: chatTurns.length ? q : chatPrompt(q) });
+    btn.disabled = true; chatAbort = new AbortController();
+    try {
+      const res = await sample(chatTurns, { cache: false, signal: chatAbort.signal, onText: ({ text }) => { out.className = 'ask-a'; out.innerHTML = mdBlock(text); log.scrollTop = log.scrollHeight; } });
+      out.className = 'ask-a'; out.innerHTML = mdBlock(res.text);
+      chatTurns.push({ role: 'assistant', content: res.text });
+    } catch (err) {
+      chatTurns.pop();
+      out.className = 'ask-a err';
+      out.textContent = { not_granted: 'Asking Claude was not allowed on this page.', rate_limited: 'Too many questions just now. Try again in a minute.' }[err?.code] || 'Could not get an answer.';
+    } finally { chatAbort = null; btn.disabled = false; ta.focus(); }
+    offerAgent(q);
+  });
+  $('#chatBtn').addEventListener('click', () => setChatOpen(panel.hidden));
+  initChatResize(panel);
+  let saved = ''; try { saved = localStorage.getItem('pr-canvas-chat') || ''; } catch (e) {}
+  if (saved && innerWidth > 820) { $('.app').classList.add('chat-open'); panel.hidden = false; $('#chatBtn').setAttribute('aria-expanded', 'true'); }
+}
+initChat();
+
+function route() {
+  const id = (location.hash || '').slice(1);
+  const sec = views[id] ? id : (D.database ? 'database' : 'overview');
+  closeAllWindows(); nodeHandlers = {};
+  document.querySelectorAll('.nav').forEach(n => n.setAttribute('aria-current', String(n.dataset.sec === sec)));
+  views[sec]();
+}
+window.addEventListener('hashchange', route);
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (viewport && document.body.contains(viewport)) fit(true); }, 150); });
+(document.fonts?.ready || Promise.resolve()).then(route);
+})();
+</script>
