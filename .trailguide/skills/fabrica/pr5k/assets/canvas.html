@@ -44,6 +44,9 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .app { position: fixed; inset: 0; display: grid; grid-template-rows: var(--toolbar) minmax(0, 1fr); grid-template-columns: var(--rail) minmax(0, 1fr); }
 .toolbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--line);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); min-width: 0; }
+.brand { display: flex; align-items: center; gap: 8px; flex: none; margin: 0; padding-right: 14px; border-right: 1px solid var(--line); font-family: var(--mono); font-size: 15px; font-weight: 500; letter-spacing: -0.04em; line-height: 1.4; white-space: nowrap; }
+.brand-logo { width: 22px; height: 22px; flex: none; color: var(--accent); }
+@media (max-width: 560px) { .brand span, .pr-num { display: none; } .brand { padding-right: 10px; } }
 .pr-num { font-family: var(--mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
 .pr-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .open-gh { display: inline-flex; align-items: center; gap: 6px; }
@@ -428,6 +431,7 @@ body.chat-resizing { cursor: col-resize; user-select: none; }
 <div class="app">
   <header class="toolbar">
     <button class="tool-btn menu-toggle" id="menuToggle" aria-label="Sections">☰</button>
+    <h1 class="brand"><svg class="brand-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2 3"/><path d="M2.5 20 9 10l3.5 5 2.5-3.5 6.5 8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>PR5K</span></h1>
     <span class="pr-num" id="prNum"></span>
     <span class="pr-title" id="prTitle"></span>
     <a class="tool-btn open-gh" id="prLink" target="_blank" rel="noopener noreferrer"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Open on GitHub ↗</a>
@@ -515,20 +519,20 @@ const CHECK = '<svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L1
 const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']];
 let theme = 'system', onThemeChange = null;
 function applyTheme(v) { if (v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', v); }
-function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('pr-canvas-theme', v); } catch (e) {} onThemeChange?.(); }
-try { const saved = localStorage.getItem('pr-canvas-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
+function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('pr5k-theme', v); } catch (e) {} onThemeChange?.(); }
+try { const saved = localStorage.getItem('pr5k-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
 /* Which tab a detail window opens on: its Summary, or its fields (Properties, Columns or Changes). Kept per browser. */
 const OPEN_TABS = [['summary', 'Summary', 'What it is and what this PR changes.'], ['fields', 'Fields', 'Properties for code, Columns or Changes for a table.']];
 const FIELD_TABS = ['props', 'columns'];
 let openTab = 'summary';
-try { const saved = localStorage.getItem('pr-canvas-open-tab'); if (OPEN_TABS.some(([v]) => v === saved)) openTab = saved; } catch (e) {}
-function setOpenTab(v) { openTab = v; try { localStorage.setItem('pr-canvas-open-tab', v); } catch (e) {} }
+try { const saved = localStorage.getItem('pr5k-open-tab'); if (OPEN_TABS.some(([v]) => v === saved)) openTab = saved; } catch (e) {}
+function setOpenTab(v) { openTab = v; try { localStorage.setItem('pr5k-open-tab', v); } catch (e) {} }
 
 /* Toolbar. */
 const pr = D.pr;
 
 /* Personas: who the product serves, from the project's settings file. Edits here stay in this browser until copied back into it. */
-const PERSONA_KEY = 'pr-canvas-personas:' + pr.repo;
+const PERSONA_KEY = 'pr5k-personas:' + pr.repo;
 const filePersonas = D.personas || [];
 let personas = filePersonas;
 try { const saved = JSON.parse(localStorage.getItem(PERSONA_KEY)); if (Array.isArray(saved)) personas = saved; } catch (e) {}
@@ -540,7 +544,7 @@ function redrawOverview() { if (currentSection() !== 'overview') return; const d
 function savePersonas() { try { localStorage.setItem(PERSONA_KEY, JSON.stringify(personas)); } catch (e) {} redrawOverview(); }
 function settingsYaml() {
   const q = v => JSON.stringify(v ?? '');
-  return `# Settings for the pr-canvas skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`;
+  return `# Settings for the pr5k skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`;
 }
 /* Settings window: a sidebar of sections, Personas first. A persona's small form saves on Done; Cancel discards. */
 const SETTINGS_SECTIONS = [{ id: 'personas', label: 'Personas', icon: CAP_ICONS.people }, { id: 'windows', label: 'Windows', icon: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17"/><path d="M8 5v4"/>' }, { id: 'appearance', label: 'Appearance', icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>' }];
@@ -584,7 +588,7 @@ function openSettings(section = 'personas') {
         </div><button class="link" data-add="${esc(g)}">+ Add persona</button></section>`).join('')}
       ${gs.length ? '' : `<p class="hint">No personas yet. <button class="link" data-add="">Add the first one</button></p>`}
       <datalist id="set-groups">${groups().filter(Boolean).map(g => `<option value="${esc(g)}">`).join('')}</datalist>
-      <footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.pr-canvas/settings.yaml</code> in the repository.'}</span>
+      <footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.pr5k/settings.yaml</code> in the repository.'}</span>
         ${edited ? '<button class="link" data-reset>Undo my edits</button>' : ''}<button class="tool-btn" data-copy>Copy settings file</button></footer>`;
     const f = $('[data-form]', main); if (f) { f.elements.pname.focus(); f.elements.pname.select(); }
   };
@@ -608,8 +612,8 @@ function openSettings(section = 'personas') {
     else if (t.hasAttribute('data-reset')) { personas = filePersonas; try { localStorage.removeItem(PERSONA_KEY); } catch (x) {} redrawOverview(); editing = null; draw(); }
     else if (t.hasAttribute('data-copy')) {
       const msg = $('[data-msg]', main);
-      try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.pr-canvas/settings.yaml</code> at the repository root and commit it.'; }
-      catch (x) { msg.innerHTML = `Copy this into <code>.pr-canvas/settings.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
+      try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.pr5k/settings.yaml</code> at the repository root and commit it.'; }
+      catch (x) { msg.innerHTML = `Copy this into <code>.pr5k/settings.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
     }
   });
 }
@@ -636,7 +640,7 @@ const WIN_ICONS = {
   close: '<svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
 };
 let lastSize = { w: 560 };
-try { const v = JSON.parse(localStorage.getItem('pr-canvas-window') || 'null'); if (v?.w) lastSize = v; } catch (e) {}
+try { const v = JSON.parse(localStorage.getItem('pr5k-window') || 'null'); if (v?.w) lastSize = v; } catch (e) {}
 const host = () => $('#main');
 function hostBox() { const h = host(); return { w: h.clientWidth, h: h.clientHeight }; }
 function minW() { return Math.min(WIN_MIN_W, hostBox().w - 24); }
@@ -656,7 +660,7 @@ function place(el, g) {
   g.x = Math.min(Math.max(g.x, 8 - g.w + 120), b.w - 120); g.y = Math.min(Math.max(g.y, 8), b.h - 44);
   Object.assign(el.style, { left: g.x + 'px', top: g.y + 'px', width: g.w + 'px', height: g.h + 'px' });
 }
-function rememberSize(g) { lastSize = { w: Math.round(g.w) }; try { localStorage.setItem('pr-canvas-window', JSON.stringify(lastSize)); } catch (e) {} }
+function rememberSize(g) { lastSize = { w: Math.round(g.w) }; try { localStorage.setItem('pr5k-window', JSON.stringify(lastSize)); } catch (e) {} }
 function toggleMax(w) {
   const on = !w.el.classList.contains('max'); w.el.classList.toggle('max', on);
   const b = $('[data-act="max"]', w.el); b.innerHTML = on ? WIN_ICONS.restore : WIN_ICONS.max; b.setAttribute('aria-label', on ? 'Restore window size' : 'Fill the canvas');
@@ -1351,12 +1355,12 @@ function chatPrompt(q) {
 function setChatOpen(open) {
   $('.app').classList.toggle('chat-open', open);
   $('#chat').hidden = !open; $('#chatBtn').setAttribute('aria-expanded', String(open));
-  try { localStorage.setItem('pr-canvas-chat', open ? '1' : ''); } catch (e) {}
+  try { localStorage.setItem('pr5k-chat', open ? '1' : ''); } catch (e) {}
   if (open) $('#chat textarea').focus();
 }
 /* Drag the chat's left edge to widen it; the width is kept per browser. Double-click resets it. */
 function initChatResize(panel) {
-  const app = $('.app'), KEY = 'pr-canvas-chat-w';
+  const app = $('.app'), KEY = 'pr5k-chat-w';
   const clamp = w => Math.round(Math.max(320, Math.min(w, innerWidth * 0.7, innerWidth - 420)));
   const setW = (w, keep) => {
     if (w == null) { app.style.removeProperty('--chat-w'); try { localStorage.removeItem(KEY); } catch (e) {} return; }
@@ -1432,7 +1436,7 @@ function initChat() {
   });
   $('#chatBtn').addEventListener('click', () => setChatOpen(panel.hidden));
   initChatResize(panel);
-  let saved = ''; try { saved = localStorage.getItem('pr-canvas-chat') || ''; } catch (e) {}
+  let saved = ''; try { saved = localStorage.getItem('pr5k-chat') || ''; } catch (e) {}
   if (saved && innerWidth > 820) { $('.app').classList.add('chat-open'); panel.hidden = false; $('#chatBtn').setAttribute('aria-expanded', 'true'); }
 }
 initChat();

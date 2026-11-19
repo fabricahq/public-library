@@ -1,14 +1,16 @@
 ---
-name: pr-canvas
-description: Build a canvas for understanding what a pull request created and changed, without reviewing its code. Use when someone wants to understand a PR's schema changes, entities, architecture decisions, design-principle fit and verification before or alongside code review.
+name: pr5k
+description: Build PR5K, a 5,000-foot view of a pull request on one canvas, so a reviewer sees its big picture before its details. Use when someone wants to review a PR's schema changes, entities, architecture decisions, design-principle fit and verification rather than its lines.
 metadata:
   trailguide-skill-type: review
-  display-name: PR Canvas
-  short-description: Understand what a pull request created and changed
-  default-prompt: Use $pr-canvas to help me understand this pull request.
+  display-name: PR5K
+  short-description: Review the big picture of a pull request
+  default-prompt: Use $pr5k to show me the big picture of this pull request.
 ---
 
-# PR Canvas
+# PR5K
+
+PR5K is the 5,000-foot view of a pull request: high enough to see the shape of the change, low enough to make out its tables, entities and decisions.
 
 Help a reviewer understand a pull request: what it created, what it changed, how the pieces relate, and how it was verified. This is not a bug review. Never report defects as findings; adversarial code review covers that. Describe what is there, with literal examples, so the reviewer gets a feel for how it works.
 
@@ -19,7 +21,7 @@ The output is one self-contained page: a section rail, a pannable canvas, and an
 1. Read the PR: title, body, base and head branches, the stack it sits on, stats, commits, review comments and CI status. Read the repository's planning or decision records the PR touches; they are the best source for why.
 2. Diff base against head. Work from the merge base (`git diff base...head`).
 3. If you are the agent that built the PR, collect your own verification from this session. Otherwise take it from the PR body, commits and comments, and say so in `verification.agentNote`.
-4. Read the project's personas from `.pr-canvas/settings.yaml` at the repository root and copy them into the snapshot's `personas`, so the page's Settings window shows them. Use them to write descriptions in the product's own terms: name a persona when a change matters to particular people ("Field agents can now..."), and otherwise say "users". If the file is missing, say "users"; never invent personas.
+4. Read the project's personas from `.pr5k/settings.yaml` at the repository root and copy them into the snapshot's `personas`, so the page's Settings window shows them. Use them to write descriptions in the product's own terms: name a persona when a change matters to particular people ("Field agents can now..."), and otherwise say "users". If the file is missing, say "users"; never invent personas.
 
 ## Sections
 
