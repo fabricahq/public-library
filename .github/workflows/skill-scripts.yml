@@ -39,6 +39,20 @@ jobs:
         run: |
           npm test
           npm run test:browser
+  review-panel:
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Fake claude and codex commands stand in for real sessions, so no model is called.
+      - name: Test the panel runner with fake sessions
+        run: |
+          python3 --version
+          python3 .trailguide/skills/fabrica/review-panel/tests/test_review_panel.py
   ratchet-files:
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     defaults:

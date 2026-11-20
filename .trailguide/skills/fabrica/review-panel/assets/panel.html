@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review panel</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e4e3df;
+  --accent: #3a5bd9; --block: #c4372b; --block-bg: #fbeceb; --adv: #9a6a00; --adv-bg: #fbf3df;
+  --ok: #2f7d4f; --ok-bg: #e7f4ec; --run: #3a5bd9; --run-bg: #e9eefc; --code: #f0efec;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615; --panel: #1f1f1d; --ink: #ecebe7; --muted: #a09f99; --line: #33322f;
+    --accent: #8ea6ff; --block: #ff8a7e; --block-bg: #3a2220; --adv: #e6b84d; --adv-bg: #3a3020;
+    --ok: #74c995; --ok-bg: #1f3428; --run: #8ea6ff; --run-bg: #232c45; --code: #2a2a27;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+header { padding: 20px 24px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+.sub { color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.sub a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+main { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 20px; padding: 20px 24px 48px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 820px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 16px; } }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; text-align: left; color: inherit; font: inherit; width: 100%; }
+.card:hover { border-color: var(--muted); }
+.card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.card .top { display: flex; align-items: center; gap: 8px; }
+.card .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.card .act { color: var(--muted); font-family: var(--mono); font-size: 11.5px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.s-queued, .s-waiting, .s-skipped { background: var(--code); color: var(--muted); }
+.s-running { background: var(--run-bg); color: var(--run); }
+.s-done { background: var(--ok-bg); color: var(--ok); }
+.s-failed, .s-cancelled { background: var(--block-bg); color: var(--block); }
+.sev-blocking, .v-blocking, .v-fix-first, .v-needs-decision { background: var(--block-bg); color: var(--block); }
+.sev-advisory, .v-concerns { background: var(--adv-bg); color: var(--adv); }
+.v-pass, .v-ready { background: var(--ok-bg); color: var(--ok); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.s-running .dot { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.counts { display: flex; gap: 6px; margin-top: 6px; }
+.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; }
+.pane h2 { font-size: 17px; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.summary { margin: 10px 0 4px; font-size: 14.5px; }
+.finding { border-top: 1px solid var(--line); padding: 12px 0; }
+.finding:first-of-type { border-top: 0; }
+.finding summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.finding summary::-webkit-details-marker { display: none; }
+.finding .fid { font-family: var(--mono); color: var(--muted); font-size: 12px; }
+.finding .ftitle { font-weight: 600; flex: 1 1 300px; }
+.finding .where { color: var(--muted); font-family: var(--mono); font-size: 12px; margin: 4px 0 0; }
+.finding .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.chip { background: var(--code); color: var(--muted); border-radius: 6px; padding: 0 6px; font-size: 11.5px; font-family: var(--mono); }
+.body { margin-top: 8px; overflow-wrap: anywhere; }
+.body p { margin: 6px 0; }
+.body pre { background: var(--code); padding: 10px; border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; }
+.body code { background: var(--code); padding: 0 4px; border-radius: 4px; }
+.body pre code { background: none; padding: 0; }
+.fix { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--ok); background: var(--ok-bg); border-radius: 0 8px 8px 0; }
+.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+.note { color: var(--muted); font-size: 12.5px; }
+.banner { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: var(--block-bg); color: var(--block); }
+.progress { height: 4px; background: var(--code); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+.progress div { height: 100%; background: var(--accent); transition: width .4s; }
+ul.plain { padding-left: 18px; margin: 6px 0; }
+a.raw { color: var(--accent); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Review panel</h1>
+  <div class="sub" id="sub"></div>
+  <div class="progress"><div id="bar" style="width:0"></div></div>
+</header>
+<main>
+  <nav>
+    <button class="card" id="syn-card" data-key="__synthesis"></button>
+    <div class="section-title">Reviewers</div>
+    <div class="list" id="reviewers"></div>
+  </nav>
+  <section class="pane" id="pane"></section>
+</main>
+<script id="inline-state" type="application/json"></script>
+<script>
+'use strict';
+const inline = document.getElementById('inline-state').textContent.trim();
+let state = inline ? JSON.parse(inline) : null;
+let selected = '__synthesis';
+let lostConnection = false;
+const open = new Set();
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function md(text) {
+  const blocks = String(text ?? '').split(/```[a-z]*\n?/);
+  return blocks.map((block, i) => {
+    if (i % 2) return `<pre><code>${esc(block.replace(/\n$/, ''))}</code></pre>`;
+    return block.split(/\n{2,}/).filter(p => p.trim()).map(p => {
+      let h = esc(p).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      if (/^\s*[-*] /m.test(p)) h = '<ul class="plain">' + h.split(/\n\s*[-*] /).map(x => x.replace(/^\s*[-*] /, '')).filter(Boolean).map(x => `<li>${x}</li>`).join('') + '</ul>';
+      return `<p>${h.replace(/\n/g, '<br>')}</p>`;
+    }).join('');
+  }).join('');
+}
+function secs(a, b) {
+  if (!a) return '';
+  const s = Math.max(0, Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 1000));
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+}
+const tokens = u => [u && u.steps ? `${u.steps} step${u.steps === 1 ? '' : 's'}` : '', u && (u.input || u.output) ? `${Math.round((u.input || 0) / 1000)}k in · ${Math.round((u.output || 0) / 1000)}k out` : ''].filter(Boolean).join(' · ');
+const statusPill = s => `<span class="pill s-${esc(s)}"><span class="dot"></span>${esc(s)}</span>`;
+const agentLabel = a => a ? `${a.harness === 'codex' ? 'Codex' : 'Claude'} · ${a.model}${a.effort && a.effort !== 'default' ? ' · ' + a.effort : ''}` : '';
+function severityCounts(findings) {
+  const b = (findings || []).filter(f => f.severity === 'blocking').length;
+  const a = (findings || []).length - b;
+  return (b ? `<span class="pill sev-blocking">${b} blocking</span>` : '') + (a ? `<span class="pill sev-advisory">${a} advisory</span>` : '') + (!b && !a ? '<span class="pill s-done">no findings</span>' : '');
+}
+
+function card(key, name, entry, focus) {
+  const result = entry.result;
+  const meta = [agentLabel(entry.agent), secs(entry.started_at, entry.ended_at), tokens(entry.usage)].filter(Boolean).join(' · ');
+  return `<div class="top"><span class="name">${esc(name)}</span>${statusPill(entry.status)}</div>
+    <div class="meta">${esc(focus || meta)}</div>${focus ? `<div class="meta">${esc(meta)}</div>` : ''}
+    ${entry.note ? `<div class="meta">${esc(entry.note)}</div>` : ''}
+    ${entry.status === 'running' && entry.activity ? `<div class="act">${esc(entry.activity)}</div>` : ''}
+    ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="act">${esc(entry.error)}</div>` : ''}
+    ${result ? `<div class="counts">${severityCounts(result.findings)}</div>` : ''}`;
+}
+
+function finding(f, keyPrefix) {
+  const id = keyPrefix + f.id;
+  const where = [f.file, f.line].filter(Boolean).join(':');
+  return `<details class="finding" data-id="${esc(id)}" ${open.has(id) ? 'open' : ''}>
+    <summary><span class="fid">${esc(f.id)}</span><span class="pill sev-${esc(f.severity)}">${esc(f.severity)}</span><span class="ftitle">${esc(f.title)}</span></summary>
+    ${where ? `<div class="where">${esc(where)}</div>` : ''}
+    <div class="chips">${f.category ? `<span class="chip">${esc(f.category)}</span>` : ''}${(f.raised_by || []).map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div>
+    <div class="body">${md(f.body)}</div>
+    ${f.fix ? `<div class="fix"><strong>Fix:</strong> ${md(f.fix)}</div>` : ''}
+  </details>`;
+}
+
+function synthesisPane() {
+  const syn = state.synthesis;
+  const pending = Object.values(state.reviewers).filter(r => r.status === 'queued' || r.status === 'running').length;
+  if (!syn.result) {
+    let message = pending ? `Waiting for ${pending} reviewer${pending === 1 ? '' : 's'} to finish.` : 'Synthesizing the reviewers’ findings…';
+    if (syn.status === 'failed' || syn.status === 'skipped' || syn.status === 'cancelled') message = `Synthesis ${syn.status}: ${syn.error || ''}`;
+    return `<h2>Synthesis ${statusPill(syn.status)}</h2>
+      ${syn.status === 'running' && syn.activity ? `<p class="note mono">${esc(syn.activity)}</p>` : ''}
+      <div class="empty">${esc(message)}</div>`;
+  }
+  const r = syn.result;
+  const missing = Object.entries(state.reviewers).filter(([, v]) => v.status !== 'done').map(([k]) => k);
+  return `<h2>Synthesis <span class="pill v-${esc(r.verdict)}">${esc(r.verdict)}</span> ${severityCounts(r.findings)}</h2>
+    <div class="summary">${md(r.summary)}</div>
+    ${missing.length ? `<div class="banner">Not covered: ${missing.map(esc).join(', ')} did not report.</div>` : ''}
+    ${(r.questions || []).length ? `<div class="section-title">Questions for you</div><ul class="plain">${r.questions.map(q => `<li><strong>${esc(q.question)}</strong>${q.why ? ` <span class="note">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul>` : ''}
+    <div class="section-title">Findings</div>
+    ${(r.findings || []).length ? r.findings.map(f => finding(f, 'syn-')).join('') : '<div class="empty">No findings.</div>'}
+    ${(r.dropped || []).length ? `<div class="section-title">Dropped after checking the code</div><ul class="plain">${r.dropped.map(d => `<li><span class="chip">${esc(d.reviewer)} ${esc(d.finding)}</span> ${esc(d.reason)}</li>`).join('')}</ul>` : ''}`;
+}
+
+function reviewerPane(name) {
+  const entry = state.reviewers[name];
+  const r = entry.result;
+  const logLink = inline ? '' : `<a class="raw" href="log/${esc(name)}" target="_blank" rel="noopener">raw session log</a>`;
+  let body;
+  if (r) {
+    body = `<div class="summary">${md(r.summary)}</div>
+      <div class="section-title">Findings</div>
+      ${(r.findings || []).length ? r.findings.map(f => finding(f, name + '-')).join('') : '<div class="empty">No findings.</div>'}
+      ${(r.unverified || []).length ? `<div class="section-title">Could not check</div><ul class="plain">${r.unverified.map(u => `<li>${esc(u.claim)} <span class="note">${esc(u.reason)}</span></li>`).join('')}</ul>` : ''}`;
+  } else if (entry.status === 'failed' || entry.status === 'cancelled') {
+    body = `<div class="banner">${esc(entry.error)}</div>`;
+  } else {
+    body = `<div class="empty">${entry.status === 'queued' ? 'Queued.' : esc(entry.activity || 'Reading the change…')}</div>`;
+  }
+  return `<h2>${esc(name)} ${statusPill(entry.status)} ${r ? `<span class="pill v-${esc(r.verdict)}">${esc(r.verdict)}</span>` : ''}</h2>
+    <p class="note">${esc(entry.focus)} · ${esc(agentLabel(entry.agent))}${entry.note ? ' · ' + esc(entry.note) : ''} · ${esc([secs(entry.started_at, entry.ended_at), tokens(entry.usage)].filter(Boolean).join(' · '))} ${logLink}</p>
+    ${body}`;
+}
+
+let lastPane = '';
+function render() {
+  if (!state) return;
+  const t = state.target;
+  document.title = `Review panel: ${t.label}`;
+  document.getElementById('title').textContent = t.label;
+  const done = Object.values(state.reviewers).filter(r => !['queued', 'running'].includes(r.status)).length;
+  const total = Object.keys(state.reviewers).length;
+  document.getElementById('sub').innerHTML = [
+    statusPill(state.status),
+    t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.url)}</a>` : '',
+    `<span class="mono">${esc(t.base)} → ${esc(t.head.slice(0, 10))}${t.kind === 'local' ? ' + working tree' : ''}</span>`,
+    `<span>${done}/${total} reviewers finished</span>`,
+    `<span>${secs(state.started_at, state.ended_at)}</span>`,
+    lostConnection ? `<span class="pill s-failed">can’t reach the panel process; if it finished, open report.html in ${esc(state.run_dir)}</span>` : '',
+  ].filter(Boolean).join('');
+  const steps = total + 1;
+  document.getElementById('bar').style.width = `${Math.round(100 * (done + (state.synthesis.status === 'done' ? 1 : 0)) / steps)}%`;
+  const syn = document.getElementById('syn-card');
+  syn.innerHTML = card('__synthesis', 'Synthesis', state.synthesis, state.synthesis.result ? null : 'Merges, verifies, and ranks the findings');
+  syn.classList.toggle('sel', selected === '__synthesis');
+  document.getElementById('reviewers').innerHTML = Object.entries(state.reviewers).map(([name, entry]) =>
+    `<button class="card ${selected === name ? 'sel' : ''}" data-key="${esc(name)}">${card(name, name, entry, entry.focus)}</button>`).join('');
+  // Replace the pane only when its content changes, so open findings and scroll position survive polling.
+  const html = selected === '__synthesis' ? synthesisPane() : reviewerPane(selected);
+  if (html !== lastPane) { document.getElementById('pane').innerHTML = html; lastPane = html; }
+}
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('.card');
+  if (button) { selected = button.dataset.key; render(); }
+});
+document.addEventListener('toggle', event => {
+  const d = event.target;
+  if (d.classList && d.classList.contains('finding')) d.open ? open.add(d.dataset.id) : open.delete(d.dataset.id);
+}, true);
+
+let failedPolls = 0;
+async function poll() {
+  try {
+    const response = await fetch('state.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(response.status);
+    state = await response.json();
+    failedPolls = 0;
+    lostConnection = false;
+  } catch (error) {
+    // Keep trying with backoff: one failed request shouldn't freeze the page while the panel keeps working.
+    failedPolls += 1;
+    lostConnection = failedPolls >= 3;
+    render();
+    setTimeout(poll, Math.min(1500 * 2 ** failedPolls, 15000));
+    return;
+  }
+  render();
+  if (!['done', 'failed', 'cancelled'].includes(state.status)) setTimeout(poll, 1500);
+}
+
+if (state) render(); else poll();
+setInterval(() => { if (state && !state.ended_at) render(); }, 1000);
+</script>
+</body>
+</html>
