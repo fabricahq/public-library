@@ -871,6 +871,7 @@ function mountBoard(build, opts = {}) {
      laid out: a page opened in a frame that is still hidden measures every node as zero. Starting spots are
      read from the nodes' own left and top, never measured. */
   const layout = () => {
+    opts.arrange?.();
     if (opts.separate) separateNodes(nodes);
     nodes.forEach(n => { n.dataset.x0 = parseFloat(n.style.left) || 0; n.dataset.y0 = parseFloat(n.style.top) || 0; });
     if (opts.movable) { applyLayout(opts.layoutKey); resetBtn.hidden = !Object.keys(readLayout(opts.layoutKey)).length; }
@@ -1003,26 +1004,35 @@ function drawEdges(list) {
 }
 /* Columns of compact nodes for every board that is not the schema. */
 function columnBoard(intro, groups, makeNode, opts = {}) {
+  /* Nodes are placed first and stacked once the page can measure them, so the columns start below the intro
+     however long it runs. */
+  let introEl = null; const columns = [];
   mountBoard(() => {
-    const W = opts.width || 300, GAP = opts.gap || 56, top = intro ? 70 : 0;
-    if (intro) { const el = placeText('board-intro', intro, 0, 0); el.style.width = Math.max(560, groups.length * (W + GAP) - GAP) + 'px'; }
+    const W = opts.width || 300, GAP = opts.gap || 56;
+    if (intro) { introEl = placeText('board-intro', intro, 0, 0); introEl.style.width = Math.max(560, groups.length * (W + GAP) - GAP) + 'px'; }
     let col = 0;
     groups.forEach(g => {
       const per = opts.perColumn || g.items.length || 1;
       for (let start = 0; start < Math.max(g.items.length, 1); start += per) {
         const x = col * (W + GAP);
-        placeText('group-title', start === 0 ? g.title : '', x, top);
-        let y = top + 26;
-        g.items.slice(start, start + per).forEach(it => {
+        const title = placeText('group-title', start === 0 ? g.title : '', x, 0);
+        const nodes = g.items.slice(start, start + per).map(it => {
           const { html, id, cls, onSelect } = makeNode(it, g);
-          const el = placeNode(html, x, y, id, cls); el.style.width = W + 'px'; nodeHandlers[id] = onSelect;
-          y += el.offsetHeight + 14;
+          const el = placeNode(html, x, 0, id, cls); el.style.width = W + 'px'; nodeHandlers[id] = onSelect; return el;
         });
+        columns.push({ title, nodes });
         col++;
       }
     });
     return opts.edges || [];
-  });
+  }, { arrange: () => {
+    const top = introEl ? introEl.offsetHeight + 28 : 0;
+    columns.forEach(({ title, nodes }) => {
+      title.style.top = top + 'px';
+      let y = top + 26;
+      nodes.forEach(el => { el.style.top = y + 'px'; y += el.offsetHeight + 14; });
+    });
+  } });
 }
 
 /* Sections. */
@@ -1053,7 +1063,13 @@ const views = {
         nodeHandlers[t.id] = () => inspectTable(t, db);
       });
       return db.relations;
-    }, { movable: '.table', layoutKey: 'database', separate: true });
+    }, { movable: '.table', layoutKey: 'database', separate: true, arrange: () => {
+      /* Keep every table below the summary, however long it runs. */
+      const intro = world.querySelector('.board-intro'), tables = [...world.querySelectorAll('.node.table')];
+      if (!intro || !tables.length) return;
+      const shift = intro.offsetHeight + 28 - Math.min(...tables.map(n => parseFloat(n.style.top) || 0));
+      if (shift > 0) tables.forEach(n => { n.style.top = (parseFloat(n.style.top) || 0) + shift + 'px'; });
+    } });
   },
 
   backend() { entityBoard(D.backend); },
