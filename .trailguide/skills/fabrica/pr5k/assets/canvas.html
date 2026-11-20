@@ -390,6 +390,7 @@ pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line);
 .colname { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); }
 .colrow .ty { font-family: var(--mono); font-size: 12px; color: var(--faint); }
 .colname.old { color: var(--muted); font-weight: 500; text-decoration: line-through; text-decoration-color: var(--faint); }
+.colname.gone { color: var(--muted); text-decoration: line-through; }
 .colrow .arrow { color: var(--faint); font-size: 13px; }
 .colrow .was { white-space: nowrap; } .colrow .was .colname.old { font-size: 12px; }
 .colgroup .dot.st-renamed { background: var(--renamed); }
@@ -834,7 +835,7 @@ function codeBlock(ex, heading = true) {
 const PROP_GROUPS = [['New', 'new'], ['Renamed', 'renamed'], ['Changed', 'changed'], ['Removed', 'removed'], ['Unchanged', 'same']];
 function propsTable(props, heading = true, example = null) {
   if (!props?.length) return '';
-  const row = p => { const k = exampleKey(p, example); return `<div class="colrow"${k ? ` role="button" tabindex="0" data-ex-key="${esc(k)}" title="Show it in the example"` : ''}><div class="colrow-top">${p.from ? `<span class="colname old">${esc(p.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(p.name)}</span>${p.type ? `<span class="ty">${esc(p.type)}</span>` : ''}</div>${p.desc ? `<div class="colrow-note">${md(p.desc)}</div>` : ''}${colValues(p)}</div>`; };
+  const row = p => { const k = exampleKey(p, example); return `<div class="colrow"${k ? ` role="button" tabindex="0" data-ex-key="${esc(k)}" title="Show it in the example"` : ''}><div class="colrow-top">${p.from ? `<span class="colname old">${esc(p.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname${p.status === 'removed' ? ' gone' : ''}">${esc(p.name)}</span>${p.status === 'removed' ? pill('removed') : ''}${p.type ? `<span class="ty">${esc(p.type)}</span>` : ''}</div>${p.desc ? `<div class="colrow-note">${md(p.desc)}</div>` : ''}${colValues(p)}</div>`; };
   const st = p => p.status || 'same';
   const body = props.every(p => st(p) === 'new') ? `<div class="colgroup"><div class="collist">${props.map(row).join('')}</div></div>`
     : PROP_GROUPS.map(([label, k]) => { const ps = props.filter(p => st(p) === k); return ps.length ? `<section class="colgroup"><h3><span class="dot st-${k}"></span>${label} <span class="tab-n">${ps.length}</span></h3><div class="collist">${ps.map(row).join('')}</div></section>` : ''; }).join('');
@@ -1211,7 +1212,7 @@ function inspectTable(t, db) {
   const changedCols = isNew ? shown : shown.filter(c => c.status !== 'same');
   const marks = {}; t.columns.forEach(c => { if (c.status !== 'same') c.name.split(' / ').forEach(n => { marks[n] = c.status; }); });
   const colKeys = c => c.name.split(' / ').filter(k => (t.examples || []).some(r => k in r));
-  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top"><span class="colname">${esc(c.name)}</span>${copyBtn(c.name)}${c.from ? `<span class="was"><span class="arrow" aria-label="renamed from">←</span> <span class="colname old">${esc(c.from)}</span></span>` : ''}<span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
+  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top"><span class="colname${c.status === 'removed' ? ' gone' : ''}">${esc(c.name)}</span>${copyBtn(c.name)}${c.status === 'removed' ? pill('removed') : ''}${c.from ? `<span class="was"><span class="arrow" aria-label="renamed from">←</span> <span class="colname old">${esc(c.from)}</span></span>` : ''}<span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
   const COL_GROUPS = [['New', ['new']], ['Renamed', ['renamed']], ['Changed', ['changed']], ['Removed', ['removed']], ['Unchanged', ['same']]];
   const cols = !shown.length ? '' : isNew ? `<div class="colgroup"><div class="collist">${shown.map(colRow).join('')}</div></div>`
     : COL_GROUPS.map(([label, sts]) => { const cs = shown.filter(c => sts.includes(c.status)); return cs.length ? `<section class="colgroup"><h3><span class="dot st-${sts[0]}"></span>${label} <span class="tab-n">${cs.length}</span></h3><div class="collist">${cs.map(colRow).join('')}</div></section>` : ''; }).join('');
