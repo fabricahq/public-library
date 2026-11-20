@@ -852,6 +852,7 @@
         "why": "A partly paid invoice has many paths to `paid`, and only one place decides.",
         "tradeoff": "The status is stored for queries, so the function and the column must agree. A test checks every combination.",
         "source": "PR description",
+        "significance": "foundational",
         "diagram": {
           "before": [
             [
@@ -879,40 +880,6 @@
         }
       },
       {
-        "id": "A2",
-        "title": "A plan keeps its original schedule",
-        "before": "No plans.",
-        "after": "Moving a date writes `due_on` and keeps `original_due_on`.",
-        "why": "Bookkeepers asked to see which installments were moved.",
-        "tradeoff": "Two dates per installment, and the page has to explain which one shows.",
-        "source": "Commit 9b02f7a",
-        "diagram": {
-          "before": [
-            [
-              {
-                "label": "No plans",
-                "tone": "muted"
-              }
-            ]
-          ],
-          "after": [
-            [
-              {
-                "label": "Installment 2",
-                "sub": "`due_on` 2026-12-22",
-                "tone": "changed"
-              },
-              "→ keeps",
-              {
-                "label": "`original_due_on`",
-                "sub": "2026-12-15",
-                "tone": "new"
-              }
-            ]
-          ]
-        }
-      },
-      {
         "id": "A3",
         "title": "Money is whole cents everywhere",
         "before": "`amount` held cents, but the name did not say so.",
@@ -920,6 +887,7 @@
         "why": "Splitting must add up to the total exactly.",
         "tradeoff": "A rename that touches every reader of `amount`.",
         "source": "Commit 1e7c440",
+        "significance": "foundational",
         "diagram": {
           "before": [
             [
@@ -947,6 +915,41 @@
                     "tone": "new"
                   }
                 ]
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "id": "A2",
+        "title": "A plan keeps its original schedule",
+        "before": "No plans.",
+        "after": "Moving a date writes `due_on` and keeps `original_due_on`.",
+        "why": "Bookkeepers asked to see which installments were moved.",
+        "tradeoff": "Two dates per installment, and the page has to explain which one shows.",
+        "source": "Commit 9b02f7a",
+        "significance": "significant",
+        "diagram": {
+          "before": [
+            [
+              {
+                "label": "No plans",
+                "tone": "muted"
+              }
+            ]
+          ],
+          "after": [
+            [
+              {
+                "label": "Installment 2",
+                "sub": "`due_on` 2026-12-22",
+                "tone": "changed"
+              },
+              "→ keeps",
+              {
+                "label": "`original_due_on`",
+                "sub": "2026-12-15",
+                "tone": "new"
               }
             ]
           ]
@@ -1026,8 +1029,7 @@
         "verdict": "Plans only fit invoices.",
         "evidence": [
           "A subscription feature would need its own split logic."
-        ],
-        "handoff": "Split a total into dated parts in one function that takes an amount, a count and a first date, and have installment plans call it, so a later subscription feature can reuse it. Keep the plan tables as they are."
+        ]
       },
       {
         "n": 8,

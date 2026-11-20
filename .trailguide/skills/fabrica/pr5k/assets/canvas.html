@@ -92,6 +92,7 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .edges path.dashed { stroke-dasharray: 5 4; }
 .edge-label { position: absolute; font-size: 11px; color: var(--muted); background: var(--canvas); padding: 0 5px; border-radius: 4px; white-space: nowrap; transform: translate(-50%, -50%); pointer-events: none; }
 .group-title { position: absolute; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.group-title .group-note { display: block; margin-top: 3px; font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 400; }
 .board-intro { position: absolute; font-size: 13px; color: var(--muted); max-width: 760px; }
 
 .node { position: absolute; width: 300px; background: var(--node); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; text-align: left; box-shadow: 0 1px 2px #0000000a; }
@@ -1006,6 +1007,12 @@ function drawEdges(list) {
   });
   svg.innerHTML = paths;
 }
+/* How much of the system an architecture decision commits to, most first. */
+const SIGNIFICANCE = [
+  { key: 'foundational', title: 'Foundational', note: 'Hard to reverse; later work builds on them.' },
+  { key: 'significant', title: 'Significant', note: 'Shape how one feature works or what it promises.' },
+  { key: 'local', title: 'Local', note: 'Details inside one area; cheap to change later.' },
+];
 /* Columns of compact nodes for every board that is not the schema. */
 function columnBoard(intro, groups, makeNode, opts = {}) {
   /* Nodes are placed first and stacked once the page can measure them, so the columns start below the intro
@@ -1014,12 +1021,14 @@ function columnBoard(intro, groups, makeNode, opts = {}) {
   mountBoard(() => {
     const W = opts.width || 300, GAP = opts.gap || 56;
     if (intro) { introEl = placeText('board-intro', intro, 0, 0); introEl.style.width = Math.max(560, groups.length * (W + GAP) - GAP) + 'px'; }
-    let col = 0;
-    groups.forEach(g => {
+    let col = 0, extra = 0;
+    groups.forEach((g, gi) => {
+      if (gi) extra += opts.groupGap || 0;
       const per = opts.perColumn || g.items.length || 1;
       for (let start = 0; start < Math.max(g.items.length, 1); start += per) {
-        const x = col * (W + GAP);
+        const x = col * (W + GAP) + extra;
         const title = placeText('group-title', start === 0 ? g.title : '', x, 0);
+        if (start === 0 && g.note) { const n = document.createElement('span'); n.className = 'group-note'; n.style.width = W + 'px'; n.textContent = g.note; title.appendChild(n); }
         const nodes = g.items.slice(start, start + per).map(it => {
           const { html, id, cls, onSelect } = makeNode(it, g);
           const el = placeNode(html, x, 0, id, cls); el.style.width = W + 'px'; nodeHandlers[id] = onSelect; return el;
@@ -1031,9 +1040,10 @@ function columnBoard(intro, groups, makeNode, opts = {}) {
     return opts.edges || [];
   }, { arrange: () => {
     const top = introEl ? introEl.offsetHeight + 28 : 0;
+    const head = Math.max(26, ...columns.map(c => c.title.offsetHeight + 10));
     columns.forEach(({ title, nodes }) => {
       title.style.top = top + 'px';
-      let y = top + 26;
+      let y = top + head;
       nodes.forEach(el => { el.style.top = y + 'px'; y += el.offsetHeight + 14; });
     });
   } });
@@ -1081,13 +1091,17 @@ const views = {
 
   architecture() {
     const a = D.architecture;
-    columnBoard(a.summary, [{ title: 'Decisions', items: a.decisions }], d => ({
-      id: d.id, cls: '',
+    /* Decisions group by significance when the snapshot rates it: what later work builds on comes first. */
+    const tiers = SIGNIFICANCE.map(t => ({ ...t, items: a.decisions.filter(d => d.significance === t.key) })).filter(g => g.items.length);
+    const unrated = a.decisions.filter(d => !SIGNIFICANCE.some(t => t.key === d.significance));
+    const groups = tiers.length ? [...tiers, ...(unrated.length ? [{ title: 'Unrated', items: unrated }] : [])] : [{ title: 'Decisions', items: a.decisions }];
+    columnBoard(a.summary, groups, d => ({
+      id: d.id, cls: d.significance ? 'sig-' + d.significance : '',
       html: `<div class="node-head"><span class="node-num">${esc(d.id)}</span><span class="node-title">${esc(d.title)}</span></div><div class="node-sum">${esc(d.after)}</div>`,
-      onSelect: () => openWindow({ title: d.title, kind: d.id, file: d.source, body: `${d.diagram ? `<div class="dg-pair">${dgPanel('Before', d.diagram.before, d.before)}${dgPanel('After', d.diagram.after, d.after)}</div><div class="facts">`
+      onSelect: () => openWindow({ title: d.title, kind: [d.id, SIGNIFICANCE.find(t => t.key === d.significance)?.title].filter(Boolean).join(' · '), file: d.source, body: `${d.diagram ? `<div class="dg-pair">${dgPanel('Before', d.diagram.before, d.before)}${dgPanel('After', d.diagram.after, d.after)}</div><div class="facts">`
           : `<div class="facts"><div class="fact"><b>Before</b>${md(d.before)}</div><div class="fact"><b>After</b>${md(d.after)}</div>`}
         <div class="fact"><b>Why</b>${md(d.why)}</div><div class="fact"><b>Trade-off</b>${md(d.tradeoff)}</div></div>` }),
-    }), { perColumn: 4, width: 320 });
+    }), { perColumn: 4, width: 320, groupGap: 40 });
   },
 
   principles() {
