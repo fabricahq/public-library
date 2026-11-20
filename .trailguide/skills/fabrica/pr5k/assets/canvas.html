@@ -1432,12 +1432,43 @@ function highlightCode(code) {
   }
   return out + esc(code.slice(last));
 }
-/* A frame on the canvas's own origin grows to its content; one elsewhere keeps a height that fits most states. */
+/* A frame on the canvas's own origin grows to its content; one elsewhere keeps a height that fits most states.
+   It is measured at no height at all, since a page that fills its viewport would otherwise read as tall as
+   the frame already is and the frame would creep taller each time it is measured. */
 function fitStage(f) {
-  const fit = () => { try { const d = f.contentDocument; if (!d?.body) return; const h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight); if (h) f.style.height = Math.min(h + 2, 1400) + 'px'; } catch (e) { f.style.height = '420px'; } };
+  const fit = () => {
+    try {
+      const d = f.contentDocument; if (!d?.body) return;
+      const was = f.offsetHeight + 'px'; f.style.height = '0px';
+      const h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight);
+      const next = h ? Math.min(h + 2, 1400) + 'px' : was;
+      f.style.height = Math.abs(parseFloat(next) - parseFloat(was)) > 1 ? next : was;
+    } catch (e) { f.style.height = '420px'; }
+  };
   fit(); setTimeout(fit, 400); setTimeout(fit, 1200); setTimeout(fit, 2500);
 }
-document.addEventListener('load', e => { if (e.target.matches?.('iframe.pv-stage')) fitStage(e.target); }, true);
+/* Keys pressed inside a preview stay the canvas's: a state that focuses its own field on load gives focus
+   back, and Escape or Option-W in a preview closes the window unless the component used the key itself. */
+function keepKeys(f) {
+  try {
+    const w = f.contentWindow; if (!w) return;
+    const had = document.activeElement;
+    setTimeout(() => { if (document.activeElement === f && had && had !== f && !f.dataset.touched) had.focus?.({ preventScroll: true }); }, 50);
+    w.addEventListener('pointerdown', () => { f.dataset.touched = '1'; });
+    w.addEventListener('keydown', e => {
+      const altW = e.altKey && !e.metaKey && !e.ctrlKey && e.code === 'KeyW';
+      if ((e.key !== 'Escape' && !altW) || (e.key === 'Escape' && e.defaultPrevented)) return;
+      if (e.key === 'Escape' && w.document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      const id = [...wins].find(([, x]) => x.el.contains(f))?.[0];
+      if (id) { e.preventDefault(); closeWindow(id); }
+    });
+  } catch (e) { /* a frame on another origin keeps its keys */ }
+}
+document.addEventListener('load', e => {
+  if (!e.target.matches?.('iframe.pv-stage, iframe.preview-frame')) return;
+  delete e.target.dataset.touched; keepKeys(e.target);
+  if (e.target.matches('iframe.pv-stage')) fitStage(e.target);
+}, true);
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-pv-state]');
   if (t) {
