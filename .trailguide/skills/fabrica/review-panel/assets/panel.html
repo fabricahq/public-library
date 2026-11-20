@@ -791,36 +791,24 @@ function synthesisView() {
   const rawCount = rawRows().length;
   const questions = r.questions || [];
   const blockingQs = questions.filter(q => q.blocking).length;
-  const tab = ui.tab.__synthesis || 'summary';
+  const tab = ui.tab.__synthesis || 'findings';
   const tabBtn = (id, label, n) => `<button type="button" class="tab ${tab === id ? 'on' : ''}" data-tab="${id}">${label}${n !== undefined ? `<span class="n">${n}</span>` : ''}</button>`;
   let body;
   if (tab === 'findings') {
-    body = `<div class="canvas-head"><label class="toggle" title="The synthesis merges duplicates and drops findings it could not confirm. Tick this to see each reviewer's findings as they reported them.">
+    body = `${missing.length ? `<div class="banner">Not covered: ${missing.map(m => esc(reviewerLabel(m))).join(', ')} did not report.</div>` : ''}
+      <div class="canvas-head"><label class="toggle" title="The synthesis merges duplicates and drops findings it could not confirm. Tick this to see each reviewer's findings as they reported them.">
         <input type="checkbox" id="raw" ${ui.raw ? 'checked' : ''}> Show each reviewer’s original findings (${rawCount})</label></div>
       ${toolbar(rows, true)}
-      <div id="table">${tableHtml(rows, { reviewerCol: true, outcomeCol: ui.raw })}</div>`;
+      <div id="table">${tableHtml(rows, { reviewerCol: true, outcomeCol: ui.raw })}</div>
+      ${droppedLine(r)}`;
   } else if (tab === 'questions') {
     body = questions.length ? `<p class="note">The synthesis can’t settle these from the code. ${blockingQs ? `${blockingQs === questions.length ? (questions.length === 1 ? 'It blocks' : 'All of them block') : `${blockingQs} of them block`} the merge until you answer.` : 'None of them blocks the merge.'}</p>
       <ul class="questions">${questions.map(q => `<li><div class="q">${q.blocking ? '<span class="pill sev-blocking">Blocks merge</span> ' : ''}${linkRefs(inlineMd(q.question))}</div>${q.why ? `<div class="why">${linkRefs(inlineMd(q.why))}</div>` : ''}</li>`).join('')}</ul>`
-      : '<div class="empty">No questions for you.</div>';
+      : '<div class="empty">No open questions.</div>';
   } else {
-    const b = r.findings.filter(f => f.severity === 'blocking').length;
-    const verdictLine = {
-      ready: 'Ready to merge: nothing blocks it.',
-      'fix-first': `Fix first: ${plural(b, 'blocking finding')} to fix before merging.`,
-      'needs-decision': `Needs your decision: ${plural(blockingQs, 'question')} only you can answer${b ? `, plus ${plural(b, 'blocking finding')}` : ''}.`,
-    }[r.verdict] || r.verdict;
-    body = `<p class="verdict-line"><span class="pill v-${esc(r.verdict)}">${esc(r.verdict)}</span> ${esc(verdictLine)}</p>
-      ${missing.length ? `<div class="banner">Not covered: ${missing.map(m => esc(reviewerLabel(m))).join(', ')} did not report.</div>` : ''}
-      ${(r.conclusions || []).length ? `<div class="section-title">Key conclusions</div><ol class="conclusions">${r.conclusions.map(c => `<li><span>${linkRefs(inlineMd(c))}</span></li>`).join('')}</ol>` : ''}
-      <div class="next-steps">
-        <button type="button" class="linkish" data-tab="findings">See all ${plural(r.findings.length, 'finding')} →</button>
-        ${questions.length ? `<button type="button" class="linkish" data-tab="questions">Answer ${plural(questions.length, 'question')}${blockingQs ? ` (${blockingQs} blocking)` : ''} →</button>` : ''}
-      </div>
-      <details class="more"><summary>The synthesis’s full summary</summary><p class="summary-line">${linkRefs(inlineMd(r.summary))}</p></details>
-      ${droppedLine(r)}`;
+    body = (r.conclusions || []).length ? `<ol class="conclusions">${r.conclusions.map(c => `<li><span>${linkRefs(inlineMd(c))}</span></li>`).join('')}</ol>` : `<p class="summary-line">${linkRefs(inlineMd(r.summary))}</p>`;
   }
-  return head + `<div class="tabs" role="tablist">${tabBtn('summary', 'Summary')}${tabBtn('findings', 'Findings', r.findings.length)}${questions.length ? tabBtn('questions', 'Questions for you', questions.length) : ''}</div><div class="tab-body">${body}</div>`;
+  return head + `<div class="tabs" role="tablist">${tabBtn('findings', 'Findings', r.findings.length)}${tabBtn('conclusions', 'Conclusions', (r.conclusions || []).length || undefined)}${tabBtn('questions', 'Open questions', questions.length)}</div><div class="tab-body">${body}</div>`;
 }
 // "S1" in synthesis text becomes a button that opens that finding.
 function linkRefs(html) {
