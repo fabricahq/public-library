@@ -109,7 +109,7 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .node.table .node-head { padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .node.table .node-title { font-family: var(--mono); font-size: 13px; }
 .cols { list-style: none; margin: 0; padding: 6px 0; }
-.col { display: grid; grid-template-columns: 16px 1fr auto; gap: 6px; align-items: baseline; padding: 2px 14px; font-family: var(--mono); font-size: 12px; }
+.col { display: grid; grid-template-columns: 16px 1fr auto 18px; gap: 6px; align-items: baseline; padding: 2px 14px; font-family: var(--mono); font-size: 12px; }
 .col .t { color: var(--faint); font-size: 11px; white-space: nowrap; }
 .col .m { font-weight: 600; text-align: center; }
 .col.new { background: var(--new-bg); } .col.new .m { color: var(--new); }
@@ -117,6 +117,15 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .col.removed .n { text-decoration: line-through; color: var(--removed); } .col.removed .m { color: var(--removed); }
 .col .from, .col .ref { color: var(--faint); font-size: 11px; }
 .col .ref { color: var(--accent); }
+/* Copy a column's name: quiet until its row is pointed at or focused. */
+.copy-col { all: unset; box-sizing: border-box; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: var(--faint); cursor: pointer; opacity: 0; transition: opacity .12s, background .12s, color .12s; align-self: center; }
+.copy-col svg { width: 13px; height: 13px; }
+.col:hover .copy-col, .colrow:hover .copy-col, .copy-col:focus-visible, .copy-col.done { opacity: 1; }
+.copy-col:hover { background: var(--line); color: var(--ink); }
+.copy-col:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.copy-col.done { color: var(--new); }
+@media (hover: none) { .copy-col { opacity: .7; } }
+.colrow-top .copy-col { align-self: center; }
 .node-foot { border-top: 1px solid var(--line); padding: 7px 14px; font-size: 11px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
 .node.rating-strong { border-left: 3px solid var(--strong); } .node.rating-mixed { border-left: 3px solid var(--mixed); } .node.rating-weak { border-left: 3px solid var(--weak); }
 .node.flag { border-left: 3px solid var(--removed); }
@@ -814,6 +823,26 @@ function mountBoard(build) {
   world.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('node')) { e.preventDefault(); selectNode(e.target.dataset.id); } });
 }
 let nodeHandlers = {};
+/* A button that copies a column's name, used on the board and in a table's window. */
+const COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 3.5v-.5A1.5 1.5 0 0 0 9 1.5H3A1.5 1.5 0 0 0 1.5 3v6A1.5 1.5 0 0 0 3 10.5h.5" stroke="currentColor" stroke-width="1.4"/></svg>';
+const DONE_ICON = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const copyBtn = name => `<button type="button" class="copy-col" data-copy="${esc(name)}" aria-label="Copy ${esc(name)}" title="Copy column name">${COPY_ICON}</button>`;
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch {} ta.remove(); return ok;
+}
+/* Capture phase, so copying never also opens the node or jumps to the examples. */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  const ok = await copyText(b.dataset.copy);
+  b.innerHTML = ok ? DONE_ICON : COPY_ICON; b.classList.toggle('done', ok);
+  b.setAttribute('aria-label', ok ? `Copied ${b.dataset.copy}` : `Couldn't copy ${b.dataset.copy}`); b.title = ok ? 'Copied' : "Couldn't copy";
+  clearTimeout(b._t); b._t = setTimeout(() => { b.innerHTML = COPY_ICON; b.classList.remove('done'); b.setAttribute('aria-label', `Copy ${b.dataset.copy}`); b.title = 'Copy column name'; }, 1400);
+}, true);
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-copy]')) e.stopPropagation(); }, true);
 function selectNode(id) {
   selectedId = id; nodeHandlers[id]?.(); markSelected();
 }
@@ -889,7 +918,7 @@ const views = {
     mountBoard(() => {
       if (db.summary) { const el = placeText('board-intro', db.summary, 0, 0); el.style.width = '1180px'; }
       db.tables.forEach(t => {
-        const cols = t.columns.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span></li>`).join('');
+        const cols = t.columns.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span>${copyBtn(c.name)}</li>`).join('');
         const foot = [t.policies?.length ? `${t.policies.length} access ${t.policies.length > 1 ? 'policies' : 'policy'}` : '', t.constraints?.length ? `${t.constraints.length} ${t.constraints.length > 1 ? 'rules' : 'rule'}` : '', t.examples?.length ? `${t.examples.length} example rows` : '', t.migrations?.length ? `migr. ${t.migrations.join(', ')}` : ''].filter(Boolean);
         const html = `<div class="node-head"><span class="node-title">${esc(t.name)}</span>${pill(t.status)}</div><ul class="cols">${cols}</ul>${foot.length ? `<div class="node-foot">${foot.map(esc).join('<span>·</span>')}</div>` : ''}`;
         placeNode(html, t.x, t.y + 70, t.id, `table st-${t.status}`);
@@ -1004,7 +1033,7 @@ function inspectTable(t, db) {
   const changedCols = isNew ? shown : shown.filter(c => c.status !== 'same');
   const marks = {}; t.columns.forEach(c => { if (c.status !== 'same') c.name.split(' / ').forEach(n => { marks[n] = c.status; }); });
   const colKeys = c => c.name.split(' / ').filter(k => (t.examples || []).some(r => k in r));
-  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top">${c.from ? `<span class="colname old">${esc(c.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(c.name)}</span><span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
+  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top">${c.from ? `<span class="colname old">${esc(c.from)}</span><span class="arrow" aria-label="renamed to">→</span>` : ''}<span class="colname">${esc(c.name)}</span>${copyBtn(c.name)}<span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
   const COL_GROUPS = [['New', ['new']], ['Renamed', ['renamed']], ['Changed', ['changed']], ['Removed', ['removed']], ['Unchanged', ['same']]];
   const cols = !shown.length ? '' : isNew ? `<div class="colgroup"><div class="collist">${shown.map(colRow).join('')}</div></div>`
     : COL_GROUPS.map(([label, sts]) => { const cs = shown.filter(c => sts.includes(c.status)); return cs.length ? `<section class="colgroup"><h3><span class="dot st-${sts[0]}"></span>${label} <span class="tab-n">${cs.length}</span></h3><div class="collist">${cs.map(colRow).join('')}</div></section>` : ''; }).join('');
