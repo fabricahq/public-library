@@ -104,6 +104,10 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .node-title { font-weight: 600; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .node-head .pill { margin-left: auto; }
 .node-kind { font-family: var(--mono); font-size: 11px; color: var(--faint); overflow-wrap: anywhere; }
+.node-made { margin-top: 8px; font-size: 12px; color: var(--muted); } .node-made span { font-weight: 600; color: var(--ink); }
+.part-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.part-chip { font: inherit; font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+.part-chip:hover { border-color: var(--accent); color: var(--accent); }
 .node-sum { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.45; }
 .node-thumb-box { display: flex; justify-content: center; align-items: flex-start; margin-top: 10px; padding: 8px; max-height: 196px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--canvas); }
 .node-thumb { display: var(--thumb-l, block); max-width: 100%; height: auto; }
@@ -382,6 +386,10 @@ pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line);
 .set-list { border: 1px solid var(--line); border-radius: 10px; background: var(--node); }
 .set-list > * + * { border-top: 1px solid var(--line); }
 .set-row { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 14px; }
+.set-pick { justify-content: space-between; cursor: default; }
+.set-pick + .set-pick { border-top: 1px solid var(--line); }
+.set-pick select { font: inherit; font-size: 13px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: 8px; padding: 6px 28px 6px 10px; min-width: 210px; max-width: 60%; }
+.set-pick select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .set-row-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .set-row-text b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
 .set-row-text span { font-size: 12.5px; color: var(--muted); }
@@ -588,12 +596,21 @@ function isDark() { const t = document.documentElement.getAttribute('data-theme'
 function previewSrc(url) { return url + (url.includes('?') ? '&' : '?') + 'theme=' + (isDark() ? 'dark' : 'light'); }
 function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('pr5k-theme', v); } catch (e) {} onThemeChange?.(); }
 try { const saved = localStorage.getItem('pr5k-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
-/* Which tab a detail window opens on: its Summary, or its fields (Properties, Columns or Changes). Kept per browser. */
-const OPEN_TABS = [['summary', 'Summary', 'What it is and what this PR changes.'], ['fields', 'Fields', 'Properties for code, Columns or Changes for a table.']];
-const FIELD_TABS = ['props', 'columns'];
-let openTab = 'summary';
-try { const saved = localStorage.getItem('pr5k-open-tab'); if (OPEN_TABS.some(([v]) => v === saved)) openTab = saved; } catch (e) {}
-function setOpenTab(v) { openTab = v; try { localStorage.setItem('pr5k-open-tab', v); } catch (e) {} }
+/* Which tab a detail window opens on, chosen per section and kept per browser. A window without that tab opens on its first. */
+const WINDOW_TABS = {
+  database: { label: 'Database', tabs: [['summary', 'Summary'], ['columns', 'Columns or Changes'], ['examples', 'Examples'], ['migrated', 'Before and after'], ['rules', 'Rules and access'], ['migrations', 'Migrations']] },
+  backend: { label: 'Backend', tabs: [['summary', 'Summary'], ['props', 'Properties'], ['example', 'Example']] },
+  frontend: { label: 'Frontend', tabs: [['preview', 'Preview'], ['summary', 'Summary'], ['props', 'Properties'], ['example', 'Example']] },
+};
+const OPEN_TAB_DEFAULTS = { database: 'summary', backend: 'summary', frontend: 'preview' };
+let openTabs = { ...OPEN_TAB_DEFAULTS };
+try {
+  const saved = JSON.parse(localStorage.getItem('pr5k-open-tabs') || 'null');
+  if (saved && typeof saved === 'object') {
+    for (const k in WINDOW_TABS) if (WINDOW_TABS[k].tabs.some(([v]) => v === saved[k])) openTabs[k] = saved[k];
+  } else if (localStorage.getItem('pr5k-open-tab') === 'fields') openTabs = { database: 'columns', backend: 'props', frontend: 'props' };
+} catch (e) {}
+function setOpenTabs(next) { openTabs = { ...openTabs, ...next }; try { localStorage.setItem('pr5k-open-tabs', JSON.stringify(openTabs)); } catch (e) {} }
 
 /* Toolbar. */
 const pr = D.pr;
@@ -640,8 +657,9 @@ function openSettings(section = 'personas') {
   };
   const drawWindows = () => {
     main.innerHTML = `<header class="set-head"><h2>Windows</h2><p>How detail windows open in this browser.</p></header>
-      <section class="set-group"><h3>Open on</h3><div class="set-list" role="radiogroup" aria-label="Open windows on">${OPEN_TABS.map(([v, label, hint]) => `<button class="set-choice" role="radio" aria-checked="${v === openTab}" data-open-tab="${v}"><span class="set-choice-text"><span>${label}</span><span class="hint">${hint}</span></span>${CHECK}</button>`).join('')}</div>
-      <p class="hint" style="margin-top:8px">A window without that tab opens on its first tab.</p></section>`;
+      <section class="set-group"><h3>Open on</h3><div class="set-list">${Object.entries(WINDOW_TABS).filter(([k]) => D[k]).map(([k, w]) => `<label class="set-row set-pick"><span class="set-row-text"><b>${w.label}</b></span><select data-open-sec="${k}" aria-label="${w.label} windows open on">${w.tabs.map(([v, l]) => `<option value="${v}"${openTabs[k] === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>
+      <p class="hint" style="margin-top:8px">A window without that tab opens on its first tab.</p>
+      <button class="tool-btn" data-open-all="summary" style="margin-top:12px">Open all on Summary</button></section>`;
   };
   const draw = () => sec === 'appearance' ? drawAppearance() : sec === 'windows' ? drawWindows() : drawPersonas();
   onThemeChange = () => { if (sec === 'appearance' && document.body.contains(main)) drawAppearance(); };
@@ -667,11 +685,12 @@ function openSettings(section = 'personas') {
     else { let id = slug(v.name), n = 2; while (personas.some(p => p.id === id)) id = slug(v.name) + '-' + n++; personas = [...personas, { id, ...v }]; }
     editing = null; savePersonas(); draw();
   });
+  main.addEventListener('change', e => { const sel = e.target.closest('[data-open-sec]'); if (sel) setOpenTabs({ [sel.dataset.openSec]: sel.value }); });
   main.addEventListener('keydown', e => { if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; draw(); } });
   main.addEventListener('click', async e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.themeValue) { setTheme(t.dataset.themeValue); return; }
-    if (t.dataset.openTab) { setOpenTab(t.dataset.openTab); drawWindows(); return; }
+    if (t.dataset.openAll) { setOpenTabs(Object.fromEntries(Object.keys(WINDOW_TABS).map(k => [k, t.dataset.openAll]))); drawWindows(); return; }
     if (t.dataset.edit !== undefined) { editing = { i: +t.dataset.edit }; draw(); }
     else if (t.dataset.add !== undefined) { editing = { group: t.dataset.add }; draw(); }
     else if (t.hasAttribute('data-cancel')) { editing = null; draw(); }
@@ -773,11 +792,11 @@ function toggleMax(w) {
   const on = !w.el.classList.contains('max'); w.el.classList.toggle('max', on);
   const b = $('[data-act="max"]', w.el); b.innerHTML = on ? WIN_ICONS.restore : WIN_ICONS.max; b.setAttribute('aria-label', on ? 'Restore window size' : 'Fill the canvas');
 }
-function openWindow({ id, title, status, statusWord, kind, file, body, tabs, wide }) {
+function openWindow({ id, title, status, statusWord, kind, file, body, tabs, wide, section }) {
   id = id || selectedId || title;
   if (wins.has(id)) { focusWin(wins.get(id).el); return wins.get(id).el; }
   tabs = (tabs || [{ id: 'details', label: 'Details', html: body }]).filter(t => t.html);
-  const first = Math.max(0, openTab === 'fields' ? tabs.findIndex(t => FIELD_TABS.includes(t.id)) : 0);
+  const first = Math.max(0, section && openTabs[section] ? tabs.findIndex(t => t.id === openTabs[section]) : 0);
   const el = document.createElement('section');
   el.className = 'win'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
   const meta = [kind, file].filter(Boolean).join(' · ');
@@ -1290,13 +1309,18 @@ function previewPane(it) {
   const n = pv.states?.length || 0;
   return `<div class="preview-bar"><span>The real component against sample data${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
 }
+/* Which other components of the PR a component draws, or is drawn by; each opens that component's window. */
+function partsHtml(title, ids) {
+  return ids?.length ? `<section><h3>${esc(title)}</h3><div class="part-chips">${ids.map(id => `<button type="button" class="part-chip" data-open-node="${esc(id)}">${esc(id)}</button>`).join('')}</div></section>` : '';
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-open-node]'); if (!b) return; e.preventDefault(); selectNode(b.dataset.openNode); });
 function entityBoard(sec) {
   columnBoard(sec.summary, sec.groups, it => ({
     id: it.id, cls: 'st-' + it.status,
-    html: `<div class="node-head"><span class="node-title">${esc(it.title)}</span>${pill(it.status)}</div><div class="node-kind">${esc(it.kind)}</div>${thumbHtml(it.preview)}<div class="node-sum">${esc(it.summary)}</div>`,
-    onSelect: () => exampleJump(openWindow({ title: it.title, status: it.status, kind: it.kind, file: it.file, wide: !!it.preview?.url, tabs: [
+    html: `<div class="node-head"><span class="node-title">${esc(it.title)}</span>${pill(it.status)}</div><div class="node-kind">${esc(it.kind)}</div>${thumbHtml(it.preview)}<div class="node-sum">${esc(it.summary)}</div>${it.madeOf?.length ? `<div class="node-made"><span>Made of</span> ${it.madeOf.map(esc).join(', ')}</div>` : ''}`,
+    onSelect: () => exampleJump(openWindow({ title: it.title, status: it.status, kind: it.kind, file: it.file, wide: !!it.preview?.url, section: currentSection(), tabs: [
       { id: 'preview', label: 'Preview', html: previewPane(it) },
-      { id: 'summary', label: 'Summary', html: `<section><h3>What it is</h3><p>${md(it.summary)}</p></section>${points('Worth knowing', it.notes)}` },
+      { id: 'summary', label: 'Summary', html: `<section><h3>What it is</h3><p>${md(it.summary)}</p></section>${partsHtml('Made of', it.madeOf)}${partsHtml('Used in', it.usedIn)}${points('Worth knowing', it.notes)}` },
       { id: 'props', label: tabLabel('Properties', it.properties), html: propsTable(it.properties, false, it.example) },
       { id: 'example', label: 'Example', html: codeBlock(it.example, false) },
     ] })),
@@ -1350,7 +1374,7 @@ function inspectTable(t, db) {
   const ex = t.examples?.length ? `<p class="hint" style="margin-bottom:8px">Loaded into the migrated schema and accepted by its constraints. Names beside ids are the example people${isNew ? '' : '; tinted fields are new or changed'}.</p>${t.examples.map((r, i) => `<div class="ex-row"><div class="ex-cap">${i + 1}. ${esc(rowCap(r))}</div>${kvTable(r, isNew ? {} : marks)}</div>`).join('')}` : '';
   const dmd = db.dataMigration?.table === t.id && db.dataMigration;
   const dm = dmd ? `<section><h3>${esc(dmd.title)}</h3>${bullets(dmd.explain)}</section>${lineDiff(JSON.stringify(dmd.before, null, 2), JSON.stringify(dmd.after, null, 2))}` : '';
-  const win = openWindow({ title: t.name, status: t.status, kind: 'Table', tabs: [
+  const win = openWindow({ title: t.name, status: t.status, kind: 'Table', section: 'database', tabs: [
     { id: 'summary', label: 'Summary', html: `<section><h3>Each row is</h3><p>${md(t.row || t.purpose)}</p></section>${points(t.status === 'context' ? 'Why it is shown' : 'What this PR changes', t.explain)}` },
     { id: 'columns', label: tabLabel(isNew ? 'Columns' : 'Changes', changedCols), html: cols },
     { id: 'examples', label: tabLabel('Examples', t.examples), html: ex },
