@@ -3,6 +3,7 @@
 
 Usage: render.py SNAPSHOT.json OUT.html
 """
+import datetime
 import html
 import json
 import pathlib
@@ -26,6 +27,8 @@ def main() -> int:
         print("snapshot has no sections", file=sys.stderr)
         return 1
     template = (pathlib.Path(__file__).resolve().parent.parent / "assets" / "canvas.html").read_text()
+    # A rescan the page asked for ends when it loads a page rendered after the request.
+    data["renderedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     pr = data["pr"]
     title = f"{pr['repo'].split('/')[-1].capitalize()} PR {pr['number']}"
     # Keep the embedded JSON from closing its script element early.

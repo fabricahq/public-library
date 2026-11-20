@@ -139,6 +139,9 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .rescan-btn { display: inline-flex; align-items: center; gap: 6px; }
 .rescan-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .rescan-btn:disabled { cursor: default; color: var(--muted); background: var(--node); }
+.rescan-btn.busy svg { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rescan-btn.busy svg { animation-duration: 2.4s; } }
 .handoff { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 0 0 14px; }
 .handoff-bar { display: flex; align-items: center; gap: 10px; }
 .handoff-bar b { font-size: 13px; font-weight: 600; }
@@ -645,28 +648,44 @@ $('#prNum').textContent = `${pr.repo.split('/')[1]} #${pr.number}`;
 $('#prTitle').textContent = pr.title;
 $('#prLink').href = pr.url;
 /* Rescan asks the agent that built this canvas, through a comment on the PR title, to rebuild the snapshot at
-   the PR's latest head and republish. It shows only where this page can send comments. */
+   the PR's latest head and republish. It shows only where this page can send comments. While a request is
+   out, the icon spins, across reloads, until the page loads a version rendered after the request; it gives
+   up after half an hour. */
 {
-  const btn = $('#rescanBtn'), label = $('span', btn), idle = `Rescan #${pr.number}`;
-  label.textContent = idle;
-  setTimeout(() => capability('comments').then(c => { if (c) btn.hidden = false; }));
+  const btn = $('#rescanBtn'), label = $('span', btn), idle = `Rescan #${pr.number}`, idleTitle = 'Ask the agent that built this canvas to rescan the PR and republish it';
+  const ICON_RESCAN = btn.querySelector('svg').outerHTML;
+  const ICON_SPIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" /></svg>';
+  const pendingKey = `pr5k-rescan:${pr.repo}#${pr.number}`;
+  const readPending = () => { try { return JSON.parse(localStorage.getItem(pendingKey)); } catch (e) { return null; } };
+  const setPending = v => { try { v ? localStorage.setItem(pendingKey, JSON.stringify(v)) : localStorage.removeItem(pendingKey); } catch (e) {} };
   const say = (text, title) => { label.textContent = text; btn.title = title; };
+  const busy = on => { btn.classList.toggle('busy', on); btn.querySelector('svg').outerHTML = on ? ICON_SPIN : ICON_RESCAN; btn.disabled = on; };
+  label.textContent = idle;
+  const pending = readPending();
+  if (pending) {
+    const rendered = Date.parse(D.renderedAt || '') || 0;
+    if (rendered > pending.at) { setPending(null); say('Rescanned', `Rebuilt at ${pr.headSha}.`); setTimeout(() => say(idle, idleTitle), 4000); }
+    else if (Date.now() - pending.at < 30 * 60 * 1000) { busy(true); say('Rescanning…', 'The agent is rebuilding this canvas. It reloads when the new version is published.'); }
+    else setPending(null);
+  }
+  setTimeout(() => capability('comments').then(c => { if (c) btn.hidden = false; }));
   btn.addEventListener('click', async () => {
     const c = await capability('comments'); if (!c || btn.disabled) return;
     let state = 'off'; try { state = await c.canSendToClaude(); } catch (e) {}
     if (state !== 'available') {
       say(state === 'no_session' ? 'No agent is watching' : 'Rescan not available', state === 'no_session' ? 'No agent session is watching this page right now. Try again later.' : 'Only editors of this page can ask for a rescan.');
-      setTimeout(() => say(idle, 'Ask the agent that built this canvas to rescan the PR and republish it'), 3000); return;
+      setTimeout(() => say(idle, idleTitle), 3000); return;
     }
-    btn.disabled = true; say('Sending…', '');
+    busy(true); say('Sending…', '');
     try {
       const anchor = await c.anchorFor($('#prTitle'));
       await c.sendToClaude({ anchor, text: `Rescan #${pr.number}: fetch the PR's latest head, rebuild this canvas's snapshot at it, and republish this page. This version shows ${pr.headSha}.` });
-      say('Rescan requested', 'The agent replies in a comment on the PR title and republishes this page when the rescan is done.');
+      setPending({ at: Date.now() });
+      say('Rescanning…', 'The agent is rebuilding this canvas. It reloads when the new version is published, and the agent replies in a comment on the PR title.');
     } catch (e) {
-      btn.disabled = false;
+      busy(false);
       say(e?.code === 'consent_required' || e?.code === 'forbidden' ? 'Sending not allowed' : "Couldn't send", 'The request was not sent.');
-      setTimeout(() => say(idle, 'Ask the agent that built this canvas to rescan the PR and republish it'), 3000);
+      setTimeout(() => say(idle, idleTitle), 3000);
     }
   });
 }
