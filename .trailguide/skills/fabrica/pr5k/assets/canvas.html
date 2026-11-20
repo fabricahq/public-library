@@ -24,8 +24,10 @@
   --renamed: #9db7e6; --renamed-bg: #22304a; --removed: #ec9488; --removed-bg: #432520;
   --context: #a0a89c; --context-bg: #2a2e29; --connector: #4f5a4c; --code-bg: #1a1d1a;
   --strong: #8cc493; --mixed: #e0b26a; --weak: #ec9488; color-scheme: dark;
+  --thumb-l: none; --thumb-d: block;
 } }
 :root[data-theme="dark"] {
+  --thumb-l: none; --thumb-d: block;
   --ink: #e4e7e1; --muted: #a0a89c; --faint: #757d72;
   --canvas: #161816; --surface: #1d201d; --node: #232723; --line: #343a33; --hover: #2b302a;
   --accent: #93a9d3; --accent-soft: #263042; --focus-ring: #93a9d340;
@@ -73,8 +75,6 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .nav[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .nav svg { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.6; }
 .nav .count { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; }
-.legend { display: grid; gap: 6px; padding: 6px 8px; font-size: 12px; color: var(--muted); }
-.legend span { display: flex; align-items: center; gap: 8px; }
 
 .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; border-radius: 999px; padding: 1px 8px; white-space: nowrap; line-height: 18px; }
 .pill.new { color: var(--new); background: var(--new-bg); } .pill.changed { color: var(--changed); background: var(--changed-bg); }
@@ -105,6 +105,12 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .node-head .pill { margin-left: auto; }
 .node-kind { font-family: var(--mono); font-size: 11px; color: var(--faint); overflow-wrap: anywhere; }
 .node-sum { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.node-thumb-box { display: flex; justify-content: center; align-items: flex-start; margin-top: 10px; padding: 8px; max-height: 196px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--canvas); }
+.node-thumb { display: var(--thumb-l, block); max-width: 100%; height: auto; }
+.node-thumb.dk { display: var(--thumb-d, none); }
+.preview-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+.preview-bar a { margin-left: auto; color: var(--accent); white-space: nowrap; }
+.preview-frame { display: block; width: 100%; height: max(420px, calc(100vh - 260px)); border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
 .node-num { font-family: var(--mono); font-size: 11px; color: var(--faint); min-width: 18px; }
 .node.table { width: 340px; padding: 0; overflow: hidden; }
 .node.table .node-head { padding: 10px 14px; border-bottom: 1px solid var(--line); }
@@ -552,7 +558,12 @@ const THEME_ICONS = {
 const CHECK = '<svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']];
 let theme = 'system', onThemeChange = null;
-function applyTheme(v) { if (v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', v); }
+function applyTheme(v) {
+  if (v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', v);
+  document.querySelectorAll('iframe[data-preview]').forEach(f => { f.src = previewSrc(f.dataset.preview); });
+}
+function isDark() { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; }
+function previewSrc(url) { return url + (url.includes('?') ? '&' : '?') + 'theme=' + (isDark() ? 'dark' : 'light'); }
 function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('pr5k-theme', v); } catch (e) {} onThemeChange?.(); }
 try { const saved = localStorage.getItem('pr5k-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
 /* Which tab a detail window opens on: its Summary, or its fields (Properties, Columns or Changes). Kept per browser. */
@@ -701,8 +712,7 @@ const st = pr.stats || {};
 /* Rail. */
 const rail = $('#rail');
 rail.innerHTML = SECTIONS.filter(s => s.id === 'overview' || D[s.id]).map(s =>
-  `<button class="nav" data-sec="${s.id}"><svg viewBox="0 0 20 20">${ICONS[s.id]}</svg>${esc(s.label)}${s.count ? `<span class="count">${s.count()}</span>` : ''}</button>`).join('') +
-  `<div class="rail-label">Key</div><div class="legend">${['new','changed','renamed','removed','context'].map(k => `<span>${pill(k)}</span>`).join('')}</div>`;
+  `<button class="nav" data-sec="${s.id}"><svg viewBox="0 0 20 20">${ICONS[s.id]}</svg>${esc(s.label)}${s.count ? `<span class="count">${s.count()}</span>` : ''}</button>`).join('');
 rail.addEventListener('click', e => { const b = e.target.closest('.nav'); if (b) { location.hash = b.dataset.sec; rail.classList.remove('open'); } });
 $('#menuToggle').addEventListener('click', () => rail.classList.toggle('open'));
 
@@ -741,7 +751,7 @@ function toggleMax(w) {
   const on = !w.el.classList.contains('max'); w.el.classList.toggle('max', on);
   const b = $('[data-act="max"]', w.el); b.innerHTML = on ? WIN_ICONS.restore : WIN_ICONS.max; b.setAttribute('aria-label', on ? 'Restore window size' : 'Fill the canvas');
 }
-function openWindow({ id, title, status, statusWord, kind, file, body, tabs }) {
+function openWindow({ id, title, status, statusWord, kind, file, body, tabs, wide }) {
   id = id || selectedId || title;
   if (wins.has(id)) { focusWin(wins.get(id).el); return wins.get(id).el; }
   tabs = (tabs || [{ id: 'details', label: 'Details', html: body }]).filter(t => t.html);
@@ -758,6 +768,7 @@ function openWindow({ id, title, status, statusWord, kind, file, body, tabs }) {
   host().appendChild(el);
   const b = hostBox(), n = wins.size % 5;
   const g = { w: lastSize.w, h: b.h - 32 - n * 28, x: 0, y: 16 + n * 28 };
+  if (wide) g.w = Math.max(g.w, Math.min(980, Math.round(b.w * 0.7)));
   g.w = Math.max(minW(), Math.min(g.w, b.w - 32)); g.x = b.w - g.w - 16 - n * 28;
   place(el, g);
   const w = { el, g }; wins.set(id, w); focusWin(el); markSelected();
@@ -1208,11 +1219,24 @@ document.addEventListener('click', async e => {
   b.textContent = ok ? 'Copied' : "Couldn't copy"; clearTimeout(b._t); b._t = setTimeout(() => { b.textContent = 'Copy prompt'; }, 1600);
 });
 
+function thumbHtml(pv) {
+  if (!pv?.thumb) return '';
+  const [w, h] = pv.size || [];
+  /* Drawn at a little over half its real size, so a small control stays small beside a whole panel. */
+  const dims = w && h ? ` width="${w}" height="${h}" style="width:${Math.round(w * 0.55)}px"` : '';
+  return `<div class="node-thumb-box"><img class="node-thumb" src="${esc(pv.thumb)}"${dims} alt="" loading="lazy">${pv.thumbDark ? `<img class="node-thumb dk" src="${esc(pv.thumbDark)}"${dims} alt="" loading="lazy">` : ''}</div>`;
+}
+function previewPane(it) {
+  const pv = it.preview; if (!pv?.url) return '';
+  const n = pv.states?.length || 0;
+  return `<div class="preview-bar"><span>The real component against sample data${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
+}
 function entityBoard(sec) {
   columnBoard(sec.summary, sec.groups, it => ({
     id: it.id, cls: 'st-' + it.status,
-    html: `<div class="node-head"><span class="node-title">${esc(it.title)}</span>${pill(it.status)}</div><div class="node-kind">${esc(it.kind)}</div><div class="node-sum">${esc(it.summary)}</div>`,
-    onSelect: () => exampleJump(openWindow({ title: it.title, status: it.status, kind: it.kind, file: it.file, tabs: [
+    html: `<div class="node-head"><span class="node-title">${esc(it.title)}</span>${pill(it.status)}</div><div class="node-kind">${esc(it.kind)}</div>${thumbHtml(it.preview)}<div class="node-sum">${esc(it.summary)}</div>`,
+    onSelect: () => exampleJump(openWindow({ title: it.title, status: it.status, kind: it.kind, file: it.file, wide: !!it.preview?.url, tabs: [
+      { id: 'preview', label: 'Preview', html: previewPane(it) },
       { id: 'summary', label: 'Summary', html: `<section><h3>What it is</h3><p>${md(it.summary)}</p></section>${points('Worth knowing', it.notes)}` },
       { id: 'props', label: tabLabel('Properties', it.properties), html: propsTable(it.properties, false, it.example) },
       { id: 'example', label: 'Example', html: codeBlock(it.example, false) },
