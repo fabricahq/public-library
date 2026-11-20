@@ -5,108 +5,198 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Review panel</title>
 <style>
+/* Layout: a header, a column of reviewer cards on the left, and the selected view on the right. */
 :root {
-  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e4e3df;
-  --accent: #3a5bd9; --block: #c4372b; --block-bg: #fbeceb; --adv: #9a6a00; --adv-bg: #fbf3df;
-  --ok: #2f7d4f; --ok-bg: #e7f4ec; --run: #3a5bd9; --run-bg: #e9eefc; --code: #f0efec;
+  --bg: #f6f6f3; --panel: #ffffff; --ink: #1c1c1a; --muted: #6a6a64; --line: #e3e2dc; --hover: #f2f2ee;
+  --accent: #3656d3; --accent-bg: #e9edfc; --block: #c0362a; --block-bg: #fbebe9; --adv: #946500; --adv-bg: #fbf2dc;
+  --ok: #2c7a4c; --ok-bg: #e6f3eb; --code: #efeee9; --claude: #c96442;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #161615; --panel: #1f1f1d; --ink: #ecebe7; --muted: #a09f99; --line: #33322f;
-    --accent: #8ea6ff; --block: #ff8a7e; --block-bg: #3a2220; --adv: #e6b84d; --adv-bg: #3a3020;
-    --ok: #74c995; --ok-bg: #1f3428; --run: #8ea6ff; --run-bg: #232c45; --code: #2a2a27;
+  :root:not([data-theme="light"]) {
+    --bg: #151514; --panel: #1e1e1c; --ink: #ecebe6; --muted: #a09f98; --line: #34332f; --hover: #262624;
+    --accent: #8ea6ff; --accent-bg: #232c47; --block: #ff8b7f; --block-bg: #3a2220; --adv: #e8b94e; --adv-bg: #393020;
+    --ok: #74c995; --ok-bg: #1e3327; --code: #2a2a27; --claude: #e08a6a; color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #151514; --panel: #1e1e1c; --ink: #ecebe6; --muted: #a09f98; --line: #34332f; --hover: #262624;
+  --accent: #8ea6ff; --accent-bg: #232c47; --block: #ff8b7f; --block-bg: #3a2220; --adv: #e8b94e; --adv-bg: #393020;
+  --ok: #74c995; --ok-bg: #1e3327; --code: #2a2a27; --claude: #e08a6a; color-scheme: dark;
+}
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
-.sub { color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.sub a { color: var(--accent); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 code, .mono { font-family: var(--mono); font-size: 12.5px; }
-main { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 20px; padding: 20px 24px 48px; max-width: 1400px; margin: 0 auto; }
-@media (max-width: 820px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 16px; } }
-.list { display: flex; flex-direction: column; gap: 8px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; text-align: left; color: inherit; font: inherit; width: 100%; }
+header { padding: 18px max(16px, env(safe-area-inset-left, 0px)) 14px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.head-inner { max-width: 1440px; margin: 0 auto; }
+h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; text-wrap: balance; }
+.sub { color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; }
+.sub a { color: var(--accent); }
+.progress { height: 4px; background: var(--code); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+.progress div { height: 100%; background: var(--accent); transition: width .4s; }
+main { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 20px; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 96px max(16px, env(safe-area-inset-left, 0px)); max-width: 1440px; margin: 0 auto; }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
+nav { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.section-title { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
+nav .section-title { margin: 10px 0 0; }
+
+/* Cards */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; text-align: left; width: 100%; display: flex; flex-direction: column; gap: 4px; }
 .card:hover { border-color: var(--muted); }
 .card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .card .top { display: flex; align-items: center; gap: 8px; }
 .card .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
-.card .act { color: var(--muted); font-family: var(--mono); font-size: 11.5px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .desc { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.card .act { color: var(--muted); font-family: var(--mono); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .err { color: var(--block); font-size: 12px; overflow-wrap: anywhere; }
+.counts { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Model and stats */
+.agent { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 12.5px; }
+.agent svg { width: 14px; height: 14px; flex: none; }
+.agent .claude { color: var(--claude); }
+.effort { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--code); border-radius: 4px; padding: 0 5px; }
+.stats { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.stats span { white-space: nowrap; }
+.fallback { font-size: 11.5px; color: var(--adv); }
+
+/* Pills */
 .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 .s-queued, .s-waiting, .s-skipped { background: var(--code); color: var(--muted); }
-.s-running { background: var(--run-bg); color: var(--run); }
+.s-running { background: var(--accent-bg); color: var(--accent); }
 .s-done { background: var(--ok-bg); color: var(--ok); }
 .s-failed, .s-cancelled { background: var(--block-bg); color: var(--block); }
-.sev-blocking, .v-blocking, .v-fix-first, .v-needs-decision { background: var(--block-bg); color: var(--block); }
-.sev-advisory, .v-concerns { background: var(--adv-bg); color: var(--adv); }
-.v-pass, .v-ready { background: var(--ok-bg); color: var(--ok); }
+.sev-blocking, .v-blocking, .v-fix-first, .v-needs-decision, .r-not-met { background: var(--block-bg); color: var(--block); }
+.sev-advisory, .v-concerns, .r-partly { background: var(--adv-bg); color: var(--adv); }
+.v-pass, .v-ready, .r-met { background: var(--ok-bg); color: var(--ok); }
+.r-unverified { background: var(--code); color: var(--muted); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .s-running .dot { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .25; } }
-.counts { display: flex; gap: 6px; margin-top: 6px; }
-.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
-.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; }
-.pane h2 { font-size: 17px; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.summary { margin: 10px 0 4px; font-size: 14.5px; }
-.finding { border-top: 1px solid var(--line); padding: 12px 0; }
-.finding:first-of-type { border-top: 0; }
-.finding summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.finding summary::-webkit-details-marker { display: none; }
-.finding .fid { font-family: var(--mono); color: var(--muted); font-size: 12px; }
-.finding .ftitle { font-weight: 600; flex: 1 1 300px; }
-.finding .where { color: var(--muted); font-family: var(--mono); font-size: 12px; margin: 4px 0 0; }
-.finding .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-.chip { background: var(--code); color: var(--muted); border-radius: 6px; padding: 0 6px; font-size: 11.5px; font-family: var(--mono); }
-.body { margin-top: 8px; overflow-wrap: anywhere; }
-.body p { margin: 6px 0; }
+@media (prefers-reduced-motion: reduce) { .s-running .dot { animation: none; } .progress div { transition: none; } }
+
+/* Main pane */
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; min-width: 0; }
+.pane-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.pane-head h2 { font-size: 18px; margin: 0; }
+.pane-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 6px; }
+.pane-desc { color: var(--muted); margin: 4px 0 0; }
+.conclusions { margin: 14px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.conclusions li { padding: 10px 14px; background: var(--hover); border-radius: 8px; font-size: 14.5px; line-height: 1.45; }
+.conclusions li::before { content: "\2192"; color: var(--accent); margin-right: 8px; font-weight: 600; }
+.summary-line { margin: 12px 0 0; font-size: 14.5px; }
+.questions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.questions li { border-left: 3px solid var(--adv); padding: 2px 0 2px 12px; }
+.questions .q { font-weight: 600; }
+.questions .why { color: var(--muted); font-size: 13px; }
+.banner { margin: 12px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--block-bg); color: var(--block); font-size: 13px; }
+.empty { color: var(--muted); padding: 28px 0; text-align: center; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 16px 0 0; overflow-x: auto; }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .n { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+/* Findings table */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 10px; }
+.toolbar input[type=search] { flex: 1 1 220px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.toolbar select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { background: var(--bg); border: 0; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--hover); white-space: nowrap; }
+td { padding: 9px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+tbody tr:first-child td { border-top: 0; }
+tr.row { cursor: pointer; }
+tr.row:hover td { background: var(--hover); }
+tr.row.picked td { background: var(--accent-bg); }
+td.pick { width: 34px; }
+td.pick input { width: 16px; height: 16px; margin: 2px 0 0; cursor: pointer; accent-color: var(--accent); }
+td.fid { font-family: var(--mono); color: var(--muted); font-size: 12px; white-space: nowrap; }
+.ftitle { font-weight: 600; }
+.where { color: var(--muted); font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; margin-top: 2px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { background: var(--code); color: var(--muted); border-radius: 6px; padding: 0 6px; font-size: 11.5px; font-family: var(--mono); white-space: nowrap; }
+.chip.more { background: var(--accent-bg); color: var(--accent); }
+.outcome { font-size: 12.5px; color: var(--muted); }
+tr.detail td { background: var(--hover); padding: 4px 16px 16px 54px; }
+.body { overflow-wrap: anywhere; max-width: 80ch; }
+.body p { margin: 8px 0; }
 .body pre { background: var(--code); padding: 10px; border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; }
 .body code { background: var(--code); padding: 0 4px; border-radius: 4px; }
 .body pre code { background: none; padding: 0; }
-.fix { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--ok); background: var(--ok-bg); border-radius: 0 8px 8px 0; }
-.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+.body ul { padding-left: 18px; }
+.fix { margin-top: 10px; padding: 8px 12px; border-left: 3px solid var(--ok); background: var(--ok-bg); border-radius: 0 8px 8px 0; max-width: 80ch; }
+.fix p { margin: 4px 0; }
+details.dupes { margin-top: 12px; }
+details.dupes summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 500; }
+details.dupes ul { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+details.dupes li { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.count-line { color: var(--muted); font-size: 12.5px; margin: 8px 2px 0; }
+
+/* Checks and prompt */
+.checks { display: flex; flex-direction: column; margin-top: 10px; }
+.check { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.check:first-child { border-top: 0; }
+.check .what { font-weight: 500; }
+.check .why { color: var(--muted); font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; }
+.check code { background: var(--code); padding: 0 4px; border-radius: 4px; }
+.prompt { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--hover); border: 1px solid var(--line); border-radius: 10px; padding: 14px; max-height: 70vh; overflow: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; margin-top: 10px; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 500; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+.rowline { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .note { color: var(--muted); font-size: 12.5px; }
-.banner { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: var(--block-bg); color: var(--block); }
-.progress { height: 4px; background: var(--code); border-radius: 4px; overflow: hidden; margin-top: 12px; }
-.progress div { height: 100%; background: var(--accent); transition: width .4s; }
-ul.plain { padding-left: 18px; margin: 6px 0; }
 a.raw { color: var(--accent); font-size: 12.5px; }
+
+/* Handoff */
+.handoff-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; background: var(--ink); color: var(--bg); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); max-width: calc(100% - 32px); flex-wrap: wrap; }
+.handoff-bar .btn { background: transparent; color: var(--bg); border-color: rgba(127,127,127,.5); }
+.handoff-bar .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.overlay { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.dialog { background: var(--panel); border-radius: 12px; width: min(820px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+.dialog h3 { margin: 0; font-size: 16px; }
+.dialog textarea { flex: 1; min-height: 300px; width: 100%; resize: vertical; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
+.dialog .rowline { margin: 0; }
 </style>
 </head>
 <body>
-<header>
+<header><div class="head-inner">
   <h1 id="title">Review panel</h1>
   <div class="sub" id="sub"></div>
   <div class="progress"><div id="bar" style="width:0"></div></div>
-</header>
+</div></header>
 <main>
-  <nav>
-    <button class="card" id="syn-card" data-key="__synthesis"></button>
-    <div class="section-title">Reviewers</div>
-    <div class="list" id="reviewers"></div>
-  </nav>
+  <nav id="nav"></nav>
   <section class="pane" id="pane"></section>
 </main>
+<div id="handoff"></div>
 <script id="inline-state" type="application/json"></script>
 <script>
 'use strict';
 const inline = document.getElementById('inline-state').textContent.trim();
 let state = inline ? JSON.parse(inline) : null;
-let selected = '__synthesis';
-let lostConnection = false;
-const open = new Set();
+const ui = {
+  view: '__synthesis', tab: {}, q: '', sev: 'all', cat: 'all', who: 'all', raw: false,
+  expanded: new Set(), picked: new Set(), lostConnection: false, dialog: false,
+};
 
+/* ---------- helpers ---------- */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const inlineMd = t => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 function md(text) {
-  const blocks = String(text ?? '').split(/```[a-z]*\n?/);
-  return blocks.map((block, i) => {
+  return String(text ?? '').split(/```[a-z]*\n?/).map((block, i) => {
     if (i % 2) return `<pre><code>${esc(block.replace(/\n$/, ''))}</code></pre>`;
     return block.split(/\n{2,}/).filter(p => p.trim()).map(p => {
-      let h = esc(p).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-      if (/^\s*[-*] /m.test(p)) h = '<ul class="plain">' + h.split(/\n\s*[-*] /).map(x => x.replace(/^\s*[-*] /, '')).filter(Boolean).map(x => `<li>${x}</li>`).join('') + '</ul>';
-      return `<p>${h.replace(/\n/g, '<br>')}</p>`;
+      if (/^\s*[-*] /m.test(p)) return '<ul>' + p.split(/\n\s*[-*] /).map(x => x.replace(/^\s*[-*] /, '')).filter(Boolean).map(x => `<li>${inlineMd(x)}</li>`).join('') + '</ul>';
+      return `<p>${inlineMd(p).replace(/\n/g, '<br>')}</p>`;
     }).join('');
   }).join('');
 }
@@ -115,82 +205,205 @@ function secs(a, b) {
   const s = Math.max(0, Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 1000));
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
 }
-const tokens = u => [u && u.steps ? `${u.steps} step${u.steps === 1 ? '' : 's'}` : '', u && (u.input || u.output) ? `${Math.round((u.input || 0) / 1000)}k in · ${Math.round((u.output || 0) / 1000)}k out` : ''].filter(Boolean).join(' · ');
+const compact = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
 const statusPill = s => `<span class="pill s-${esc(s)}"><span class="dot"></span>${esc(s)}</span>`;
-const agentLabel = a => a ? `${a.harness === 'codex' ? 'Codex' : 'Claude'} · ${a.model}${a.effort && a.effort !== 'default' ? ' · ' + a.effort : ''}` : '';
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const terminal = s => ['done', 'failed', 'cancelled'].includes(s);
+function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage is optional */ } }
+function recall(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
+
+// Brand marks: unmodified path data from Font Awesome Free 7.2.0 (svgs/brands/claude.svg and openai.svg),
+// CC BY 4.0, https://fontawesome.com/license/free. "Claude" is a trademark of Anthropic, PBC, and "OpenAI"
+// of OpenAI OpCo, LLC; each mark only identifies which vendor's model ran a session.
+const LOGOS = {
+  'claude-code': '<svg class="claude" viewBox="0 0 512 512" role="img" aria-label="Claude"><path fill="currentColor" d="M100.4 340.5l100.7-56.5 1.7-4.9-1.7-2.7-4.9 0-16.8-1-57.5-1.6-49.9-2.1-48.3-2.6-12.2-2.6-11.4-15 1.2-7.5 10.2-6.9 14.7 1.3c18.9 1.3 45.9 3.1 81 5.6l35.2 2.1 52.2 5.4 8.3 0 1.2-3.4-2.8-2.1-2.2-2.1-50.3-34.1-54.4-36-28.5-20.7-15.4-10.5-7.8-9.8-3.4-21.5 14-15.4 18.8 1.3 4.8 1.3 19 14.7 40.7 31.5 53.1 39.1 7.8 6.5 3.1-2.2 .4-1.6-3.5-5.8-28.9-52.2-30.8-53.1-13.7-22-3.6-13.2c-1.3-5.4-2.2-10-2.2-15.5l15.9-21.6 8.8-2.8 21.2 2.8 8.9 7.8 13.2 30.2 21.4 47.5 33.2 64.6 9.7 19.2 5.2 17.8 1.9 5.4 3.4 0 0-3.1 2.7-36.4 5-44.7 4.9-57.5 1.7-16.2 8-19.4 15.9-10.5 12.4 5.9 10.2 14.7-1.4 9.5-6.1 39.5-11.9 61.9-7.8 41.5 4.5 0 5.2-5.2 21-27.8 35.2-44.1 15.5-17.5 18.1-19.3 11.6-9.2 22 0 16.2 24.1-7.3 24.9-22.7 28.7-18.8 24.4-27 36.3-16.8 29 1.6 2.3 4-.4 60.9-13 32.9-5.9 39.3-6.7 17.8 8.3 1.9 8.4-7 17.2-42 10.4-49.2 9.8-73.3 17.3-.9 .7 1 1.3 33 3.1 14.1 .8 34.6 0 64.4 4.8 16.8 11.1 10.1 13.6-1.7 10.4-25.9 13.2c-15.5-3.7-54.4-12.9-116.6-27.7l-28-7-3.9 0 0 2.3 23.3 22.8 42.7 38.6 53.5 49.8 2.7 12.3-6.9 9.7-7.3-1-47-35.4-18.1-15.9-41.1-34.6-2.7 0 0 3.6 9.5 13.9 50 75.2 2.6 23-3.6 7.5-13 4.5-14.2-2.6-29.3-41.1-30.2-46.3-24.4-41.5-3 1.7-14.4 154.8-6.7 7.9-15.5 5.9-13-9.8-6.9-15.9 6.9-31.5 8.3-41.1 6.7-32.7 6.1-40.6 3.6-13.5-.2-.9-3 .4-30.6 42-46.5 62.9-36.8 39.4-8.8 3.5-15.3-7.9 1.4-14.1 8.5-12.6 50.9-64.8 30.7-40.2 19.8-23.2-.1-3.4-1.2 0-135.3 87.8-24.1 3.1-10.4-9.7 1.3-15.9 4.9-5.2 40.7-28-.1 .1 0 .1z"/></svg>',
+  codex: '<svg class="openai" viewBox="0 0 512 512" role="img" aria-label="OpenAI"><path fill="currentColor" d="M196.4 185.8l0-48.6c0-4.1 1.5-7.2 5.1-9.2l97.8-56.3c13.3-7.7 29.2-11.3 45.6-11.3 61.4 0 100.4 47.6 100.4 98.3 0 3.6 0 7.7-.5 11.8L343.3 111.1c-6.1-3.6-12.3-3.6-18.4 0L196.4 185.8zM424.7 375.2l0-116.2c0-7.2-3.1-12.3-9.2-15.9L287 168.4 329 144.3c3.6-2 6.7-2 10.2 0L437 200.7c28.2 16.4 47.1 51.2 47.1 85 0 38.9-23 74.8-59.4 89.6l0 0zM166.2 272.8l-42-24.6c-3.6-2-5.1-5.1-5.1-9.2l0-112.6c0-54.8 42-96.3 98.8-96.3 21.5 0 41.5 7.2 58.4 20L175.4 108.5c-6.1 3.6-9.2 8.7-9.2 15.9l0 148.5 0 0zm90.4 52.2l-60.2-33.8 0-71.7 60.2-33.8 60.2 33.8 0 71.7-60.2 33.8zm38.7 155.7c-21.5 0-41.5-7.2-58.4-20l100.9-58.4c6.1-3.6 9.2-8.7 9.2-15.9l0-148.5 42.5 24.6c3.6 2 5.1 5.1 5.1 9.2l0 112.6c0 54.8-42.5 96.3-99.3 96.3l0 0zM173.8 366.5L76.1 310.2c-28.2-16.4-47.1-51.2-47.1-85 0-39.4 23.6-74.8 59.9-89.6l0 116.7c0 7.2 3.1 12.3 9.2 15.9l128 74.2-42 24.1c-3.6 2-6.7 2-10.2 0zm-5.6 84c-57.9 0-100.4-43.5-100.4-97.3 0-4.1 .5-8.2 1-12.3l100.9 58.4c6.1 3.6 12.3 3.6 18.4 0l128.5-74.2 0 48.6c0 4.1-1.5 7.2-5.1 9.2l-97.8 56.3c-13.3 7.7-29.2 11.3-45.6 11.3l0 0zm127 60.9c62 0 113.7-44 125.4-102.4 57.3-14.9 94.2-68.6 94.2-123.4 0-35.8-15.4-70.7-43-95.7 2.6-10.8 4.1-21.5 4.1-32.3 0-73.2-59.4-128-128-128-13.8 0-27.1 2-40.4 6.7-23-22.5-54.8-36.9-89.6-36.9-62 0-113.7 44-125.4 102.4-57.3 14.8-94.2 68.6-94.2 123.4 0 35.8 15.4 70.7 43 95.7-2.6 10.8-4.1 21.5-4.1 32.3 0 73.2 59.4 128 128 128 13.8 0 27.1-2 40.4-6.7 23 22.5 54.8 36.9 89.6 36.9z"/></svg>',
+};
+// opus → Opus, claude-opus-5-5 → Opus 5.5, gpt-6.1-sol → GPT-6.1 Sol
+function modelName(model) {
+  const m = String(model || '');
+  const gpt = m.match(/^gpt-([\d.]+)(?:-(.+))?$/i);
+  if (gpt) return `GPT-${gpt[1]}${gpt[2] ? ' ' + gpt[2].split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') : ''}`;
+  const claude = m.replace(/^claude-/, '').match(/^([a-z]+)(?:-(\d+)(?:-(\d+))?)?/i);
+  if (claude) return claude[1][0].toUpperCase() + claude[1].slice(1) + (claude[2] ? ` ${claude[2]}${claude[3] ? '.' + claude[3] : ''}` : '');
+  return m;
+}
+function agentChip(entry) {
+  const a = entry.agent;
+  if (!a) return '';
+  const model = entry.served_model || a.model;
+  return `<span class="agent" title="${esc(a.harness)} · ${esc(model)}">${LOGOS[a.harness] || ''}${esc(modelName(model))}${a.effort && a.effort !== 'default' ? `<span class="effort" title="Reasoning effort">${esc(a.effort)}</span>` : ''}</span>`;
+}
+function statsLine(entry) {
+  const u = entry.usage || {};
+  const total = (u.input || 0) + (u.output || 0);
+  const parts = [
+    entry.started_at ? `<span title="Time">${secs(entry.started_at, entry.ended_at)}</span>` : '',
+    u.steps ? `<span title="Tool calls">${plural(u.steps, 'step')}</span>` : '',
+    total ? `<span title="${(u.input || 0).toLocaleString()} tokens in, ${(u.output || 0).toLocaleString()} out">${compact(total)} tokens</span>` : '',
+  ].filter(Boolean);
+  return parts.length ? `<span class="stats">${parts.join('')}</span>` : '';
+}
 function severityCounts(findings) {
   const b = (findings || []).filter(f => f.severity === 'blocking').length;
   const a = (findings || []).length - b;
-  return (b ? `<span class="pill sev-blocking">${b} blocking</span>` : '') + (a ? `<span class="pill sev-advisory">${a} advisory</span>` : '') + (!b && !a ? '<span class="pill s-done">no findings</span>' : '');
+  if (!b && !a) return '<span class="pill s-done">no findings</span>';
+  return (b ? `<span class="pill sev-blocking">${b} blocking</span>` : '') + (a ? `<span class="pill sev-advisory">${a} advisory</span>` : '');
 }
 
-function card(key, name, entry, focus) {
-  const result = entry.result;
-  const meta = [agentLabel(entry.agent), secs(entry.started_at, entry.ended_at), tokens(entry.usage)].filter(Boolean).join(' · ');
-  return `<div class="top"><span class="name">${esc(name)}</span>${statusPill(entry.status)}</div>
-    <div class="meta">${esc(focus || meta)}</div>${focus ? `<div class="meta">${esc(meta)}</div>` : ''}
-    ${entry.note ? `<div class="meta">${esc(entry.note)}</div>` : ''}
-    ${entry.status === 'running' && entry.activity ? `<div class="act">${esc(entry.activity)}</div>` : ''}
-    ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="act">${esc(entry.error)}</div>` : ''}
-    ${result ? `<div class="counts">${severityCounts(result.findings)}</div>` : ''}`;
+/* ---------- rows: every finding, synthesized or raw, in one shape ---------- */
+function synthesisRows() {
+  const result = state.synthesis.result;
+  if (!result) return [];
+  return result.findings.map(f => ({
+    key: 'S:' + f.id, id: f.id, severity: f.severity, category: f.category, title: f.title, file: f.file, line: f.line,
+    body: f.body, fix: f.fix, reviewers: f.raised_by || [], merges: f.merges || [],
+  }));
+}
+function rawRows(only) {
+  const result = state.synthesis.result;
+  const mergedInto = {}, dropped = {};
+  for (const f of result ? result.findings : []) for (const ref of f.merges || []) mergedInto[ref] = f.id;
+  for (const d of result ? result.dropped || [] : []) dropped[`${d.reviewer}:${d.finding}`] = d.reason;
+  const rows = [];
+  for (const [name, entry] of Object.entries(state.reviewers)) {
+    if (only && name !== only) continue;
+    for (const f of (entry.result && entry.result.findings) || []) {
+      const ref = `${name}:${f.id}`;
+      rows.push({
+        key: 'R:' + ref, id: f.id, severity: f.severity, category: f.category, title: f.title, file: f.file, line: f.line,
+        body: f.body, fix: f.fix, reviewers: [name], ref,
+        outcome: mergedInto[ref] ? `in ${mergedInto[ref]}` : dropped[ref] ? 'dropped' : '', droppedReason: dropped[ref],
+      });
+    }
+  }
+  return rows;
+}
+function rawFinding(ref) {
+  const [name, id] = ref.split(':');
+  const entry = state.reviewers[name];
+  return entry && entry.result ? entry.result.findings.find(f => f.id === id) : null;
+}
+function allRows() { return [...synthesisRows(), ...rawRows()]; }
+function filtered(rows) {
+  const q = ui.q.trim().toLowerCase();
+  return rows.filter(r => (ui.sev === 'all' || r.severity === ui.sev)
+    && (ui.cat === 'all' || r.category === ui.cat)
+    && (ui.who === 'all' || r.reviewers.includes(ui.who))
+    && (!q || [r.id, r.title, r.body, r.fix, r.file, r.reviewers.join(' ')].join(' ').toLowerCase().includes(q)));
 }
 
-function finding(f, keyPrefix) {
-  const id = keyPrefix + f.id;
-  const where = [f.file, f.line].filter(Boolean).join(':');
-  return `<details class="finding" data-id="${esc(id)}" ${open.has(id) ? 'open' : ''}>
-    <summary><span class="fid">${esc(f.id)}</span><span class="pill sev-${esc(f.severity)}">${esc(f.severity)}</span><span class="ftitle">${esc(f.title)}</span></summary>
-    ${where ? `<div class="where">${esc(where)}</div>` : ''}
-    <div class="chips">${f.category ? `<span class="chip">${esc(f.category)}</span>` : ''}${(f.raised_by || []).map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div>
-    <div class="body">${md(f.body)}</div>
-    ${f.fix ? `<div class="fix"><strong>Fix:</strong> ${md(f.fix)}</div>` : ''}
-  </details>`;
+/* ---------- the findings table ---------- */
+function toolbar(rows, withReviewer) {
+  const cats = [...new Set(rows.map(r => r.category).filter(Boolean))];
+  const who = [...new Set(rows.flatMap(r => r.reviewers))];
+  const seg = (value, label) => `<button type="button" data-sev="${value}" class="${ui.sev === value ? 'on' : ''}">${label}</button>`;
+  return `<div class="toolbar">
+    <input id="search" type="search" placeholder="Search findings" value="${esc(ui.q)}" aria-label="Search findings">
+    <span class="seg" role="group" aria-label="Severity">${seg('all', 'All')}${seg('blocking', 'Blocking')}${seg('advisory', 'Advisory')}</span>
+    <select id="cat" aria-label="Category"><option value="all">All categories</option>${cats.map(c => `<option value="${esc(c)}" ${ui.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+    ${withReviewer ? `<select id="who" aria-label="Reviewer"><option value="all">All reviewers</option>${who.map(w => `<option value="${esc(w)}" ${ui.who === w ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select>` : ''}
+  </div>`;
+}
+function detailRow(r, cols) {
+  let dupes = '';
+  if (r.merges && r.merges.length > 1) {
+    dupes = `<details class="dupes"><summary>Merges ${plural(r.merges.length, 'reviewer finding')}</summary><ul>${r.merges.map(ref => {
+      const f = rawFinding(ref);
+      return `<li><span class="chip">${esc(ref)}</span> ${f ? `<span class="pill sev-${esc(f.severity)}">${esc(f.severity)}</span> <strong>${esc(f.title)}</strong>` : ''}</li>`;
+    }).join('')}</ul></details>`;
+  } else if (r.merges && r.merges.length === 1) {
+    dupes = `<div class="note" style="margin-top:10px">From ${esc(r.merges[0])}</div>`;
+  }
+  const dropped = r.droppedReason ? `<div class="banner">Dropped by the synthesis: ${esc(r.droppedReason)}</div>` : '';
+  return `<tr class="detail"><td colspan="${cols}">${dropped}<div class="body">${md(r.body)}</div>
+    ${r.fix ? `<div class="fix"><strong>Fix:</strong> ${md(r.fix)}</div>` : ''}${dupes}</td></tr>`;
+}
+function tableHtml(rows, { reviewerCol, outcomeCol }) {
+  const shown = filtered(rows);
+  const cols = 4 + (reviewerCol ? 1 : 0) + (outcomeCol ? 1 : 0);
+  const body = shown.map(r => {
+    const where = [r.file, r.line].filter(Boolean).join(':');
+    const picked = ui.picked.has(r.key);
+    const who = r.reviewers.length > 2 ? r.reviewers.slice(0, 2).map(w => `<span class="chip">${esc(w)}</span>`).join('') + `<span class="chip more">+${r.reviewers.length - 2}</span>` : r.reviewers.map(w => `<span class="chip">${esc(w)}</span>`).join('');
+    return `<tr class="row ${picked ? 'picked' : ''}" data-key="${esc(r.key)}">
+        <td class="pick"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Include ${esc(r.id)} in the handoff"></td>
+        <td class="fid">${esc(r.id)}</td>
+        <td><span class="pill sev-${esc(r.severity)}">${esc(r.severity)}</span></td>
+        <td><div class="ftitle">${inlineMd(r.title)}</div>${where ? `<div class="where">${esc(where)}</div>` : ''}</td>
+        ${reviewerCol ? `<td><div class="chips">${who}</div></td>` : ''}
+        ${outcomeCol ? `<td class="outcome">${esc(r.outcome)}</td>` : ''}
+      </tr>${ui.expanded.has(r.key) ? detailRow(r, cols) : ''}`;
+  }).join('');
+  return `<div class="table-wrap"><table>
+      <thead><tr><th></th><th>ID</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Raised by</th>' : ''}${outcomeCol ? '<th>Synthesis</th>' : ''}</tr></thead>
+      <tbody>${body || `<tr><td colspan="${cols}" class="empty">${rows.length ? 'No findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
+    </table></div>
+    <div class="count-line">${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}. Click a row for details; tick the ones to hand off.</div>`;
 }
 
-function synthesisPane() {
+/* ---------- views ---------- */
+function synthesisView() {
   const syn = state.synthesis;
   const pending = Object.values(state.reviewers).filter(r => r.status === 'queued' || r.status === 'running').length;
+  const head = `<div class="pane-head"><h2>Synthesis</h2>${syn.result ? `<span class="pill v-${esc(syn.result.verdict)}">${esc(syn.result.verdict)}</span>${severityCounts(syn.result.findings)}` : statusPill(syn.status)}</div>
+    <div class="pane-meta">${agentChip(syn)}${statsLine(syn)}</div>`;
   if (!syn.result) {
-    let message = pending ? `Waiting for ${pending} reviewer${pending === 1 ? '' : 's'} to finish.` : 'Synthesizing the reviewers’ findings…';
-    if (syn.status === 'failed' || syn.status === 'skipped' || syn.status === 'cancelled') message = `Synthesis ${syn.status}: ${syn.error || ''}`;
-    return `<h2>Synthesis ${statusPill(syn.status)}</h2>
-      ${syn.status === 'running' && syn.activity ? `<p class="note mono">${esc(syn.activity)}</p>` : ''}
-      <div class="empty">${esc(message)}</div>`;
+    let message = pending ? `Waiting for ${plural(pending, 'reviewer')} to finish.` : 'Checking, merging, and ranking the reviewers’ findings…';
+    if (['failed', 'skipped', 'cancelled'].includes(syn.status)) message = `Synthesis ${syn.status}: ${syn.error || ''}`;
+    const raw = rawRows();
+    return head + `<div class="empty">${esc(message)}</div>` + (raw.length ? `<div class="section-title">Reviewer findings so far</div>${toolbar(raw, true)}<div id="table">${tableHtml(raw, { reviewerCol: true })}</div>` : '');
   }
   const r = syn.result;
   const missing = Object.entries(state.reviewers).filter(([, v]) => v.status !== 'done').map(([k]) => k);
-  return `<h2>Synthesis <span class="pill v-${esc(r.verdict)}">${esc(r.verdict)}</span> ${severityCounts(r.findings)}</h2>
-    <div class="summary">${md(r.summary)}</div>
+  const rows = ui.raw ? rawRows() : synthesisRows();
+  const rawCount = rawRows().length;
+  return head + `
+    ${(r.conclusions || []).length ? `<ul class="conclusions">${r.conclusions.map(c => `<li>${inlineMd(c)}</li>`).join('')}</ul>` : `<p class="summary-line">${inlineMd(r.summary)}</p>`}
     ${missing.length ? `<div class="banner">Not covered: ${missing.map(esc).join(', ')} did not report.</div>` : ''}
-    ${(r.questions || []).length ? `<div class="section-title">Questions for you</div><ul class="plain">${r.questions.map(q => `<li><strong>${esc(q.question)}</strong>${q.why ? ` <span class="note">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul>` : ''}
+    ${(r.questions || []).length ? `<div class="section-title">Questions for you</div><ul class="questions">${r.questions.map(q => `<li><div class="q">${inlineMd(q.question)}</div>${q.why ? `<div class="why">${inlineMd(q.why)}</div>` : ''}</li>`).join('')}</ul>` : ''}
     <div class="section-title">Findings</div>
-    ${(r.findings || []).length ? r.findings.map(f => finding(f, 'syn-')).join('') : '<div class="empty">No findings.</div>'}
-    ${(r.dropped || []).length ? `<div class="section-title">Dropped after checking the code</div><ul class="plain">${r.dropped.map(d => `<li><span class="chip">${esc(d.reviewer)} ${esc(d.finding)}</span> ${esc(d.reason)}</li>`).join('')}</ul>` : ''}`;
+    <label class="toggle"><input type="checkbox" id="raw" ${ui.raw ? 'checked' : ''}> Show every reviewer finding before merging (${rawCount})</label>
+    ${toolbar(rows, true)}
+    <div id="table">${tableHtml(rows, { reviewerCol: true, outcomeCol: ui.raw })}</div>`;
 }
-
-function reviewerPane(name) {
+function reviewerView(name) {
   const entry = state.reviewers[name];
   const r = entry.result;
-  const logLink = inline ? '' : `<a class="raw" href="log/${esc(name)}" target="_blank" rel="noopener">raw session log</a>`;
-  let body;
-  if (r) {
-    body = `<div class="summary">${md(r.summary)}</div>
-      <div class="section-title">Findings</div>
-      ${(r.findings || []).length ? r.findings.map(f => finding(f, name + '-')).join('') : '<div class="empty">No findings.</div>'}
-      ${(r.unverified || []).length ? `<div class="section-title">Could not check</div><ul class="plain">${r.unverified.map(u => `<li>${esc(u.claim)} <span class="note">${esc(u.reason)}</span></li>`).join('')}</ul>` : ''}`;
-  } else if (entry.status === 'failed' || entry.status === 'cancelled') {
-    body = `<div class="banner">${esc(entry.error)}</div>`;
-  } else {
-    body = `<div class="empty">${entry.status === 'queued' ? 'Queued.' : esc(entry.activity || 'Reading the change…')}</div>`;
-  }
-  return `<h2>${esc(name)} ${statusPill(entry.status)} ${r ? `<span class="pill v-${esc(r.verdict)}">${esc(r.verdict)}</span>` : ''}</h2>
-    <p class="note">${esc(entry.focus)} · ${esc(agentLabel(entry.agent))}${entry.note ? ' · ' + esc(entry.note) : ''} · ${esc([secs(entry.started_at, entry.ended_at), tokens(entry.usage)].filter(Boolean).join(' · '))} ${logLink}</p>
-    ${body}`;
+  const tab = ui.tab[name] || 'findings';
+  const rows = rawRows(name);
+  const logLink = inline ? '' : `<a class="raw" href="log/${esc(name)}" target="_blank" rel="noopener">Raw session log</a>`;
+  const head = `<div class="pane-head"><h2>${esc(name)}</h2>${statusPill(entry.status)}${r ? severityCounts(r.findings) : ''}</div>
+    <p class="pane-desc">${esc(entry.focus)}</p>
+    <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${logLink}</div>
+    ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
+    ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="banner">${esc(entry.error)}</div>` : ''}
+    ${r ? `<p class="summary-line">${inlineMd(r.summary)}</p>` : entry.status === 'running' ? `<p class="note mono">${esc(entry.activity || 'Reading the change…')}</p>` : ''}`;
+  const tabBtn = (id, label, n) => `<button type="button" class="tab ${tab === id ? 'on' : ''}" data-tab="${id}">${label}${n !== undefined ? `<span class="n">${n}</span>` : ''}</button>`;
+  const checks = (r && r.checks) || [];
+  let body = '';
+  if (tab === 'findings') body = r ? toolbar(rows, false) + `<div id="table">${tableHtml(rows, { outcomeCol: !!state.synthesis.result })}</div>` : `<div class="empty">${entry.status === 'queued' ? 'Queued.' : 'No findings yet.'}</div>`;
+  if (tab === 'checks') body = checks.length ? `<div class="checks">${checks.map(c => `<div class="check"><span><span class="pill r-${esc(c.result)}">${esc(c.result.replace('-', ' '))}</span></span><div><div class="what">${inlineMd(c.check)}</div>${c.evidence ? `<div class="why">${inlineMd(c.evidence)}</div>` : ''}</div></div>`).join('')}</div>`
+    + ((r && r.unverified) || []).map(u => `<div class="check"><span><span class="pill r-unverified">unverified</span></span><div><div class="what">${inlineMd(u.claim)}</div><div class="why">${inlineMd(u.reason)}</div></div></div>`).join('')
+    : `<div class="empty">${r ? 'This reviewer listed no checks.' : 'No checks yet.'}</div>`;
+  if (tab === 'prompt') body = entry.prompt ? `<div class="rowline"><span class="note">The full prompt this session received: shared reviewer instructions, this reviewer’s focus, then the change.</span><button type="button" class="btn" data-copy="prompt">Copy prompt</button></div><div class="prompt">${esc(entry.prompt)}</div>` : '<div class="empty">The prompt appears when the session starts.</div>';
+  return head + `<div class="tabs" role="tablist">${tabBtn('findings', 'Findings', rows.length)}${tabBtn('checks', 'What it checked', checks.length)}${tabBtn('prompt', 'Prompt')}</div>${body}`;
 }
 
-let lastPane = '';
-function render() {
-  if (!state) return;
+/* ---------- nav and header ---------- */
+function card(key, name, entry, desc) {
+  const result = entry.result;
+  return `<button type="button" class="card ${ui.view === key ? 'sel' : ''}" data-view="${esc(key)}">
+    <div class="top"><span class="name">${esc(name)}</span>${statusPill(entry.status)}</div>
+    <div class="desc">${esc(desc)}</div>
+    ${agentChip(entry)}${statsLine(entry)}
+    ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
+    ${entry.status === 'running' && entry.activity ? `<div class="act">${esc(entry.activity)}</div>` : ''}
+    ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="err">${esc(entry.error)}</div>` : ''}
+    ${result ? `<div class="counts">${severityCounts(result.findings)}</div>` : ''}
+  </button>`;
+}
+function renderChrome() {
   const t = state.target;
   document.title = `Review panel: ${t.label}`;
   document.getElementById('title').textContent = t.label;
@@ -198,55 +411,147 @@ function render() {
   const total = Object.keys(state.reviewers).length;
   document.getElementById('sub').innerHTML = [
     statusPill(state.status),
-    t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.url)}</a>` : '',
-    `<span class="mono">${esc(t.base)} → ${esc(t.head.slice(0, 10))}${t.kind === 'local' ? ' + working tree' : ''}</span>`,
+    t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.url.replace('https://github.com/', ''))}</a>` : '',
+    `<span class="mono">${esc(t.base)} → ${esc(t.head.slice(0, 10))}</span>`,
     `<span>${done}/${total} reviewers finished</span>`,
     `<span>${secs(state.started_at, state.ended_at)}</span>`,
-    lostConnection ? `<span class="pill s-failed">can’t reach the panel process; if it finished, open report.html in ${esc(state.run_dir)}</span>` : '',
+    ui.lostConnection ? `<span class="pill s-failed">Can’t reach the panel process. If it finished, open report.html in ${esc(state.run_dir)}</span>` : '',
   ].filter(Boolean).join('');
-  const steps = total + 1;
-  document.getElementById('bar').style.width = `${Math.round(100 * (done + (state.synthesis.status === 'done' ? 1 : 0)) / steps)}%`;
-  const syn = document.getElementById('syn-card');
-  syn.innerHTML = card('__synthesis', 'Synthesis', state.synthesis, state.synthesis.result ? null : 'Merges, verifies, and ranks the findings');
-  syn.classList.toggle('sel', selected === '__synthesis');
-  document.getElementById('reviewers').innerHTML = Object.entries(state.reviewers).map(([name, entry]) =>
-    `<button class="card ${selected === name ? 'sel' : ''}" data-key="${esc(name)}">${card(name, name, entry, entry.focus)}</button>`).join('');
-  // Replace the pane only when its content changes, so open findings and scroll position survive polling.
-  const html = selected === '__synthesis' ? synthesisPane() : reviewerPane(selected);
-  if (html !== lastPane) { document.getElementById('pane').innerHTML = html; lastPane = html; }
+  document.getElementById('bar').style.width = `${Math.round(100 * (done + (state.synthesis.status === 'done' ? 1 : 0)) / (total + 1))}%`;
+  document.getElementById('nav').innerHTML = card('__synthesis', 'Synthesis', state.synthesis, 'Verifies, merges, and ranks the reviewers’ findings')
+    + '<div class="section-title">Reviewers</div>'
+    + Object.entries(state.reviewers).map(([name, entry]) => card(name, name, entry, entry.focus)).join('');
+}
+let lastPane = '';
+function renderPane(force) {
+  const html = ui.view === '__synthesis' ? synthesisView() : reviewerView(ui.view);
+  if (!force && html === lastPane) return;
+  const search = document.activeElement && document.activeElement.id === 'search';
+  const caret = search ? document.activeElement.selectionStart : 0;
+  document.getElementById('pane').innerHTML = html;
+  lastPane = html;
+  if (search) { const s = document.getElementById('search'); s.focus(); s.setSelectionRange(caret, caret); }
+}
+function renderTable() {
+  const holder = document.getElementById('table');
+  if (!holder) return;
+  if (ui.view === '__synthesis') {
+    const rows = !state.synthesis.result ? rawRows() : ui.raw ? rawRows() : synthesisRows();
+    holder.innerHTML = tableHtml(rows, { reviewerCol: true, outcomeCol: !!state.synthesis.result && ui.raw });
+  } else {
+    holder.innerHTML = tableHtml(rawRows(ui.view), { outcomeCol: !!state.synthesis.result });
+  }
+  lastPane = '';
 }
 
-document.addEventListener('click', event => {
-  const button = event.target.closest('.card');
-  if (button) { selected = button.dataset.key; render(); }
-});
-document.addEventListener('toggle', event => {
-  const d = event.target;
-  if (d.classList && d.classList.contains('finding')) d.open ? open.add(d.dataset.id) : open.delete(d.dataset.id);
-}, true);
+/* ---------- handoff ---------- */
+function pickedRows() { const rows = allRows(); return [...ui.picked].map(k => rows.find(r => r.key === k)).filter(Boolean); }
+function handoffText() {
+  const t = state.target;
+  const rows = pickedRows();
+  const reviewers = [...new Set(rows.flatMap(r => r.reviewers))];
+  const lines = [
+    '# Fix review findings', '',
+    `Repository: ${state.repo}`,
+    `Change: ${t.label}${t.url ? ` (${t.url})` : ''}`,
+    `Reviewed: ${t.base} to ${t.head.slice(0, 12)}`,
+    `Review run: ${state.run_dir}`, '',
+    `Fix the ${plural(rows.length, 'finding')} below, and nothing else. For each one, first confirm the problem in the code. If a finding turns out to be wrong, say so and leave the code alone. Add or update a test that would have caught each defect. Run the project's tests and linters before you finish, and report what you changed for each finding.`, '',
+  ];
+  for (const r of rows) {
+    const where = [r.file, r.line].filter(Boolean).join(':');
+    lines.push(`## ${r.ref || r.id}: ${r.title}`, '', `- Severity: ${r.severity}${r.category ? ` (${r.category})` : ''}`);
+    if (where) lines.push(`- Location: ${where}`);
+    lines.push(`- Raised by: ${r.reviewers.join(', ')}`, '', r.body.trim(), '');
+    if (r.fix) lines.push(`Suggested fix: ${r.fix.trim()}`, '');
+  }
+  lines.push('When you are done, run the review panel again on the reviewers that raised these:', '',
+    '```sh', `python3 <review-panel skill>/scripts/review_panel.py run --only ${[...new Set([...reviewers, 'check-correctness'])].join(',')}`, '```');
+  return lines.join('\n') + '\n';
+}
+function renderHandoff() {
+  const holder = document.getElementById('handoff');
+  const n = ui.picked.size;
+  let html = '';
+  if (n) html += `<div class="handoff-bar"><span>${plural(n, 'finding')} selected</span><button type="button" class="btn" data-act="clear">Clear</button><button type="button" class="btn primary" data-act="handoff">Prepare handoff</button></div>`;
+  if (ui.dialog && n) html += `<div class="overlay" data-act="close"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="handoff-title">
+      <h3 id="handoff-title">Handoff for an implementing agent</h3>
+      <p class="note" style="margin:0">Paste this into the agent that will make the fixes. You can edit it here first.</p>
+      <textarea id="handoff-text" spellcheck="false">${esc(handoffText())}</textarea>
+      <div class="rowline"><span class="note" id="copy-note"></span><span><button type="button" class="btn" data-act="close">Close</button> <button type="button" class="btn primary" data-act="copy">Copy</button></span></div>
+    </div></div>`;
+  holder.innerHTML = html;
+}
+function savePicks() { if (state) store('review-panel:' + state.run_dir, [...ui.picked]); }
+async function copy(text, note) {
+  try { await navigator.clipboard.writeText(text); if (note) note.textContent = 'Copied.'; return true; }
+  catch (e) { if (note) note.textContent = 'Copying isn’t allowed here. The text is selected: press ⌘C or Ctrl+C.'; return false; }
+}
 
+/* ---------- events ---------- */
+document.addEventListener('click', async event => {
+  const t = event.target;
+  const view = t.closest('[data-view]');
+  if (view) { ui.view = view.dataset.view; ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; renderChrome(); renderPane(true); return; }
+  const tab = t.closest('[data-tab]');
+  if (tab) { ui.tab[ui.view] = tab.dataset.tab; renderPane(true); return; }
+  const sev = t.closest('[data-sev]');
+  if (sev) { ui.sev = sev.dataset.sev; document.querySelectorAll('[data-sev]').forEach(b => b.classList.toggle('on', b.dataset.sev === ui.sev)); renderTable(); return; }
+  if (t.matches('[data-pick]')) { t.checked ? ui.picked.add(t.dataset.pick) : ui.picked.delete(t.dataset.pick); savePicks(); renderTable(); renderHandoff(); return; }
+  const row = t.closest('tr.row');
+  if (row) { const k = row.dataset.key; ui.expanded.has(k) ? ui.expanded.delete(k) : ui.expanded.add(k); renderTable(); return; }
+  const copyBtn = t.closest('[data-copy]');
+  if (copyBtn) { const ok = await copy(state.reviewers[ui.view].prompt); copyBtn.textContent = ok ? 'Copied' : 'Select and copy below'; return; }
+  const act = t.closest('[data-act]');
+  if (act) {
+    const a = act.dataset.act;
+    if (a === 'close' && t !== act && act.classList.contains('overlay')) return;
+    if (a === 'clear') { ui.picked.clear(); savePicks(); renderTable(); }
+    if (a === 'handoff') ui.dialog = true;
+    if (a === 'close') ui.dialog = false;
+    if (a === 'copy') { const area = document.getElementById('handoff-text'); area.select(); await copy(area.value, document.getElementById('copy-note')); return; }
+    renderHandoff();
+  }
+});
+document.addEventListener('input', event => {
+  if (event.target.id === 'search') { ui.q = event.target.value; renderTable(); }
+});
+document.addEventListener('change', event => {
+  const t = event.target;
+  if (t.id === 'cat') { ui.cat = t.value; renderTable(); }
+  if (t.id === 'who') { ui.who = t.value; renderTable(); }
+  if (t.id === 'raw') { ui.raw = t.checked; renderPane(true); }
+});
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && ui.dialog) { ui.dialog = false; renderHandoff(); } });
+
+/* ---------- data ---------- */
+function render() { renderChrome(); renderPane(false); renderHandoff(); }
+function adopt(next) {
+  const first = !state;
+  state = next;
+  if (first) { const saved = recall('review-panel:' + state.run_dir); if (Array.isArray(saved)) saved.forEach(k => ui.picked.add(k)); }
+}
 let failedPolls = 0;
 async function poll() {
   try {
     const response = await fetch('state.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error(response.status);
-    state = await response.json();
+    if (!response.ok) throw new Error(String(response.status));
+    adopt(await response.json());
     failedPolls = 0;
-    lostConnection = false;
+    ui.lostConnection = false;
   } catch (error) {
     // Keep trying with backoff: one failed request shouldn't freeze the page while the panel keeps working.
     failedPolls += 1;
-    lostConnection = failedPolls >= 3;
-    render();
+    ui.lostConnection = failedPolls >= 3;
+    if (state) render();
     setTimeout(poll, Math.min(1500 * 2 ** failedPolls, 15000));
     return;
   }
   render();
-  if (!['done', 'failed', 'cancelled'].includes(state.status)) setTimeout(poll, 1500);
+  if (!terminal(state.status)) setTimeout(poll, 1500);
 }
-
-if (state) render(); else poll();
-setInterval(() => { if (state && !state.ended_at) render(); }, 1000);
+if (state) { const s = state; state = null; adopt(s); render(); } else poll();
+setInterval(() => { if (state && !state.ended_at) renderChrome(); }, 1000);
 </script>
 </body>
 </html>

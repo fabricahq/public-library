@@ -4,14 +4,14 @@ Review a change with a panel of eight focused reviewers instead of one generalis
 
 | Reviewer | Checks | Runs on |
 | --- | --- | --- |
-| check-acceptance-criteria | The spec, its acceptance criteria, and the product decisions | Claude Opus, high effort |
-| check-correctness | Concrete inputs traced through the new logic | Codex, GPT-6 Astra, high effort |
-| check-security | Trust boundaries, secrets, injection, tenant isolation | Codex, GPT-6 Astra, high effort |
-| check-rules | The repository's own rules and agent instructions | Claude Opus |
-| check-docs | Docs that the change made wrong or left missing | Claude Opus |
-| check-supportability | Errors surfaced, traceable, and recoverable | Codex, GPT-6.1 Sol, high effort |
-| check-performance | Only bottlenecks unacceptably large for the change | Codex, GPT-6.1 Sol, high effort |
-| check-architecture | Deep modules and simpler designs, with an alternative compared | Claude Opus, high effort |
+| check-acceptance-criteria | Checks the change against the known acceptance criteria and product decisions | Claude Opus, high effort |
+| check-correctness | Traces concrete inputs through the new logic to find wrong results | Codex, GPT-6 Astra, high effort |
+| check-security | Checks trust boundaries, secrets, injection, and tenant isolation | Codex, GPT-6 Astra, high effort |
+| check-rules | Checks the change against the repository's own rules and agent instructions | Claude Opus |
+| check-docs | Checks that the docs still match the code after this change | Claude Opus |
+| check-supportability | Checks that failures surface, can be traced, and can be recovered | Codex, GPT-6.1 Sol, high effort |
+| check-performance | Flags only bottlenecks too large for the change's real workload | Codex, GPT-6.1 Sol, high effort |
+| check-architecture | Judges whether the design is as simple as it could be, and proposes a simpler one | Claude Opus, high effort |
 
 Edit `panel.json` to change a reviewer's model or effort, and `focus/` to change what it looks for.
 
@@ -52,6 +52,10 @@ This reviews the current branch, including uncommitted changes, against `origin/
 - The GitHub CLI, signed in, for `--pr`.
 
 A full run starts nine sessions (eight reviewers and the synthesis), each limited to 20 minutes; a run of the whole panel on a small pull request took about eight minutes. Reviewers read a snapshot of your branch, including uncommitted and new files, so you can keep working meanwhile. Claude reviewers can only read and search files (no shell, project settings, hooks, or MCP servers), and Codex reviewers run in Codex's read-only sandbox. Results stay in `.git/review-panel/` in the reviewed repository; nothing is posted anywhere.
+
+## Credits
+
+The live page shows the Claude and OpenAI marks from Font Awesome Free 7.2.0 under CC BY 4.0; see [references/icon-attribution.md](references/icon-attribution.md). The architecture reviewer's focus draws on John Ousterhout's *A Philosophy of Software Design*.
 
 ## What it does not do
 

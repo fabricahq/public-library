@@ -29,6 +29,7 @@ PAGE = SKILL / 'assets' / 'panel.html'
 ROSTER = SKILL / 'panel.json'
 SEVERITIES = ('blocking', 'advisory')
 CATEGORIES = ('defect', 'policy', 'negligible-likelihood')
+CHECK_RESULTS = ('met', 'not-met', 'partly', 'unverified')
 REVIEW_VERDICTS = ('pass', 'concerns', 'blocking')
 SYNTHESIS_VERDICTS = ('ready', 'fix-first', 'needs-decision')
 # Claude sessions read untrusted text (the diff, a pull request's description, the files it adds), so they
@@ -109,6 +110,11 @@ def validate_review(value):
     for index, finding in enumerate(findings if isinstance(findings, list) else []):
         _check_finding(finding, f'findings[{index}]', problems)
     _check_items(value, 'unverified', ('claim', 'reason'), problems)
+    _check_items(value, 'checks', ('check', 'result'), problems)
+    for index, check in enumerate(value.get('checks') if isinstance(value.get('checks'), list) else []):
+        if isinstance(check, dict):
+            _require(check.get('result') in CHECK_RESULTS, f'checks[{index}].result must be one of {", ".join(CHECK_RESULTS)}', problems)
+    _require(len(value.get('summary') or '') <= 400, 'summary must be under 400 characters; put the detail in checks and findings', problems)
     return problems
 
 
@@ -123,8 +129,14 @@ def _check_items(value, key, fields, problems):
                      f'{key}[{index}].{field} must be a non-empty string', problems)
 
 
-def validate_synthesis(value, reviewers):
-    """Return the list of ways the synthesis JSON breaks its contract (empty when valid)."""
+def validate_synthesis(value, reviews):
+    """Return the list of ways the synthesis JSON breaks its contract (empty when valid).
+
+    `reviews` maps each reviewer that reported to its review. Every reviewer finding must end up either
+    merged into a synthesis finding or dropped with a reason, so nothing a reviewer raised goes missing.
+    """
+    known = {f'{name}:{f["id"]}' for name, review in reviews.items() for f in review.get('findings', [])}
+    accounted = set()
     problems = []
     if not isinstance(value, dict):
         return ['the reply is not a JSON object']
@@ -135,12 +147,24 @@ def validate_synthesis(value, reviewers):
     for index, finding in enumerate(findings if isinstance(findings, list) else []):
         where = f'findings[{index}]'
         _check_finding(finding, where, problems)
-        raised = finding.get('raised_by') if isinstance(finding, dict) else None
-        _require(isinstance(raised, list) and raised, f'{where}.raised_by must list the reviewers that raised it', problems)
-        for name in raised if isinstance(raised, list) else []:
-            _require(isinstance(name, str) and name in reviewers,
-                     f'{where}.raised_by names {name!r}, which is not a reviewer whose report you were given', problems)
+        merges = finding.get('merges') if isinstance(finding, dict) else None
+        _require(isinstance(merges, list) and merges, f'{where}.merges must list the reviewer findings it covers, as "reviewer:F1"', problems)
+        for ref in merges if isinstance(merges, list) else []:
+            valid = isinstance(ref, str) and ref in known
+            _require(valid, f'{where}.merges names {ref!r}, which is not a reviewer finding in the reports', problems)
+            if valid:
+                accounted.add(ref)
+    _require(len(value.get('summary') or '') <= 600, 'summary must be under 600 characters; put the detail in findings and questions', problems)
+    conclusions = value.get('conclusions')
+    _require(isinstance(conclusions, list) and 1 <= len(conclusions) <= 5, 'conclusions must list one to five short statements', problems)
+    for index, line in enumerate(conclusions if isinstance(conclusions, list) else []):
+        _require(isinstance(line, str) and line.strip() and len(line) <= 200, f'conclusions[{index}] must be a statement under 200 characters', problems)
     _check_items(value, 'dropped', ('reviewer', 'finding', 'reason'), problems)
+    for item in value.get('dropped') if isinstance(value.get('dropped'), list) else []:
+        if isinstance(item, dict):
+            accounted.add(f"{item.get('reviewer')}:{item.get('finding')}")
+    missing = sorted(known - accounted)
+    _require(not missing, 'every reviewer finding must be merged into a finding or dropped with a reason; missing: ' + ', '.join(missing[:10]), problems)
     _check_items(value, 'questions', ('question',), problems)
     if isinstance(findings, list):
         blocking = any(isinstance(f, dict) and f.get('severity') == 'blocking' for f in findings)
@@ -150,6 +174,15 @@ def validate_synthesis(value, reviewers):
         _require(not (verdict == 'needs-decision' and not value.get('questions')),
                  "verdict 'needs-decision' needs at least one question", problems)
     return problems
+
+
+def normalize_synthesis(value):
+    """Derive each synthesis finding's raised_by from the reviewer findings it merges."""
+    for finding in value.get('findings', []) if isinstance(value, dict) and isinstance(value.get('findings'), list) else []:
+        if isinstance(finding, dict) and isinstance(finding.get('merges'), list):
+            names = [ref.split(':', 1)[0] for ref in finding['merges'] if isinstance(ref, str)]
+            finding['raised_by'] = list(dict.fromkeys(names))
+    return value
 
 
 def normalize(value):
@@ -517,6 +550,11 @@ class Panel:
         (folder / f'command-{attempt}.json').write_text(json.dumps(command))  # How this session ran.
 
         def on_line(line):
+            if '"subtype":"init"' in line.replace(' ', ''):  # Claude's first event names the model it resolved.
+                try:
+                    report(None, None, json.loads(line).get('model'))
+                except (json.JSONDecodeError, AttributeError):
+                    pass
             activity, text, ident = parse(line, usage)
             if ident:
                 final['id'] = ident
@@ -569,15 +607,17 @@ class Panel:
         """
         folder.mkdir(parents=True, exist_ok=True)
 
-        def report(activity, usage):
+        def report(activity, usage, model=None):
             def change(data):
+                if model:
+                    entry(data)['served_model'] = model
                 if activity:
                     entry(data)['activity'] = activity
                 if usage is not None:
                     entry(data)['usage'] = usage
             self.state.update(change)
 
-        self.state.update(lambda data: entry(data).update(status='running', started_at=now()))
+        self.state.update(lambda data: entry(data).update(status='running', started_at=now(), prompt=prompt))
         try:
             result = self.run_until_valid(agent, prompt, validator, folder, report)
         except Exception as error:  # Any failure ends this stage only; the rest of the panel goes on.
@@ -635,14 +675,14 @@ def report_markdown(state):
     synthesis = state['synthesis'].get('result')
     if synthesis is None:
         return unsynthesized_markdown(state)
-    lines = [f"# Review panel: {state['target']['label']}", '', f"Verdict: **{synthesis['verdict']}**", '',
-             synthesis['summary'], '']
+    lines = [f"# Review panel: {state['target']['label']}", '', f"Verdict: **{synthesis['verdict']}**", '']
+    lines += [f'- {line}' for line in synthesis.get('conclusions', [])] + ['', synthesis['summary'], '']
     for finding in synthesis['findings']:
         where = finding.get('file') or ''
         if finding.get('line'):
             where += f":{finding['line']}"
         lines += [f"## {finding['id']} [{finding['severity']}] {finding['title']}",
-                  f"{where} (raised by {', '.join(finding.get('raised_by', []))})", '', finding['body'], '']
+                  f"{where} (merges {', '.join(finding.get('merges', []))})", '', finding['body'], '']
         if finding.get('fix'):
             lines += ['Fix: ' + finding['fix'], '']
     if synthesis.get('questions'):
@@ -837,7 +877,7 @@ def run_panel(args, run_dir, code_dir, state, server, context, files, roster, re
     if reviews and not panel.cancelled.is_set():
         panel.run_stage(lambda data: data['synthesis'], roster['synthesize']['agent'],
                         synthesis_prompt(context, reviews, failures),
-                        lambda value: validate_synthesis(value, set(reviews)), run_dir / 'synthesis')
+                        lambda value: validate_synthesis(normalize_synthesis(value), reviews), run_dir / 'synthesis')
     else:
         reason = 'cancelled' if panel.cancelled.is_set() else 'no reviewer reported'
         state.update(lambda data: data['synthesis'].update(status='skipped', error=reason))

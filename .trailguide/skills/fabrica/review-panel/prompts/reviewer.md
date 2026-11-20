@@ -23,7 +23,10 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
 ```json
 {
   "verdict": "pass | concerns | blocking",
-  "summary": "One paragraph: what you checked and your overall judgment.",
+  "summary": "One or two sentences: your overall judgment, for someone skimming.",
+  "checks": [
+    { "check": "What you checked, as a short statement", "result": "met | not-met | partly | unverified", "evidence": "One sentence: what you read or traced, or why you couldn't check it" }
+  ],
   "findings": [
     {
       "id": "F1",
@@ -39,5 +42,7 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
   "unverified": [ { "claim": "What you could not check", "reason": "Why" } ]
 }
 ```
+
+Keep `summary` under 400 characters. The detail belongs in `checks`, one entry for each thing you checked (each acceptance criterion, each rule, each risk you traced), and in `findings`. A check that is `not-met` or `partly` has a finding that explains it.
 
 `verdict` is `blocking` when any finding is blocking, `concerns` when there are only advisory findings, and `pass` when there are none. Number findings F1, F2, and so on.

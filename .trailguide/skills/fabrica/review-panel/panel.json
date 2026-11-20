@@ -1,48 +1,88 @@
 {
   "reviewers": {
     "check-acceptance-criteria": {
-      "summary": "The spec, its acceptance criteria, and the product decisions",
-      "agent": { "harness": "claude-code", "model": "opus", "effort": "high" },
+      "summary": "Checks the change against the known acceptance criteria and product decisions",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "high"
+      },
       "focus": "focus/check-acceptance-criteria.md"
     },
     "check-correctness": {
-      "summary": "Traces concrete inputs through new logic",
-      "agent": { "harness": "codex", "model": "gpt-6-astra", "effort": "high" },
+      "summary": "Traces concrete inputs through the new logic to find wrong results",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6-astra",
+        "effort": "high"
+      },
       "focus": "focus/check-correctness.md"
     },
     "check-security": {
-      "summary": "Trust boundaries, secrets, injection, and tenant isolation",
-      "agent": { "harness": "codex", "model": "gpt-6-astra", "effort": "high" },
+      "summary": "Checks trust boundaries, secrets, injection, and tenant isolation",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6-astra",
+        "effort": "high"
+      },
       "focus": "focus/check-security.md"
     },
     "check-rules": {
-      "summary": "The repository's own rules and agent instructions",
-      "agent": { "harness": "claude-code", "model": "opus", "effort": "default" },
+      "summary": "Checks the change against the repository's own rules and agent instructions",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "default"
+      },
       "focus": "focus/check-rules.md"
     },
     "check-docs": {
-      "summary": "Docs kept up to date with the change",
-      "agent": { "harness": "claude-code", "model": "opus", "effort": "default" },
+      "summary": "Checks that the docs still match the code after this change",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "default"
+      },
       "focus": "focus/check-docs.md"
     },
     "check-supportability": {
-      "summary": "Errors surfaced, traceable, and supportable",
-      "agent": { "harness": "codex", "model": "gpt-6.1-sol", "effort": "high" },
+      "summary": "Checks that failures surface, can be traced, and can be recovered",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      },
       "focus": "focus/check-supportability.md"
     },
     "check-performance": {
-      "summary": "Only bottlenecks unacceptably large for the change",
-      "agent": { "harness": "codex", "model": "gpt-6.1-sol", "effort": "high" },
+      "summary": "Flags only bottlenecks too large for the change's real workload",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      },
       "focus": "focus/check-performance.md"
     },
     "check-architecture": {
-      "summary": "Deep modules and simpler designs; proposes an alternative",
-      "agent": { "harness": "claude-code", "model": "opus", "effort": "high" },
+      "summary": "Judges whether the design is as simple as it could be, and proposes a simpler one",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "high"
+      },
       "focus": "focus/check-architecture.md"
     }
   },
-  "codex_fallback": { "harness": "claude-code", "model": "opus", "effort": "high" },
+  "codex_fallback": {
+    "harness": "claude-code",
+    "model": "opus",
+    "effort": "high"
+  },
   "synthesize": {
-    "agent": { "harness": "claude-code", "model": "opus", "effort": "high" }
+    "agent": {
+      "harness": "claude-code",
+      "model": "opus",
+      "effort": "high"
+    }
   }
 }

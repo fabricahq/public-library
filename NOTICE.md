@@ -186,3 +186,7 @@ SOFTWARE.
 Fabrica's `grill-me-ui` skill provides a canvas and local reply transport for Matt Pocock's [grill-me](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md), [grilling](https://github.com/mattpocock/skills/blob/main/skills/productivity/grilling/SKILL.md), and [grill-with-docs](https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md) workflow. The bundle retains [his MIT notice](.trailguide/skills/fabrica/grill-me-ui/references/Matt-Pocock-MIT-LICENSE.txt). Its design-tree approach also draws on Fred Brooks' *The Design of Design*.
 
 The canvas embeds JetBrains Mono under the [SIL Open Font License 1.1](.trailguide/skills/fabrica/grill-me-ui/references/JetBrainsMono-OFL.txt), and Font Awesome Free 7.2.0 brand icon paths under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/grill-me-ui/references/icon-attribution.md). These assets retain their own licenses; the library's MIT license does not replace them.
+
+## Review Panel
+
+Fabrica's `review-panel` skill embeds Font Awesome Free 7.2.0 brand icon paths for Claude and OpenAI under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/review-panel/references/icon-attribution.md). These marks keep their own license; the library's MIT license does not replace it. The architecture reviewer's focus draws on John Ousterhout's *A Philosophy of Software Design*.

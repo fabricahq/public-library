@@ -20,6 +20,7 @@ REVIEW = {
     'findings': [{'id': 'F1', 'severity': 'blocking', 'category': 'defect', 'title': 'Off by one',
                   'file': 'app.py', 'line': '2', 'body': 'Drops the last item.', 'fix': 'Use <=.'}],
     'unverified': [],
+    'checks': [{'check': 'AC1: prints every item', 'result': 'not-met', 'evidence': 'The loop stops one short (F1).'}],
 }
 
 # The fake commands read their instructions from environment variables the tests set:
@@ -48,9 +49,10 @@ FAKE_CLAUDE = textwrap.dedent('''\
         sys.exit(1)
     if 'You are the synthesis step' in prompt:
         names = re.findall(r'^## (check-[a-z-]+)$', prompt, re.M)
-        value = {'verdict': 'fix-first', 'summary': 'One blocking defect.', 'findings': [
+        value = {'verdict': 'fix-first', 'summary': 'One blocking defect.',
+            'conclusions': ['Fix S1 before merging: the loop drops the last item.'], 'findings': [
             {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 'Off by one', 'file': 'app.py',
-             'line': '2', 'body': 'Confirmed.', 'fix': 'Use <=.', 'raised_by': names}],
+             'line': '2', 'body': 'Confirmed.', 'fix': 'Use <=.', 'merges': [n + ':F1' for n in names]}],
             'dropped': [], 'questions': [{'question': 'Keep the old format?', 'why': 'Clients parse it.'}]}
         text = 'Done.\\n```json\\n' + json.dumps(value) + '\\n```'
     elif os.environ.get('FAKE_BAD_FIRST') and 'did not meet the output contract' not in prompt:
@@ -94,16 +96,48 @@ class PureHelpers(unittest.TestCase):
     def test_validate_review_accepts_the_contract_example(self):
         self.assertEqual(review_panel.validate_review(REVIEW), [])
 
+    def test_validate_review_rejects_a_long_summary_and_an_unknown_check_result(self):
+        bad = dict(REVIEW, summary='x' * 401, checks=[{'check': 'AC1', 'result': 'mostly'}])
+        problems = review_panel.validate_review(bad)
+        self.assertIn('summary must be under 400 characters; put the detail in checks and findings', problems)
+        self.assertIn('checks[0].result must be one of met, not-met, partly, unverified', problems)
+
     def test_validate_review_reports_an_unknown_severity(self):
         bad = json.loads(json.dumps(REVIEW))
         bad['findings'][0]['severity'] = 'critical'
         self.assertIn('findings[0].severity must be one of blocking, advisory', review_panel.validate_review(bad))
 
-    def test_validate_synthesis_rejects_a_reviewer_not_in_the_run(self):
-        value = {'verdict': 'ready', 'summary': 's', 'findings': [
-            {'id': 'S1', 'severity': 'advisory', 'title': 't', 'body': 'b', 'raised_by': ['check-made-up']}]}
-        problems = review_panel.validate_synthesis(value, {'check-docs'})
-        self.assertTrue(any('check-made-up' in p for p in problems), problems)
+    def synthesis(self, **changes):
+        value = {'verdict': 'fix-first', 'summary': 's', 'conclusions': ['Fix S1.'], 'findings': [
+            {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 't', 'body': 'b',
+             'merges': ['check-docs:F1', 'check-rules:F1']}]}
+        value.update(changes)
+        return value
+
+    def test_validate_synthesis_accepts_merged_duplicates(self):
+        self.assertEqual(review_panel.validate_synthesis(self.synthesis(), {'check-docs': REVIEW, 'check-rules': REVIEW}), [])
+
+    def test_validate_synthesis_rejects_a_merge_of_a_finding_no_reviewer_raised(self):
+        value = self.synthesis()
+        value['findings'][0]['merges'] = ['check-made-up:F1', 'check-docs:F1']
+        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW})
+        self.assertTrue(any('check-made-up:F1' in p for p in problems), problems)
+
+    def test_validate_synthesis_rejects_a_reviewer_finding_left_unaccounted(self):
+        value = self.synthesis()
+        value['findings'][0]['merges'] = ['check-docs:F1']
+        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
+        self.assertTrue(any('missing: check-rules:F1' in p for p in problems), problems)
+        value['dropped'] = [{'reviewer': 'check-rules', 'finding': 'F1', 'reason': 'Already handled.'}]
+        self.assertEqual(review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW}), [])
+
+    def test_validate_synthesis_requires_short_conclusions(self):
+        problems = review_panel.validate_synthesis(self.synthesis(conclusions=['x' * 201]), {'check-docs': REVIEW, 'check-rules': REVIEW})
+        self.assertIn('conclusions[0] must be a statement under 200 characters', problems)
+
+    def test_normalize_synthesis_derives_raised_by_from_merges(self):
+        value = review_panel.normalize_synthesis(self.synthesis())
+        self.assertEqual(value['findings'][0]['raised_by'], ['check-docs', 'check-rules'])
 
     def test_normalize_derives_a_reviewers_verdict_from_its_findings(self):
         self.assertEqual(review_panel.normalize(dict(REVIEW, verdict='pass'))['verdict'], 'blocking')
@@ -113,24 +147,22 @@ class PureHelpers(unittest.TestCase):
         text = 'Example:\n```json\n{"example": true}\n```\nCode:\n```python\nx = 1\n```\nResult:\n```json\n{"final": 1}\n```'
         self.assertEqual(review_panel.extract_json(text), {'final': 1})
 
-    def test_validate_synthesis_rejects_a_raised_by_entry_that_is_not_a_name(self):
-        value = {'verdict': 'ready', 'summary': 's', 'findings': [
-            {'id': 'S1', 'severity': 'advisory', 'category': 'defect', 'title': 't', 'body': 'b',
-             'raised_by': [{'reviewer': 'check-docs'}]}]}
-        self.assertTrue(review_panel.validate_synthesis(value, {'check-docs'}))
+    def test_validate_synthesis_rejects_a_merge_entry_that_is_not_a_name(self):
+        value = self.synthesis()
+        value['findings'][0]['merges'] = [{'reviewer': 'check-docs'}]
+        self.assertTrue(review_panel.validate_synthesis(value, {'check-docs': REVIEW}))
 
     def test_validate_synthesis_rejects_fix_first_without_a_blocking_finding(self):
-        value = {'verdict': 'fix-first', 'summary': 's', 'findings': []}
-        self.assertIn("verdict 'fix-first' needs a blocking finding", review_panel.validate_synthesis(value, set()))
+        value = self.synthesis(findings=[])
+        self.assertIn("verdict 'fix-first' needs a blocking finding", review_panel.validate_synthesis(value, {}))
 
     def test_validate_synthesis_rejects_questions_that_are_not_objects(self):
-        value = {'verdict': 'needs-decision', 'summary': 's', 'findings': [], 'questions': ['Keep it?']}
-        self.assertIn('questions[0].question must be a non-empty string', review_panel.validate_synthesis(value, set()))
+        value = self.synthesis(verdict='needs-decision', findings=[], questions=['Keep it?'])
+        self.assertIn('questions[0].question must be a non-empty string', review_panel.validate_synthesis(value, {}))
 
     def test_validate_synthesis_rejects_ready_with_a_blocking_finding(self):
-        value = {'verdict': 'ready', 'summary': 's', 'findings': [
-            {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 't', 'body': 'b', 'raised_by': ['check-docs']}]}
-        self.assertIn("verdict can't be 'ready' while a finding is blocking", review_panel.validate_synthesis(value, {'check-docs'}))
+        problems = review_panel.validate_synthesis(self.synthesis(verdict='ready'), {'check-docs': REVIEW, 'check-rules': REVIEW})
+        self.assertIn("verdict can't be 'ready' while a finding is blocking", problems)
 
     def test_normalize_turns_a_whole_number_line_into_a_string(self):
         value = review_panel.normalize({'findings': [{'line': 42}]})
