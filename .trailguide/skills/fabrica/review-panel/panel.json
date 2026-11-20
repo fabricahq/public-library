@@ -90,19 +90,19 @@
       "id": "opus",
       "name": "Opus",
       "harness": "claude-code",
-      "note": "Latest Opus"
+      "latest": true
     },
     {
       "id": "sonnet",
       "name": "Sonnet",
       "harness": "claude-code",
-      "note": "Latest Sonnet"
+      "latest": true
     },
     {
       "id": "haiku",
       "name": "Haiku",
       "harness": "claude-code",
-      "note": "Latest Haiku"
+      "latest": true
     },
     {
       "id": "claude-fable-5-2",

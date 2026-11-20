@@ -404,6 +404,7 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .swin .mpick:hover { border-color: var(--faint); }
 .swin .mpick:focus-visible, .swin .mpick[aria-expanded="true"] { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 .mpick .mname { flex: none; white-space: nowrap; }
+.mpick .mnote { color: var(--muted); }
 .mpick .mid { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
 .mpick > svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
 .mpop { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: max(100%, 300px); background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); overflow: hidden; }
@@ -418,7 +419,8 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .mopt.active { background: var(--hover); }
 .mopt .mcheck { width: 14px; height: 14px; flex: none; color: var(--accent); }
 .mopt .mname { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
-.mopt .mnote { font-size: 11.5px; color: var(--faint); }
+.mopt .mname { gap: 5px; } .mopt .mnote { color: var(--muted); }
+.mdivider { height: 1px; background: var(--line); margin: 4px 8px; }
 .mopt .mid { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
 .mopt.custom .mname { color: var(--accent); }
 .mempty { padding: 14px 12px; color: var(--faint); font-size: 13px; }
@@ -1196,8 +1198,8 @@ const EFFORTS = ['default', 'low', 'medium', 'high', 'max'];
 const LIVE = !inline;
 const HARNESS_WORDS = { 'claude-code': 'Claude Code', codex: 'Codex' };
 const FALLBACK_MODELS = [
-  { id: 'opus', name: 'Opus', harness: 'claude-code', note: 'Latest Opus' },
-  { id: 'sonnet', name: 'Sonnet', harness: 'claude-code', note: 'Latest Sonnet' },
+  { id: 'opus', name: 'Opus', harness: 'claude-code', latest: true },
+  { id: 'sonnet', name: 'Sonnet', harness: 'claude-code', latest: true },
   { id: 'gpt-6-astra', name: 'GPT-6 Astra', harness: 'codex' },
   { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', harness: 'codex' },
 ];
@@ -1309,14 +1311,14 @@ const findModel = id => models().find(m => m.id === id);
 function modelButton(scope, value) {
   const m = findModel(value);
   return `<div class="mpick-wrap"><button type="button" class="mpick" id="${scope}-model" data-mpick="${scope}" role="combobox" aria-haspopup="listbox" aria-expanded="${settings.picker && settings.picker.scope === scope}">
-      <span class="mname">${esc(m ? m.name : modelName(value))}</span><span class="mid">${esc(value)}</span>
+      <span class="mname">${esc(m ? m.name : modelName(value))}${m && m.latest ? ' <span class="mnote">(latest)</span>' : ''}</span><span class="mid">${esc(value)}</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
     </button>${settings.picker && settings.picker.scope === scope ? pickerPopover() : ''}</div>`;
 }
 function pickerMatches() {
   const p = settings.picker;
   const q = p.q.trim().toLowerCase();
-  const list = modelsFor(p.harness).filter(m => !q || [m.name, m.id, m.note || '', HARNESS_WORDS[m.harness]].join(' ').toLowerCase().includes(q));
+  const list = modelsFor(p.harness).filter(m => !q || [m.name, m.id, m.latest ? 'latest' : '', HARNESS_WORDS[m.harness]].join(' ').toLowerCase().includes(q));
   const options = list.map(m => ({ id: m.id, model: m }));
   if (q && !models().some(m => m.id.toLowerCase() === q)) options.push({ id: p.q.trim(), custom: true });
   return options;
@@ -1327,9 +1329,10 @@ function pickerList() {
   p.active = Math.max(0, Math.min(p.active, options.length - 1));
   if (!options.length) return '<div class="mempty">No model matches.</div>';
   const check = '<svg class="mcheck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
-  return options.map((o, i) => `<div class="mopt ${i === p.active ? 'active' : ''} ${o.custom ? 'custom' : ''}" role="option" id="mopt-${i}" data-mchoose="${esc(o.id)}" aria-selected="${o.id === p.value}">
+  // Aliases that follow the newest model come first, then a divider, then pinned versions.
+  return options.map((o, i) => `${i && options[i - 1].model && options[i - 1].model.latest && !(o.model && o.model.latest) ? '<div class="mdivider" role="separator"></div>' : ''}<div class="mopt ${i === p.active ? 'active' : ''} ${o.custom ? 'custom' : ''}" role="option" id="mopt-${i}" data-mchoose="${esc(o.id)}" aria-selected="${o.id === p.value}">
       ${o.id === p.value ? check : '<span class="mcheck"></span>'}
-      ${o.custom ? `<span class="mname">Use “${esc(o.id)}” as the model ID</span>` : `<span class="mname">${esc(o.model.name)}${o.model.note ? `<span class="mnote">${esc(o.model.note)}</span>` : ''}</span><span class="mid">${esc(o.id)}</span>`}
+      ${o.custom ? `<span class="mname">Use “${esc(o.id)}” as the model ID</span>` : `<span class="mname">${esc(o.model.name)}${o.model.latest ? '<span class="mnote">(latest)</span>' : ''}</span><span class="mid">${esc(o.id)}</span>`}
     </div>`).join('');
 }
 function pickerPopover() {
