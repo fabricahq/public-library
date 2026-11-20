@@ -186,6 +186,8 @@ td.fid { font-family: var(--mono); color: var(--muted); font-size: 12px; white-s
 .chip.more { background: var(--accent-bg); color: var(--accent); }
 .outcome { font-size: 12.5px; color: var(--muted); }
 tr.row.current td { background: var(--accent-bg); }
+tr.row.flash td { animation: flash 2.4s ease-out; }
+@keyframes flash { 0%, 40% { background: var(--adv-bg); } 100% { background: transparent; } }
 .finding-window { width: min(800px, 100%); gap: 4px; outline: none; }
 .finding-window .body, .finding-window .fix { max-width: none; }
 .finding-window > :not(.fw-scroll) { flex: none; }
@@ -240,7 +242,7 @@ button.ref:hover { text-decoration: underline; }
 details.origin { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 details.origin summary { cursor: pointer; font-size: 13px; font-weight: 500; }
 details.origin .body { margin-top: 8px; font-size: 13px; }
-tr.row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+tr.row:focus-visible, tr.row.flash:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 .body { overflow-wrap: anywhere; max-width: 80ch; }
 .body p { margin: 8px 0; }
 .body pre { background: var(--code); padding: 10px; border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; }
@@ -690,7 +692,7 @@ function detailHtml(r) {
   let outcome = '';
   if (isRaw) {
     const into = r.outcome && r.outcome.startsWith('in ') ? findRow('S:' + r.outcome.slice(3)) : null;
-    outcome = into ? `<div class="fact wide"><dt>Synthesis</dt><dd>Merged into <button type="button" class="linkish" data-act="detail-open" data-key="${esc(into.key)}">${inlineMd(into.title)}</button></dd></div>`
+    outcome = into ? `<div class="fact wide"><dt>Synthesis</dt><dd>Merged into <button type="button" class="linkish" data-goto="${esc(into.key)}" title="Show it in the synthesis's findings">finding ${esc(into.id.replace(/^S/, ''))}: ${inlineMd(into.title)}</button></dd></div>`
       : r.droppedReason ? `<div class="fact wide"><dt>Synthesis</dt><dd>Dropped: ${esc(r.droppedReason)}</dd></div>` : '';
   }
   const where = r.file ? `<button type="button" class="linkish mono" data-fwtab="code" title="Show the code">${esc(r.file.split('/').pop())}${r.line ? `:${esc(r.line)}` : ''}</button>` : '';
@@ -742,6 +744,19 @@ function closeDetail() {
   const row = [...document.querySelectorAll('#pane tr.row')].find(tr => tr.dataset.key === key);
   if (row) { row.classList.remove('current'); row.focus(); }
 }
+// Jump to a synthesized finding: show the synthesis's findings table, highlight its row, and focus it so Enter opens it.
+function gotoFinding(key) {
+  if (ui.detail) { ui.detail = null; renderDetail(); }
+  ui.view = '__synthesis'; ui.tab.__synthesis = 'findings'; ui.raw = false;
+  ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all';
+  renderChrome(); renderPane(true);
+  const row = [...document.querySelectorAll('#pane tr.row')].find(tr => tr.dataset.key === key);
+  if (!row) return;
+  row.scrollIntoView({ block: 'center' });
+  row.focus({ preventScroll: true });
+  row.classList.add('flash');
+  setTimeout(() => row.classList.remove('flash'), 2400);
+}
 function stepDetail(delta) {
   const keys = visibleKeys();
   const next = keys[keys.indexOf(ui.detail) + delta];
@@ -755,14 +770,14 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
     const picked = ui.picked.has(r.key);
     const who = r.reviewers.slice(0, 2).map(reviewerTag).join('') + (r.reviewers.length > 2 ? `<span class="chip more">+${r.reviewers.length - 2}</span>` : '');
     const num = r.key.startsWith('S:') ? r.id.replace(/^S/, '') : '';
-    const outcome = r.outcome && r.outcome.startsWith('in ') ? `Merged into finding ${r.outcome.slice(4)}` : r.outcome === 'dropped' ? 'Dropped' : '';
+    const outcome = r.outcome && r.outcome.startsWith('in ') ? `<button type="button" class="linkish" data-goto="S:${esc(r.outcome.slice(3))}" title="Show it in the synthesis's findings">Merged into finding ${esc(r.outcome.slice(4))}</button>` : r.outcome === 'dropped' ? 'Dropped' : '';
     return `<tr class="row ${picked ? 'picked' : ''} ${ui.detail === r.key ? 'current' : ''}" data-key="${esc(r.key)}" tabindex="0">
         <td class="pick"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Add this finding to the handoff"></td>
         <td class="fid">${esc(num)}</td>
         <td><span class="pill sev-${esc(r.severity)}">${esc(words(SEVERITY_WORDS, r.severity)[0])}</span></td>
         <td><div class="ftitle">${inlineMd(r.title)}</div>${where ? `<div class="where" title="${esc([r.file, r.line].filter(Boolean).join(':'))}">${esc(where)}</div>` : ''}</td>
         ${reviewerCol ? `<td><div class="whos">${who}</div></td>` : ''}
-        ${outcomeCol ? `<td class="outcome">${esc(outcome)}</td>` : ''}
+        ${outcomeCol ? `<td class="outcome">${outcome}</td>` : ''}
       </tr>`;
   }).join('');
   return `<div class="table-wrap"><table>
@@ -981,6 +996,8 @@ document.addEventListener('click', async event => {
   if (sev) { ui.sev = sev.dataset.sev; document.querySelectorAll('[data-sev]').forEach(b => b.classList.toggle('on', b.dataset.sev === ui.sev)); renderTable(); return; }
   if (t.matches('[data-pick]')) { t.checked ? ui.picked.add(t.dataset.pick) : ui.picked.delete(t.dataset.pick); savePicks(); renderTable(); renderHandoff(); if (ui.detail) document.querySelectorAll('#pane tr.row').forEach(tr => tr.classList.toggle('current', tr.dataset.key === ui.detail)); return; }
   const row = t.closest('tr.row');
+  const go = t.closest('[data-goto]');
+  if (go) { gotoFinding(go.dataset.goto); return; }
   const fwTab = t.closest('[data-fwtab]');
   if (fwTab) { ui.fwTab = fwTab.dataset.fwtab; renderDetail(); return; }
   if (row) { openDetail(row.dataset.key); return; }
