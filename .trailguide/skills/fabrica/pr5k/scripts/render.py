@@ -10,7 +10,7 @@ import pathlib
 import sys
 
 REQUIRED = ["schemaVersion", "pr"]
-SECTIONS = ["overview", "database", "backend", "frontend", "architecture", "principles", "verification", "media"]
+SECTIONS = ["overview", "database", "backend", "frontend", "architecture", "principles", "verification", "deadCode", "media"]
 
 
 def main() -> int:

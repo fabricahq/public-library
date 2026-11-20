@@ -103,7 +103,7 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .node-head { display: flex; align-items: center; gap: 8px; }
 .node-title { font-weight: 600; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .node-head .pill { margin-left: auto; }
-.node-kind { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.node-kind { font-family: var(--mono); font-size: 11px; color: var(--faint); overflow-wrap: anywhere; }
 .node-sum { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.45; }
 .node-num { font-family: var(--mono); font-size: 11px; color: var(--faint); min-width: 18px; }
 .node.table { width: 340px; padding: 0; overflow: hidden; }
@@ -492,6 +492,7 @@ const ICONS = {
   principles: '<path d="M4 3.5h9.5L16 6v10.5H4z"/><path d="M7 8h6M7 11h6M7 14h3"/>',
   verification: '<path d="M10 2.5l6 2.5v4.5c0 4-2.7 6.8-6 8-3.3-1.2-6-4-6-8V5z"/><path d="M7.2 10l2 2 3.8-4"/>',
   media: '<rect x="2.5" y="4" width="15" height="12" rx="1.5"/><path d="M8.5 7.8v4.4L12.3 10z"/>',
+  deadCode: '<path d="M4 5.5h12M8 5.5V3.5h4v2M5.5 5.5l.8 11h7.4l.8-11"/><path d="M8.5 8.5v5M11.5 8.5v5"/>',
 };
 const SECTIONS = [
   { id: 'overview', label: 'Overview' },
@@ -501,8 +502,11 @@ const SECTIONS = [
   { id: 'architecture', label: 'Architecture', count: () => (D.architecture?.decisions || []).length },
   { id: 'principles', label: 'Design principles', count: () => (D.principles?.items || []).length },
   { id: 'verification', label: 'Verification', count: () => (D.verification?.runs || []).length },
+  { id: 'deadCode', label: 'Dead code', count: () => deadFindings().length },
   { id: 'media', label: 'Screenshots and demos', count: () => (D.media?.items || []).length },
 ];
+/* Dead code findings across their groups; the scans that produced them are not findings. */
+function deadFindings() { return (D.deadCode?.groups || []).flatMap(g => g.items || []); }
 /* Lines added and deleted as GitHub shows them: the two counts, then five squares split by their share. */
 function diffstat(add, del) {
   const total = add + del, n = 5;
@@ -1141,6 +1145,23 @@ const views = {
     </div></div>`;
   },
 
+  deadCode() {
+    const dc = D.deadCode;
+    handoffs.clear();
+    const groups = [...(dc.groups || []), ...(dc.scans?.length ? [{ title: 'Scans run', note: 'Each compares the base with the head.', items: dc.scans.map(x => ({ ...x, scan: true })) }] : [])];
+    columnBoard(dc.summary, groups, it => it.scan ? ({
+      id: 'scan-' + it.tool, cls: '',
+      html: `<div class="node-head"><span class="node-title">${esc(it.tool)}</span>${pill(it.result || 'pass', { pass: 'Ran', warn: 'Partly', skip: 'Not run', fail: 'Failed' }[it.result || 'pass'])}</div><div class="node-kind">${esc(it.language || '')}</div><div class="node-sum">${esc(it.scope)}</div>`,
+      onSelect: () => openWindow({ title: it.tool, kind: 'Scan', body: `<p class="lead">${md(it.scope)}</p><div class="facts">${it.counts ? `<div class="fact"><b>Findings</b>${md(it.counts)}</div>` : ''}${it.limits ? `<div class="fact"><b>What it can miss</b>${md(it.limits)}</div>` : ''}</div>${it.command ? `<section><h3>Command</h3><pre class="code"><code>${esc(it.command)}</code></pre></section>` : ''}` }),
+    }) : ({
+      id: 'dead-' + it.id, cls: 'st-' + (it.status || 'context'),
+      html: `<div class="node-head"><span class="node-title">${it.label ? esc(it.label) : `<code>${esc(it.name)}</code>`}</span>${pill(it.status === 'new' ? 'new' : 'context', it.status === 'new' ? 'This PR' : 'Before')}</div><div class="node-kind">${esc(it.where)}</div><div class="node-sum">${esc(String(it.finding || '').replace(/`/g, ''))}</div>`,
+      onSelect: () => openWindow({ title: it.label || it.name, kind: it.where, statusWord: it.status === 'new' ? 'Left by this PR' : 'Already there', status: it.status === 'new' ? 'new' : 'context',
+        body: `<p class="lead">${md(it.finding)}</p>` + handoffBox('dead-' + it.id, { ...it, dead: true }) + `<div class="facts">${it.why ? `<div class="fact"><b>Why it is unused</b>${md(it.why)}</div>` : ''}${it.fix ? `<div class="fact"><b>Fix</b>${md(it.fix)}</div>` : ''}${it.tool ? `<div class="fact"><b>Found by</b>${md(it.tool)}</div>` : ''}</div>`
+          + (it.entries?.length ? `<section><h3>${esc(it.entriesTitle || 'Where')}</h3><ul class="list">${it.entries.map(e => `<li><code>${esc(e.name)}</code> <span class="hint">${esc(e.where)}</span>${e.note ? ` - ${md(e.note)}` : ''}</li>`).join('')}</ul></section>` : '') }),
+    }), { perColumn: 5, width: 320, groupGap: 40 });
+  },
+
   media() {
     const m = D.media;
     $('#main').innerHTML = `<div class="doc"><div class="doc-inner"><h1>Screenshots and demos</h1>${m.note ? `<p class="sub">${esc(m.note)}</p>` : ''}
@@ -1155,8 +1176,13 @@ const handoffs = new Map();
 function handoffPrompt(it) {
   const pr = D.pr || {}, p = D.principles || {}, book = (p.source || 'the design principles').split('. ')[0];
   const out = [`You are working in ${pr.repo}, on pull request #${pr.number}, "${pr.title}" (${pr.url}). Its branch is ${pr.head}.`,
-    `A design review of this PR was made at commit ${pr.headSha}. Check out the branch, pull it, and look at what changed since that commit before you start.`, ''];
-  if (it.flag) {
+    `A ${it.dead ? 'dead code scan' : 'design review'} of this PR was made at commit ${pr.headSha}. Check out the branch, pull it, and look at what changed since that commit before you start.`, ''];
+  if (it.dead) {
+    out.push(`Goal: remove unused code the scan found: ${it.label || it.name} (${it.where}).`, '', `Finding: ${it.finding}`);
+    if (it.why) out.push(`Why it is unused: ${it.why}`);
+    if (it.entries?.length) out.push('Entries:', ...it.entries.map(e => `- ${e.name} (${e.where})`));
+    out.push('', `What to do: ${it.handoff || it.fix || 'Delete it, then build and run the tests for the packages it was in.'} Before deleting, search the whole repository, including generated code, tests and anything that calls it by name through reflection or bindings, to confirm nothing uses it.`);
+  } else if (it.flag) {
     out.push(`Goal: remove the red flag "${it.name}" from this PR. The red flags come from ${book}.`, '', `Where the review saw it: ${it.where}`);
     if (it.fix?.text) out.push('', `Proposed fix: ${it.fix.text}`);
     out.push('', `What to do: ${it.handoff || (it.fix?.text ? 'Apply the proposed fix, or a simpler one if you find it, then check that nothing else in the PR shows the same red flag.' : 'Remove the red flag where the review saw it, then check that nothing else in the PR shows it.')}`);
@@ -1173,7 +1199,7 @@ function handoffPrompt(it) {
 }
 function handoffBox(id, it) {
   const text = handoffPrompt(it); handoffs.set(id, text);
-  return `<section class="handoff"><div class="handoff-bar"><b>Handoff prompt</b><span class="hint">Give it to an agent to act on this ${it.flag ? 'red flag' : 'principle'}.</span><button type="button" class="tool-btn" data-handoff="${esc(id)}">Copy prompt</button></div><details><summary>Show prompt</summary><pre>${esc(text)}</pre></details></section>`;
+  return `<section class="handoff"><div class="handoff-bar"><b>Handoff prompt</b><span class="hint">Give it to an agent to act on this ${it.dead ? 'finding' : it.flag ? 'red flag' : 'principle'}.</span><button type="button" class="tool-btn" data-handoff="${esc(id)}">Copy prompt</button></div><details><summary>Show prompt</summary><pre>${esc(text)}</pre></details></section>`;
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-handoff]'); if (!b) return;
@@ -1425,6 +1451,7 @@ function sourceCatalog() {
   (D.architecture?.decisions || []).forEach(d => out.push(`architecture:${d.id}`));
   (D.principles?.items || []).forEach(p => out.push(`principles:p${p.n}`));
   (D.principles?.redFlags || []).filter(f => f.seen).forEach(f => out.push(`principles:flag-${f.name}`));
+  deadFindings().forEach(f => out.push(`deadCode:dead-${f.id}`));
   return out;
 }
 function sourcesRule() {
@@ -1434,8 +1461,9 @@ function sourcesRule() {
 }
 function sourceLabel(id) {
   const [sec, item, tab] = id.split(':');
-  const name = { overview: 'Overview', database: 'Database', backend: 'Backend', frontend: 'Frontend', architecture: 'Architecture', principles: 'Design principles', verification: 'Verification', media: 'Screenshots and demos' }[sec] || sec;
-  const itemName = sec === 'principles' && item?.startsWith('flag-') ? item.slice(5) : sec === 'principles' && item ? (D.principles.items.find(p => 'p' + p.n === item)?.title || item) : item;
+  const name = { overview: 'Overview', database: 'Database', backend: 'Backend', frontend: 'Frontend', architecture: 'Architecture', principles: 'Design principles', verification: 'Verification', deadCode: 'Dead code', media: 'Screenshots and demos' }[sec] || sec;
+  const itemName = sec === 'principles' && item?.startsWith('flag-') ? item.slice(5) : sec === 'principles' && item ? (D.principles.items.find(p => 'p' + p.n === item)?.title || item)
+    : sec === 'deadCode' && item ? ((f => f?.label || f?.name)(deadFindings().find(f => 'dead-' + f.id === item)) || item) : item;
   return [name, itemName, tab && (TAB_WORDS[tab] || tab)].filter(Boolean).map(esc).join(' › ');
 }
 function splitSources(text, done) {

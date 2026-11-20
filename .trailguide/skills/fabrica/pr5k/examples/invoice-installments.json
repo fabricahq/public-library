@@ -1244,5 +1244,52 @@
         "detail": "Seeded with one invoice on a three-installment plan."
       }
     ]
+  },
+  "deadCode": {
+    "summary": "Unused code at the head, compared with the base. This PR left one unused helper behind; one older finding is unchanged.",
+    "groups": [
+      {
+        "title": "Left by this PR",
+        "note": "Unused at the head, used at the base.",
+        "items": [
+          {
+            "id": "markPaid",
+            "name": "markInvoicePaid",
+            "status": "new",
+            "where": "src/billing/invoices.ts:88",
+            "finding": "The old way to mark a whole invoice paid has no callers.",
+            "why": "Recording a payment now works out the invoice status (A1), so nothing sets it directly.",
+            "fix": "Delete it and its test.",
+            "tool": "knip, from the app entry and every test."
+          }
+        ]
+      },
+      {
+        "title": "Already unused before this PR",
+        "note": "Unused at the base too.",
+        "items": [
+          {
+            "id": "legacyCsv",
+            "name": "exportLegacyCsv",
+            "status": "existing",
+            "where": "src/reports/csv.ts:12",
+            "finding": "A CSV export no screen offers.",
+            "fix": "Delete it, or link it from Reports.",
+            "tool": "knip."
+          }
+        ]
+      }
+    ],
+    "scans": [
+      {
+        "tool": "knip",
+        "language": "TypeScript",
+        "result": "pass",
+        "scope": "Unused files, exports and types from the app entry, routes and tests.",
+        "counts": "1 at the base, 2 at the head.",
+        "limits": "Code reached only by string can look unused.",
+        "command": "npx knip --reporter json"
+      }
+    ]
   }
 }
