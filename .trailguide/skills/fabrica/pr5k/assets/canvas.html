@@ -847,13 +847,18 @@ function mountBoard(build, opts = {}) {
   viewport = $('#viewport'); world = $('#world'); zoomLabel = $('#zoomLvl');
   boardEdges = build(world) || [];
   const nodes = [...world.querySelectorAll('.node')];
-  if (opts.separate) separateNodes(nodes);
-  nodes.forEach(n => { n.dataset.x0 = n.offsetLeft; n.dataset.y0 = n.offsetTop; });
   const resetBtn = $('[data-z="reset"]');
-  if (opts.movable) { applyLayout(opts.layoutKey); resetBtn.hidden = !Object.keys(readLayout(opts.layoutKey)).length; }
-  sizeWorld();
-  drawEdges(boardEdges);
-  fit(true);
+  /* Separating tables, sizing the world and drawing edges all measure the nodes, so wait until the page is
+     laid out: a page opened in a frame that is still hidden measures every node as zero. Starting spots are
+     read from the nodes' own left and top, never measured. */
+  const layout = () => {
+    if (opts.separate) separateNodes(nodes);
+    nodes.forEach(n => { n.dataset.x0 = parseFloat(n.style.left) || 0; n.dataset.y0 = parseFloat(n.style.top) || 0; });
+    if (opts.movable) { applyLayout(opts.layoutKey); resetBtn.hidden = !Object.keys(readLayout(opts.layoutKey)).length; }
+    sizeWorld(); drawEdges(boardEdges); fit(true);
+  };
+  if (!nodes.length || nodes[0].offsetHeight) layout();
+  else { const ro = new ResizeObserver(() => { if (!nodes[0].offsetHeight) return; ro.disconnect(); if (world?.contains(nodes[0])) layout(); }); ro.observe(nodes[0]); }
   $('.zoom').addEventListener('click', e => { const z = e.target.closest('button')?.dataset.z; if (!z) return; const r = viewport.getBoundingClientRect();
     if (z === 'reset') { resetLayout(opts.layoutKey); resetBtn.hidden = true; return; }
     if (z === 'fit') fit(); else zoomAt(z === 'in' ? 1.2 : 1 / 1.2, r.width / 2, r.height / 2); });
@@ -918,7 +923,7 @@ function applyLayout(key) {
 }
 function saveLayout(key, selector) {
   const out = {};
-  world.querySelectorAll(selector).forEach(n => { if (n.offsetLeft != n.dataset.x0 || n.offsetTop != n.dataset.y0) out[n.dataset.id] = { x: n.offsetLeft, y: n.offsetTop }; });
+  world.querySelectorAll(selector).forEach(n => { const x = parseFloat(n.style.left) || 0, y = parseFloat(n.style.top) || 0; if (x != n.dataset.x0 || y != n.dataset.y0) out[n.dataset.id] = { x, y }; });
   try { localStorage.setItem(layoutStoreKey(key), JSON.stringify(out)); } catch (e) {}
 }
 function resetLayout(key) {
