@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Review panel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20x%3D%221%22%20y%3D%221%22%20width%3D%2222%22%20height%3D%2222%22%20rx%3D%226.5%22%20fill%3D%22%232f5d50%22/%3E%3Cg%20fill%3D%22%23fff%22%3E%3Ccircle%20cx%3D%227%22%20cy%3D%227.6%22%20r%3D%221.9%22/%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%227.6%22%20r%3D%221.9%22/%3E%3Ccircle%20cx%3D%2217%22%20cy%3D%227.6%22%20r%3D%221.9%22/%3E%3C/g%3E%3Cpath%20d%3D%22M7.2%2014.6l3.1%203.1%206.5-6.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.3%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout, after PR 10K: a persistent top bar, a sidebar of the synthesis and reviewers, and the selected view filling the rest. */
@@ -39,10 +40,17 @@ html, body { height: 100%; }
 body { -webkit-font-smoothing: antialiased; }
 .app { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .topbar { position: relative; display: flex; align-items: center; gap: 18px; padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); min-width: 0; }
-.brand { font-family: var(--mono); font-weight: 600; font-size: 12.5px; letter-spacing: .04em; color: var(--muted); white-space: nowrap; }
-.tb-title { min-width: 0; flex: 1; }
-h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sub { color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; font-size: 12.5px; margin-top: 1px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; }
+.brand .logo { width: 22px; height: 22px; flex: none; }
+.tb-div { width: 1px; height: 22px; background: var(--line-strong); flex: none; }
+.tb-title { min-width: 0; flex: 1; display: flex; align-items: center; gap: 10px; }
+.tb-chip { font-family: var(--mono); font-size: 12px; color: var(--muted); background: var(--code); border-radius: 6px; padding: 2px 8px; white-space: nowrap; flex: none; }
+.tb-chip:empty { display: none; }
+h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sub { color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 12.5px; white-space: nowrap; }
+#tb-links { display: inline-flex; align-items: center; gap: 4px; }
+.tb-btn { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 11px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); font: 500 13px/1 var(--sans); text-decoration: none; cursor: pointer; white-space: nowrap; }
+.tb-btn:hover { background: var(--hover); }
 .sub a { color: var(--accent); }
 .tb-stats { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .tb-actions { display: flex; align-items: center; gap: 4px; }
@@ -57,10 +65,13 @@ main { overflow-y: auto; min-width: 0; background: var(--panel); padding: 22px m
 @media (max-width: 860px) {
   .app { height: auto; display: block; }
   .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; flex-wrap: wrap; gap: 8px 12px; }
-  .tb-title { flex-basis: calc(100% - 120px); order: 1; }
   .brand { order: 0; }
-  .tb-actions { order: 2; margin-left: auto; }
-  .tb-stats { order: 3; justify-content: flex-start; flex-basis: 100%; }
+  .tb-div { display: none; }
+  .tb-actions { order: 1; margin-left: auto; }
+  .tb-title { order: 2; flex-basis: 100%; }
+  .sub { order: 3; }
+  .tb-stats { order: 4; justify-content: flex-start; }
+  #tb-links .tb-btn .lbl { display: none; }
   .shell { display: block; }
   nav#nav { border-right: 0; border-bottom: 1px solid var(--line); padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
   main { padding: 18px max(16px, env(safe-area-inset-right, 0px)) 110px max(16px, env(safe-area-inset-left, 0px)); }
@@ -111,16 +122,9 @@ nav .section-title { margin: 12px 4px 6px; }
 .pane-head h2 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
 .pane-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 6px; }
 .pane-desc { color: var(--muted); margin: 4px 0 0; }
-.syn-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; margin-top: 18px; align-items: start; }
-.syn-grid .canvas { min-width: 0; }
-.syn-grid .rail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-@media (max-width: 1180px) { .syn-grid { grid-template-columns: minmax(0, 1fr); } .syn-grid .rail { position: static; order: -1; } }
 .canvas-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
 .canvas-head .section-title { margin: 0; }
 .canvas .toolbar { margin-top: 10px; }
-.rail-block { background: var(--side); border: 1px solid var(--line); border-radius: 10px; padding: 4px 14px 14px; }
-.rail-block .section-title { margin: 12px 0 8px; }
-.rail-block .section-title .n { color: var(--faint); margin-left: 4px; }
 .conclusions { margin: 0; padding: 0; list-style: none; counter-reset: c; display: flex; flex-direction: column; gap: 10px; }
 .conclusions li { counter-increment: c; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; font-size: 13.5px; line-height: 1.45; }
 .conclusions li::before { content: counter(c); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
@@ -168,14 +172,54 @@ td.fid { font-family: var(--mono); color: var(--muted); font-size: 12px; white-s
 .chip.more { background: var(--accent-bg); color: var(--accent); }
 .outcome { font-size: 12.5px; color: var(--muted); }
 tr.row.current td { background: var(--accent-bg); }
-.finding-window { width: min(760px, 100%); gap: 4px; }
+.finding-window { width: min(800px, 100%); gap: 4px; outline: none; }
+.finding-window .body, .finding-window .fix { max-width: none; }
+.finding-window > :not(.fw-scroll) { flex: none; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 10px 0 0; }
+.fact { display: grid; gap: 2px; min-width: 0; }
+.fact.wide { flex-basis: 100%; }
+.fact dt { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.fact dd { margin: 0; font-size: 13.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.fact dd .sep { margin-left: -6px; }
+.who { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.who svg { width: 13px; height: 13px; flex: none; }
+.who svg.claude { color: var(--claude); }
+.whos { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.linkish.mono { font-family: var(--mono); font-size: 12.5px; }
+.fw-tabs { margin-top: 14px; }
+.finding-window .fw-scroll { border-top: 0; margin-top: 0; padding-top: 14px; }
+.fix-label { font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+.origin { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.origin-head { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 13.5px; }
+.origin-title { font-weight: 500; margin-top: 6px; }
+.code-file { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 10px; }
+.code-file .path { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.code-file a { margin-left: auto; font-size: 13px; }
+.excerpt { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.excerpt-head { display: flex; justify-content: space-between; gap: 8px; padding: 5px 10px; background: var(--side); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.excerpt-scroll { overflow-x: auto; }
+.src-table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12px; line-height: 1.55; }
+.src-table td { padding: 0 10px; border: 0; white-space: pre; vertical-align: top; }
+.src-table td.ln { width: 1%; text-align: right; color: var(--faint); user-select: none; padding-right: 12px; }
+.src-table tr.hit td { background: var(--adv-bg); }
+.src-table tr.hit td.ln { color: var(--adv); box-shadow: inset 3px 0 0 var(--adv); }
+kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--panel); font-family: var(--mono); font-size: 11px; line-height: 16px; text-align: center; color: var(--ink); }
+.fw-keys { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.fw-keys > span { display: inline-flex; align-items: center; gap: 3px; }
+button.ref { font: inherit; font-size: .92em; font-weight: 600; color: var(--accent); background: var(--accent-bg); border: 0; border-radius: 5px; padding: 0 6px; cursor: pointer; white-space: nowrap; }
+button.ref:hover { text-decoration: underline; }
+.tab-body { padding-top: 16px; }
+.verdict-line { font-size: 15px; font-weight: 500; margin: 0 0 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tab-body .conclusions li { font-size: 14.5px; max-width: 80ch; }
+.tab-body .questions li { font-size: 14px; max-width: 80ch; padding: 4px 0 4px 12px; }
+.tab-body .questions { gap: 14px; margin-top: 10px; }
+.next-steps { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 18px 0 4px; font-size: 14px; }
 .finding-window h3 { font-size: 17px; margin: 6px 0 2px; line-height: 1.35; text-wrap: balance; }
 .fw-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .fw-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .fw-scroll { overflow-y: auto; min-height: 0; flex: 1; margin-top: 10px; padding-top: 4px; border-top: 1px solid var(--line); }
 .fw-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 8px; }
 .fw-nav, .fw-actions { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.fw-keys { font-size: 11.5px; text-align: right; }
 .btn.icon { padding: 2px 9px; }
 .btn:disabled { opacity: .45; cursor: default; }
 .origins { display: flex; flex-direction: column; gap: 8px; }
@@ -308,6 +352,12 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 .status-line { padding: 8px 12px; border-radius: 8px; background: var(--code); color: var(--muted); font-size: 13px; }
 .status-line.on { background: var(--accent-bg); color: var(--accent); }
 pre.tree, .code-block pre { font-family: var(--mono); font-size: 12px; line-height: 1.6; background: var(--side); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 10px 0 0; }
+.setup-card { margin-top: 18px; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; background: var(--side); }
+.setup-card h3 { margin: 0 0 2px; font-size: 14px; }
+.setup-card p { margin: 0; color: var(--muted); }
+.setup-card .rowline { margin: 0; justify-content: flex-start; flex-direction: row-reverse; }
+.setup-card details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; line-height: 1.55; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0 0; max-height: 320px; overflow: auto; }
 .code-block { position: relative; }
 .code-block .btn { position: absolute; top: 8px; right: 8px; }
 @media (max-width: 720px) {
@@ -324,10 +374,13 @@ pre.tree, .code-block pre { font-family: var(--mono); font-size: 12px; line-heig
 <body>
 <div class="app">
 <header class="topbar">
-  <span class="brand">REVIEW PANEL</span>
-  <div class="tb-title"><h1 id="title">Review panel</h1><div class="sub" id="sub"></div></div>
+  <span class="brand"><svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6.5" fill="var(--accent)"/><g fill="var(--accent-fg)"><circle cx="7" cy="7.6" r="1.9"/><circle cx="12" cy="7.6" r="1.9"/><circle cx="17" cy="7.6" r="1.9"/></g><path d="M7.2 14.6l3.1 3.1 6.5-6.5" fill="none" stroke="var(--accent-fg)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Review Panel</span>
+  <span class="tb-div" aria-hidden="true"></span>
+  <div class="tb-title"><span class="tb-chip" id="chip"></span><h1 id="title">Review panel</h1></div>
+  <div class="sub" id="sub"></div>
   <div class="tb-stats" id="tb-stats"></div>
   <div class="tb-actions">
+    <span id="tb-links"></span>
     <button type="button" class="guide-btn" data-act="guide" aria-haspopup="dialog" aria-controls="guide"><span class="q">?</span>Guide</button>
     <button type="button" class="icon-btn" data-act="settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
@@ -414,7 +467,7 @@ pre.tree, .code-block pre { font-family: var(--mono); font-size: 12px; line-heig
     <section id="g-handoff">
       <h3>Handing off fixes</h3>
       <p>Tick the findings you want fixed, then choose <strong>Prepare handoff</strong>. You get a prompt to edit and paste into the agent that will make the fixes. It asks the agent to confirm each problem first, fix only those, add tests, and re-run the reviewers that raised them.</p>
-      <p>Your ticks are remembered in this browser for this run.</p>
+      <p>Your ticks are remembered in this browser for this review.</p>
     </section>
   </div>
   <div class="guide-foot"><button type="button" class="btn" id="guide-prev">← Previous</button><span class="note" id="guide-count"></span><button type="button" class="btn primary" id="guide-next">Next →</button></div>
@@ -546,47 +599,114 @@ function toolbar(rows, withReviewer) {
   const seg = (value, label) => `<button type="button" data-sev="${value}" class="${ui.sev === value ? 'on' : ''}">${label}</button>`;
   return `<div class="toolbar">
     <input id="search" type="search" placeholder="Search findings" value="${esc(ui.q)}" aria-label="Search findings">
-    <span class="seg" role="group" aria-label="Severity">${seg('all', 'All')}${seg('blocking', 'Blocking')}${seg('advisory', 'Advisory')}</span>
-    <select id="cat" aria-label="Category"><option value="all">All categories</option>${cats.map(c => `<option value="${esc(c)}" ${ui.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
-    ${withReviewer ? `<select id="who" aria-label="Reviewer"><option value="all">All reviewers</option>${who.map(w => `<option value="${esc(w)}" ${ui.who === w ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select>` : ''}
+    <span class="seg" role="group" aria-label="Severity">${seg('all', 'All')}${seg('blocking', 'Blocks merge')}${seg('advisory', 'Advisory')}</span>
+    <select id="cat" aria-label="Type"><option value="all">All types</option>${cats.map(c => `<option value="${esc(c)}" ${ui.cat === c ? 'selected' : ''}>${esc(words(CATEGORY_WORDS, c)[0])}</option>`).join('')}</select>
+    ${withReviewer ? `<select id="who" aria-label="Reviewer"><option value="all">All reviewers</option>${who.map(w => `<option value="${esc(w)}" ${ui.who === w ? 'selected' : ''}>${esc(reviewerLabel(w))}</option>`).join('')}</select>` : ''}
   </div>`;
 }
 /* ---------- the finding window ---------- */
 // The rows in the table as it's filtered now, so the window's Previous and Next follow what the user sees.
-function visibleKeys() { return [...document.querySelectorAll('#pane tr.row')].map(tr => tr.dataset.key); }
+function visibleKeys() {
+  const keys = [...document.querySelectorAll('#pane tr.row')].map(tr => tr.dataset.key);
+  // Opened from the summary, where there is no table: step through the synthesis's findings.
+  return keys.length || !ui.detail || ui.detail.startsWith('R:') ? keys : synthesisRows().map(r => r.key);
+}
 function findRow(key) { return allRows().find(r => r.key === key); }
+// Plain words for the synthesis contract's values, so the finding window reads without a glossary.
+const SEVERITY_WORDS = {
+  blocking: ['Blocks merge', 'Fix this before the change merges.'],
+  advisory: ['Advisory', 'Worth fixing, but it does not block the merge.'],
+};
+const CATEGORY_WORDS = {
+  defect: ['Bug', 'The code does the wrong thing.'],
+  policy: ['Needs your decision', 'A judgment call only the author can make.'],
+  'negligible-likelihood': ['Unlikely edge case', 'Real, but very unlikely to happen.'],
+};
+const words = (map, value) => map[value] || [value, ''];
+// check-correctness → Correctness reviewer; the synthesis keeps its own name.
+function reviewerLabel(name) {
+  const base = String(name).replace(/^check-/, '').split('-').filter(Boolean).join(' ');
+  return base ? base[0].toUpperCase() + base.slice(1) + ' reviewer' : name;
+}
+function reviewerTag(name) {
+  const entry = state.reviewers[name];
+  const harness = entry && entry.agent && entry.agent.harness;
+  return `<span class="who">${(harness && LOGOS[harness]) || ''}${esc(reviewerLabel(name))}</span>`;
+}
+function lineLabel(line) { return line ? (/[,-]/.test(String(line)) ? `lines ${line}` : `line ${line}`) : ''; }
+function fileLink(file, start, end) {
+  const t = state.target || {};
+  if (t.kind !== 'pr' || !t.github || !t.head) return '';
+  const anchor = start ? `#L${start}${end && end !== start ? `-L${end}` : ''}` : '';
+  return `https://github.com/${t.github}/blob/${t.head}/${file.split('/').map(encodeURIComponent).join('/')}${anchor}`;
+}
+function codeTab(r) {
+  if (!r.file) return '<p class="note">This finding doesn\'t point at a file.</p>';
+  const excerpts = (state.snippets || {})[`${r.file}:${r.line}`];
+  const link = fileLink(r.file);
+  const head = `<div class="code-file"><span class="path">${esc(r.file)}</span>${r.line ? `<span class="note">${esc(lineLabel(r.line))}</span>` : ''}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open on GitHub ↗</a>` : ''}</div>`;
+  if (!excerpts || !excerpts.length) return head + `<p class="note">${state.status === 'running' ? 'The code excerpt appears once the reviewer reports.' : 'This run didn\'t save an excerpt of this code.'}</p>`;
+  return head + excerpts.map(x => {
+    const [a, b] = x.focus;
+    const gh = fileLink(r.file, a, b);
+    const rows = x.lines.map((text, i) => {
+      const n = x.start + i;
+      return `<tr class="${n >= a && n <= b ? 'hit' : ''}"><td class="ln">${n}</td><td class="src">${esc(text) || ' '}</td></tr>`;
+    }).join('');
+    return `<div class="excerpt"><div class="excerpt-head"><span>${esc(lineLabel(a === b ? a : `${a}-${b}`))}</span>${gh ? `<a href="${esc(gh)}" target="_blank" rel="noopener">GitHub ↗</a>` : ''}</div><div class="excerpt-scroll"><table class="src-table">${rows}</table></div></div>`;
+  }).join('');
+}
+function reviewersTab(r) {
+  return `<div class="origins">${r.merges.map(ref => {
+    const [name] = ref.split(':');
+    const f = rawFinding(ref);
+    if (!f) return `<div class="origin">${reviewerTag(name)}</div>`;
+    const sameTitle = f.title.trim() === String(r.title).trim();
+    const sev = f.severity !== r.severity ? `<span class="note">rated it ${esc(words(SEVERITY_WORDS, f.severity)[0].toLowerCase())}</span>` : '';
+    return `<div class="origin"><div class="origin-head">${reviewerTag(name)}${sev}</div>${sameTitle ? '' : `<div class="origin-title">${inlineMd(f.title)}</div>`}<div class="body">${md(f.body)}</div>${f.fix && f.fix !== r.fix ? `<div class="fix"><div class="fix-label">Their suggested fix</div>${md(f.fix)}</div>` : ''}</div>`;
+  }).join('')}</div>`;
+}
 function detailHtml(r) {
-  const where = [r.file, r.line].filter(Boolean).join(':');
   const keys = visibleKeys();
   const at = keys.indexOf(r.key);
-  let origins = '';
-  if (r.merges && r.merges.length) {
-    origins = `<div class="section-title">${r.merges.length > 1 ? `Merges ${plural(r.merges.length, 'reviewer finding')}` : 'Reviewer finding'}</div><div class="origins">${r.merges.map(ref => {
-      const f = rawFinding(ref);
-      if (!f) return `<div class="origin"><span class="chip">${esc(ref)}</span></div>`;
-      return `<details class="origin"><summary><span class="chip">${esc(ref)}</span> <span class="pill sev-${esc(f.severity)}">${esc(f.severity)}</span> ${inlineMd(f.title)}</summary><div class="body">${md(f.body)}</div>${f.fix ? `<div class="fix"><strong>Fix:</strong> ${md(f.fix)}</div>` : ''}</details>`;
-    }).join('')}</div>`;
+  const isRaw = r.key.startsWith('R:');
+  const tabs = [['problem', 'Problem'], ['code', 'Code']];
+  if (!isRaw && r.merges.length) tabs.push(['reviewers', r.merges.length > 1 ? `Reviewers <span class="n">${r.merges.length}</span>` : 'Reviewer']);
+  if (!tabs.some(([id]) => id === ui.fwTab)) ui.fwTab = 'problem';
+  const [sevWord, sevHint] = words(SEVERITY_WORDS, r.severity);
+  const [catWord, catHint] = words(CATEGORY_WORDS, r.category);
+  const finders = r.reviewers.length ? r.reviewers : r.merges.map(ref => ref.split(':')[0]);
+  let outcome = '';
+  if (isRaw) {
+    const into = r.outcome && r.outcome.startsWith('in ') ? findRow('S:' + r.outcome.slice(3)) : null;
+    outcome = into ? `<div class="fact wide"><dt>Synthesis</dt><dd>Merged into <button type="button" class="linkish" data-act="detail-open" data-key="${esc(into.key)}">${inlineMd(into.title)}</button></dd></div>`
+      : r.droppedReason ? `<div class="fact wide"><dt>Synthesis</dt><dd>Dropped: ${esc(r.droppedReason)}</dd></div>` : '';
   }
+  const where = r.file ? `<button type="button" class="linkish mono" data-fwtab="code" title="Show the code">${esc(r.file.split('/').pop())}${r.line ? `:${esc(r.line)}` : ''}</button>` : '';
   const picked = ui.picked.has(r.key);
-  return `<div class="overlay" data-act="detail-close"><div class="dialog finding-window" role="dialog" aria-modal="true" aria-labelledby="fw-title">
+  const tab = ui.fwTab;
+  const content = tab === 'code' ? codeTab(r) : tab === 'reviewers' ? reviewersTab(r)
+    : `<div class="body">${md(r.body)}</div>${r.fix ? `<div class="fix"><div class="fix-label">Suggested fix</div>${md(r.fix)}</div>` : ''}`;
+  return `<div class="overlay" data-act="detail-close"><div class="dialog finding-window" role="dialog" aria-modal="true" aria-labelledby="fw-title" tabindex="-1">
     <div class="fw-head">
-      <div class="fw-meta"><span class="fid">${esc(r.ref || r.id)}</span><span class="pill sev-${esc(r.severity)}">${esc(r.severity)}</span>${r.category ? `<span class="pill r-unverified">${esc(r.category)}</span>` : ''}${r.outcome ? `<span class="note">${esc(r.outcome)}</span>` : ''}</div>
-      <button type="button" class="btn icon" data-act="detail-close" aria-label="Close" title="Close (Esc or ⌥W)">✕</button>
+      <span class="note">${isRaw ? 'Original reviewer finding' : 'Finding'}${at >= 0 ? ` ${at + 1} of ${keys.length}` : ''}</span>
+      <button type="button" class="btn icon" data-act="detail-close" aria-label="Close" title="Close (Esc)">✕</button>
     </div>
     <h3 id="fw-title">${inlineMd(r.title)}</h3>
-    ${where ? `<div class="where">${esc(where)}</div>` : ''}
-    <div class="chips" style="margin-top:6px">${r.reviewers.map(w => `<span class="chip">${esc(w)}</span>`).join('')}</div>
-    <div class="fw-scroll">
-      ${r.droppedReason ? `<div class="banner">Dropped by the synthesis: ${esc(r.droppedReason)}</div>` : ''}
-      <div class="body">${md(r.body)}</div>
-      ${r.fix ? `<div class="fix"><strong>Fix:</strong> ${md(r.fix)}</div>` : ''}
-      ${origins}
-    </div>
+    <dl class="facts">
+      <div class="fact" title="${esc(sevHint)}"><dt>Severity</dt><dd><span class="pill sev-${esc(r.severity)}">${esc(sevWord)}</span></dd></div>
+      ${r.category ? `<div class="fact" title="${esc(catHint)}"><dt>Type</dt><dd>${esc(catWord)}</dd></div>` : ''}
+      ${finders.length ? `<div class="fact"><dt>Found by</dt><dd>${finders.map(reviewerTag).join('<span class="sep">,</span> ')}</dd></div>` : ''}
+      ${where ? `<div class="fact"><dt>Where</dt><dd>${where}</dd></div>` : ''}
+      ${outcome}
+    </dl>
+    <div class="tabs fw-tabs" role="tablist">${tabs.map(([id, label]) => `<button type="button" role="tab" aria-selected="${tab === id}" class="tab ${tab === id ? 'on' : ''}" data-fwtab="${id}">${label}</button>`).join('')}</div>
+    <div class="fw-scroll">${content}</div>
     <div class="fw-foot">
-      <span class="fw-nav"><button type="button" class="btn" data-act="detail-prev" ${at > 0 ? '' : 'disabled'} title="Previous (↑ or K)">↑ Previous</button><button type="button" class="btn" data-act="detail-next" ${at >= 0 && at < keys.length - 1 ? '' : 'disabled'} title="Next (↓ or J)">↓ Next</button><span class="note">${at >= 0 ? `${at + 1} of ${keys.length}` : ''}</span></span>
-      <span class="fw-actions"><span class="note" id="fw-note"></span><label class="toggle"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''}> Include in handoff</label><button type="button" class="btn primary" data-act="detail-copy">Copy handoff for this one</button></span>
+      <span class="fw-nav"><button type="button" class="btn" data-act="detail-prev" ${at > 0 ? '' : 'disabled'}>↑ Previous</button><button type="button" class="btn" data-act="detail-next" ${at >= 0 && at < keys.length - 1 ? '' : 'disabled'}>↓ Next</button></span>
+      <span class="fw-actions"><span class="note" id="fw-note"></span><label class="toggle"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''}> Add to handoff</label><button type="button" class="btn" data-act="detail-copy" title="Copy a prompt that asks an agent to fix only this finding">Copy fix prompt</button></span>
     </div>
-    <div class="fw-keys note">Esc or ⌥W closes · ↑ ↓ move between findings</div>
+    <div class="fw-keys"><span><kbd>Esc</kbd> close</span><span><kbd>↑</kbd><kbd>↓</kbd> previous / next</span><span><kbd>Space</kbd> add to handoff</span><span><kbd>1</kbd>–<kbd>${tabs.length}</kbd> tabs</span></div>
   </div></div>`;
 }
 function renderDetail() {
@@ -598,10 +718,11 @@ function renderDetail() {
 }
 function openDetail(key) {
   const opening = !ui.detail;
+  if (opening) ui.fwTab = 'problem';
   ui.detail = key;
   renderDetail();
   document.querySelectorAll('#pane tr.row').forEach(tr => tr.classList.toggle('current', tr.dataset.key === key));
-  if (opening) document.querySelector('#detail [data-act="detail-close"].icon').focus();
+  if (opening) document.querySelector('#detail .finding-window').focus();
 }
 function closeDetail() {
   const key = ui.detail;
@@ -619,20 +740,22 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
   const shown = filtered(rows);
   const cols = 4 + (reviewerCol ? 1 : 0) + (outcomeCol ? 1 : 0);
   const body = shown.map(r => {
-    const where = [r.file, r.line].filter(Boolean).join(':');
+    const where = r.file ? `${r.file.split('/').pop()}${r.line ? `:${r.line}` : ''}` : '';
     const picked = ui.picked.has(r.key);
-    const who = r.reviewers.length > 2 ? r.reviewers.slice(0, 2).map(w => `<span class="chip">${esc(w)}</span>`).join('') + `<span class="chip more">+${r.reviewers.length - 2}</span>` : r.reviewers.map(w => `<span class="chip">${esc(w)}</span>`).join('');
+    const who = r.reviewers.slice(0, 2).map(reviewerTag).join('') + (r.reviewers.length > 2 ? `<span class="chip more">+${r.reviewers.length - 2}</span>` : '');
+    const num = r.key.startsWith('S:') ? r.id.replace(/^S/, '') : '';
+    const outcome = r.outcome && r.outcome.startsWith('in ') ? `Merged into finding ${r.outcome.slice(4)}` : r.outcome === 'dropped' ? 'Dropped' : '';
     return `<tr class="row ${picked ? 'picked' : ''} ${ui.detail === r.key ? 'current' : ''}" data-key="${esc(r.key)}" tabindex="0">
-        <td class="pick"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Include ${esc(r.id)} in the handoff"></td>
-        <td class="fid">${esc(r.id)}</td>
-        <td><span class="pill sev-${esc(r.severity)}">${esc(r.severity)}</span></td>
-        <td><div class="ftitle">${inlineMd(r.title)}</div>${where ? `<div class="where">${esc(where)}</div>` : ''}</td>
-        ${reviewerCol ? `<td><div class="chips">${who}</div></td>` : ''}
-        ${outcomeCol ? `<td class="outcome">${esc(r.outcome)}</td>` : ''}
+        <td class="pick"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Add this finding to the handoff"></td>
+        <td class="fid">${esc(num)}</td>
+        <td><span class="pill sev-${esc(r.severity)}">${esc(words(SEVERITY_WORDS, r.severity)[0])}</span></td>
+        <td><div class="ftitle">${inlineMd(r.title)}</div>${where ? `<div class="where" title="${esc([r.file, r.line].filter(Boolean).join(':'))}">${esc(where)}</div>` : ''}</td>
+        ${reviewerCol ? `<td><div class="whos">${who}</div></td>` : ''}
+        ${outcomeCol ? `<td class="outcome">${esc(outcome)}</td>` : ''}
       </tr>`;
   }).join('');
   return `<div class="table-wrap"><table>
-      <thead><tr><th></th><th>ID</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Raised by</th>' : ''}${outcomeCol ? '<th>Synthesis</th>' : ''}</tr></thead>
+      <thead><tr><th></th><th>#</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Found by</th>' : ''}${outcomeCol ? '<th>Synthesis</th>' : ''}</tr></thead>
       <tbody>${body || `<tr><td colspan="${cols}" class="empty">${rows.length ? 'No findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
     </table></div>
     <div class="count-line">${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}. Click a row to open it; tick the ones to hand off.</div>`;
@@ -654,23 +777,44 @@ function synthesisView() {
   const missing = Object.entries(state.reviewers).filter(([, v]) => v.status !== 'done').map(([k]) => k);
   const rows = ui.raw ? rawRows() : synthesisRows();
   const rawCount = rawRows().length;
-  // The findings table is the canvas; conclusions and questions sit in a rail beside it (above it when narrow).
-  const rail = `
-    <div class="rail-block"><div class="section-title">Key conclusions</div>
-      ${(r.conclusions || []).length ? `<ol class="conclusions">${r.conclusions.map(c => `<li>${inlineMd(c)}</li>`).join('')}</ol>` : ''}
-      <details class="more"><summary>Full summary</summary><p class="summary-line">${inlineMd(r.summary)}</p></details>
-      ${droppedLine(r)}
-      ${missing.length ? `<div class="banner">Not covered: ${missing.map(esc).join(', ')} did not report.</div>` : ''}
-    </div>
-    ${(r.questions || []).length ? `<div class="rail-block"><div class="section-title">Questions for you <span class="n">${r.questions.length}</span></div><ul class="questions">${r.questions.map(q => `<li><div class="q">${q.blocking ? '<span class="pill sev-blocking">blocks merge</span> ' : ''}${inlineMd(q.question)}</div>${q.why ? `<details class="why"><summary>Why it matters</summary>${inlineMd(q.why)}</details>` : ''}</li>`).join('')}</ul></div>` : ''}`;
-  return head + `<div class="syn-grid">
-    <div class="canvas">
-      <div class="canvas-head"><div class="section-title">Findings</div><label class="toggle"><input type="checkbox" id="raw" ${ui.raw ? 'checked' : ''}> Show every reviewer finding before merging (${rawCount})</label></div>
+  const questions = r.questions || [];
+  const blockingQs = questions.filter(q => q.blocking).length;
+  const tab = ui.tab.__synthesis || 'summary';
+  const tabBtn = (id, label, n) => `<button type="button" class="tab ${tab === id ? 'on' : ''}" data-tab="${id}">${label}${n !== undefined ? `<span class="n">${n}</span>` : ''}</button>`;
+  let body;
+  if (tab === 'findings') {
+    body = `<div class="canvas-head"><label class="toggle" title="The synthesis merges duplicates and drops findings it could not confirm. Tick this to see each reviewer's findings as they reported them.">
+        <input type="checkbox" id="raw" ${ui.raw ? 'checked' : ''}> Show each reviewer’s original findings (${rawCount})</label></div>
       ${toolbar(rows, true)}
-      <div id="table">${tableHtml(rows, { reviewerCol: true, outcomeCol: ui.raw })}</div>
-    </div>
-    <aside class="rail">${rail}</aside>
-  </div>`;
+      <div id="table">${tableHtml(rows, { reviewerCol: true, outcomeCol: ui.raw })}</div>`;
+  } else if (tab === 'questions') {
+    body = questions.length ? `<p class="note">The synthesis can’t settle these from the code. ${blockingQs ? `${blockingQs === questions.length ? (questions.length === 1 ? 'It blocks' : 'All of them block') : `${blockingQs} of them block`} the merge until you answer.` : 'None of them blocks the merge.'}</p>
+      <ul class="questions">${questions.map(q => `<li><div class="q">${q.blocking ? '<span class="pill sev-blocking">Blocks merge</span> ' : ''}${linkRefs(inlineMd(q.question))}</div>${q.why ? `<div class="why">${linkRefs(inlineMd(q.why))}</div>` : ''}</li>`).join('')}</ul>`
+      : '<div class="empty">No questions for you.</div>';
+  } else {
+    const b = r.findings.filter(f => f.severity === 'blocking').length;
+    const verdictLine = {
+      ready: 'Ready to merge: nothing blocks it.',
+      'fix-first': `Fix first: ${plural(b, 'blocking finding')} to fix before merging.`,
+      'needs-decision': `Needs your decision: ${plural(blockingQs, 'question')} only you can answer${b ? `, plus ${plural(b, 'blocking finding')}` : ''}.`,
+    }[r.verdict] || r.verdict;
+    body = `<p class="verdict-line"><span class="pill v-${esc(r.verdict)}">${esc(r.verdict)}</span> ${esc(verdictLine)}</p>
+      ${missing.length ? `<div class="banner">Not covered: ${missing.map(m => esc(reviewerLabel(m))).join(', ')} did not report.</div>` : ''}
+      ${(r.conclusions || []).length ? `<div class="section-title">Key conclusions</div><ol class="conclusions">${r.conclusions.map(c => `<li><span>${linkRefs(inlineMd(c))}</span></li>`).join('')}</ol>` : ''}
+      <div class="next-steps">
+        <button type="button" class="linkish" data-tab="findings">See all ${plural(r.findings.length, 'finding')} →</button>
+        ${questions.length ? `<button type="button" class="linkish" data-tab="questions">Answer ${plural(questions.length, 'question')}${blockingQs ? ` (${blockingQs} blocking)` : ''} →</button>` : ''}
+      </div>
+      <details class="more"><summary>The synthesis’s full summary</summary><p class="summary-line">${linkRefs(inlineMd(r.summary))}</p></details>
+      ${droppedLine(r)}`;
+  }
+  return head + `<div class="tabs" role="tablist">${tabBtn('summary', 'Summary')}${tabBtn('findings', 'Findings', r.findings.length)}${questions.length ? tabBtn('questions', 'Questions for you', questions.length) : ''}</div><div class="tab-body">${body}</div>`;
+}
+// "S1" in synthesis text becomes a button that opens that finding.
+function linkRefs(html) {
+  const ids = new Set(synthesisRows().map(r => r.id));
+  return html.replace(/(^|[^\w>="-])(S\d+)\b(?![^<]*>)/g, (m, pre, id) => ids.has(id)
+    ? `${pre}<button type="button" class="ref" data-act="detail-open" data-key="S:${id}" title="Open this finding">Finding ${id.slice(1)}</button>` : m);
 }
 function droppedLine(r) {
   const dropped = r.dropped || [];
@@ -684,7 +828,7 @@ function reviewerView(name) {
   const tab = ui.tab[name] || 'findings';
   const rows = rawRows(name);
   const logLink = inline ? '' : `<a class="raw" href="log/${esc(name)}" target="_blank" rel="noopener">Raw session log</a>`;
-  const head = `<div class="pane-head"><h2>${esc(name)}</h2>${statusPill(entry.status)}${r ? severityCounts(r.findings) : ''}</div>
+  const head = `<div class="pane-head"><h2>${esc(reviewerLabel(name))}</h2>${statusPill(entry.status)}${r ? severityCounts(r.findings) : ''}</div>
     <p class="pane-desc">${esc(entry.focus)}</p>
     <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${logLink}</div>
     ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
@@ -718,17 +862,26 @@ function card(key, name, entry, desc) {
 function renderChrome() {
   const t = state.target;
   document.title = `Review panel: ${t.label}`;
-  document.getElementById('title').textContent = t.label;
+  const title = t.title || (t.kind === 'pr' ? t.label : `${t.branch || 'Local changes'} against ${t.base}`);
+  document.getElementById('title').textContent = title;
+  document.getElementById('title').title = title;
+  const chip = document.getElementById('chip');
+  chip.textContent = `${t.repo_name || ''}${t.number ? ` #${t.number}` : ''}`.trim();
+  chip.title = `${t.base} → ${String(t.head || '').slice(0, 10)}${t.kind === 'local' ? ' (a snapshot of your working tree)' : ''}`;
   const done = Object.values(state.reviewers).filter(r => !['queued', 'running'].includes(r.status)).length;
   const total = Object.keys(state.reviewers).length;
   document.getElementById('sub').innerHTML = [
-    statusPill(state.status),
-    t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.url.replace('https://github.com/', ''))}</a>` : '',
-    `<span class="mono">${esc(t.base)} → ${esc(t.head.slice(0, 10))}</span>`,
-    `<span>${done}/${total} reviewers finished</span>`,
-    `<span>${secs(state.started_at, state.ended_at)}</span>`,
+    terminal(state.status) && state.status === 'done' ? '' : statusPill(state.status),
+    terminal(state.status) ? '' : `<span>${done} of ${total} reviewers done</span>`,
+    `<span title="How long the review took">${secs(state.started_at, state.ended_at)}</span>`,
     ui.lostConnection ? `<span class="pill s-failed">Can’t reach the panel process. If it finished, open report.html in ${esc(state.run_dir)}</span>` : '',
   ].filter(Boolean).join('');
+  const links = [
+    t.url ? `<a class="tb-btn" href="${esc(t.url)}" target="_blank" rel="noopener" title="Open the pull request on GitHub"><span class="lbl">Open on GitHub</span> ↗</a>` : '',
+    t.rerun ? `<button type="button" class="tb-btn" data-act="rerun" title="Copy the command that reviews this change again"><span class="lbl">Rerun</span>↻</button>` : '',
+  ].join('');
+  const linksBox = document.getElementById('tb-links');
+  if (linksBox.dataset.html !== links) { linksBox.innerHTML = links; linksBox.dataset.html = links; }
   const result = state.synthesis.result;
   document.getElementById('tb-stats').innerHTML = result
     ? `<span class="pill v-${esc(result.verdict)}" title="The panel's verdict">${esc(result.verdict)}</span>${severityCounts(result.findings)}`
@@ -738,7 +891,7 @@ function renderChrome() {
   bar.hidden = terminal(state.status);
   document.getElementById('nav').innerHTML = card('__synthesis', 'Synthesis', state.synthesis, 'Verifies, merges, and ranks the reviewers’ findings')
     + '<div class="section-title">Reviewers</div>'
-    + Object.entries(state.reviewers).map(([name, entry]) => card(name, name, entry, entry.focus)).join('');
+    + Object.entries(state.reviewers).map(([name, entry]) => card(name, reviewerLabel(name), entry, entry.focus)).join('');
 }
 let lastPane = '';
 // Strip running clocks before comparing, so a poll redraws the pane only when its content changed.
@@ -832,6 +985,8 @@ document.addEventListener('click', async event => {
   if (sev) { ui.sev = sev.dataset.sev; document.querySelectorAll('[data-sev]').forEach(b => b.classList.toggle('on', b.dataset.sev === ui.sev)); renderTable(); return; }
   if (t.matches('[data-pick]')) { t.checked ? ui.picked.add(t.dataset.pick) : ui.picked.delete(t.dataset.pick); savePicks(); renderTable(); renderHandoff(); if (ui.detail) document.querySelectorAll('#pane tr.row').forEach(tr => tr.classList.toggle('current', tr.dataset.key === ui.detail)); return; }
   const row = t.closest('tr.row');
+  const fwTab = t.closest('[data-fwtab]');
+  if (fwTab) { ui.fwTab = fwTab.dataset.fwtab; renderDetail(); return; }
   if (row) { openDetail(row.dataset.key); return; }
   const copyBtn = t.closest('[data-copy]');
   if (copyBtn) { const ok = await copy(state.reviewers[ui.view].prompt); copyBtn.textContent = ok ? 'Copied' : 'Select and copy below'; return; }
@@ -842,14 +997,16 @@ document.addEventListener('click', async event => {
     if (a === 'clear') { ui.picked.clear(); savePicks(); renderTable(); }
     if (a === 'detail-close' && t !== act && act.classList.contains('overlay')) return;
     if (a === 'detail-close') { closeDetail(); return; }
+    if (a === 'detail-open') { openDetail(act.dataset.key); return; }
     if (a === 'detail-prev') { stepDetail(-1); return; }
     if (a === 'detail-next') { stepDetail(1); return; }
     if (a === 'detail-copy') { await copy(handoffText([findRow(ui.detail)]), document.getElementById('fw-note')); return; }
     if (a === 'settings') { openSettings(true); return; }
+    if (a === 'rerun') { const ok = await copy(state.target.rerun); act.querySelector('.lbl').textContent = ok ? 'Copied' : 'Rerun'; setTimeout(() => { const l = act.querySelector('.lbl'); if (l) l.textContent = 'Rerun'; }, 1800); return; }
     if (a === 'guide') { openGuide(true); return; }
     if (a === 'guide-close') { openGuide(false); return; }
     if (a === 'handoff') { ui.dialog = true; ui.draft = handoffText(); }
-    if (a === 'show-raw') { ui.raw = true; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; renderPane(true); return; }
+    if (a === 'show-raw') { ui.tab.__synthesis = 'findings'; ui.raw = true; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; renderPane(true); return; }
     if (a === 'close') ui.dialog = false;
     if (a === 'copy') { const area = document.getElementById('handoff-text'); area.select(); await copy(area.value, document.getElementById('copy-note')); return; }
     renderHandoff();
@@ -873,6 +1030,13 @@ document.addEventListener('keydown', event => {
     if (event.target.matches('input, textarea, select')) return;
     if (event.key === 'ArrowDown' || event.key === 'j') { event.preventDefault(); stepDetail(1); }
     if (event.key === 'ArrowUp' || event.key === 'k') { event.preventDefault(); stepDetail(-1); }
+    if (event.key === ' ' && !event.target.matches('button, a')) {
+      event.preventDefault();
+      ui.picked.has(ui.detail) ? ui.picked.delete(ui.detail) : ui.picked.add(ui.detail);
+      savePicks(); renderTable(); renderHandoff(); renderDetail(); return;
+    }
+    const tabs = [...document.querySelectorAll('#detail [data-fwtab].tab')];
+    if (/^[1-9]$/.test(event.key) && tabs[event.key - 1]) { event.preventDefault(); ui.fwTab = tabs[event.key - 1].dataset.fwtab; renderDetail(); }
     return;
   }
   if (event.key === 'Enter' && event.target.matches('tr.row')) { openDetail(event.target.dataset.key); return; }
@@ -972,11 +1136,11 @@ function reviewersPane() {
       <span class="who"><b>${esc(r.name)}</b><span>${esc(r.summary || 'No summary yet')}</span></span>
       <span class="meta">${r.included ? '' : '<span class="chip">left out</span>'}${sourceChip(r)}<span class="model">${esc(modelName(r.model))}${r.effort !== 'default' ? ` · ${esc(r.effort)}` : ''}</span></span>
     </div>${settings.editing === i ? reviewerEditor(r, i) : ''}`).join('');
-  return `<div class="spane-head"><div><h2>Reviewers</h2><p>The experts on this run’s panel. Open one to read its prompt, or to change it for this repository.</p></div>${closeBtn()}</div>
+  return `<div class="spane-head"><div><h2>Reviewers</h2><p>The experts on the review panel. Open one to read its prompt, or to change it for this repository.</p></div>${closeBtn()}</div>
     <div class="sbody">
-      <div class="group-head"><h3>On this run</h3><span class="n">${cfg.reviewers.length}</span><button type="button" class="linkish add" data-sact="add">+ Add reviewer</button></div>
+      <div class="group-head"><button type="button" class="linkish add" data-sact="add">+ Add reviewer</button></div>
       <div class="slist">${rows}</div>
-      <p class="hint" style="margin-top:12px">This run ${state.config && state.config.found ? `read <code>${esc(configDir())}/</code>` : 'used the built-in panel'}. A run with <code>--only</code> shows only the reviewers it asked for.</p>
+      <p class="hint" style="margin-top:12px">${state.config && state.config.found ? `Settings from <code>${esc(configDir())}/</code> in this repository.` : 'The built-in reviewers.'} A review started with <code>--only</code> lists only the reviewers it asked for.</p>
     </div>`;
 }
 function synthesisPane() {
@@ -992,32 +1156,37 @@ function synthesisPane() {
       <span class="hint">These go in <code>panel.yaml</code> under <code>synthesis:</code>. The synthesis prompt itself lives in the skill, at <code>prompts/synthesize.md</code>.</span>
     </div></div></div>`;
 }
+function setupPrompt() {
+  const dir = configDir();
+  const roster = Object.entries(state.reviewers).map(([name, e]) => `- ${name}: ${e.focus}`).join('\n');
+  return `Set up the review panel's settings for this repository.
+
+The review-panel skill reads ${dir}/ from the repository it runs in:
+
+- ${dir}/panel.yaml (optional): a \`reviewers:\` list of reviewer names, in the order they should run, and a \`synthesis:\` map with \`harness\`, \`model\`, and \`effort\`. Without a list, every built-in reviewer runs, plus every file in reviewers/.
+- ${dir}/reviewers/<name>.md: one file per reviewer. The Markdown body is the reviewer's focus prompt. Front matter sets \`summary\` (one line), \`harness\` (claude-code or codex), \`model\`, and \`effort\`. A file named after a built-in reviewer replaces its prompt, or adds to it with \`mode: append\`. Any other name adds a new reviewer and needs a \`summary\`.
+
+Both files use a small YAML subset: \`key: value\` lines, and one level of list or map under a key.
+
+The review panel's current reviewers:
+${roster}
+
+First ask me which reviewers to keep, change, or add, and what this repository needs them to watch for. Then write the files, keeping each reviewer's prompt to one concern, and show me what you wrote.
+`;
+}
 function repoPane() {
   const dir = configDir();
-  const example = `# ${dir}/panel.yaml\n# Run only these reviewers, in this order. Leave the list out to run all of them.\nreviewers:\n  - check-acceptance-criteria\n  - check-correctness\n  - check-security\n  - check-payments\n\nsynthesis:\n  model: opus\n  effort: high`;
-  const reviewer = `# ${dir}/reviewers/check-payments.md\n---\nsummary: "Checks payment flows for double charges and refund gaps"\nharness: claude-code\nmodel: opus\neffort: high\n---\n\nYou find ways a change can charge a customer twice, ...`;
-  return `<div class="spane-head"><div><h2>Customize for a repository</h2><p>A repository can change its panel with a folder of plain files. Everyone who runs the panel there gets the same experts.</p></div>${closeBtn()}</div>
+  const found = state.config && state.config.found;
+  return `<div class="spane-head"><div><h2>Customize for a repository</h2><p>Choose a repository's reviewers and change their prompts with a folder in the repository.</p></div>${closeBtn()}</div>
     <div class="sbody prose">
-      <div class="status-line ${state.config && state.config.found ? 'on' : ''}">${state.config && state.config.found ? `This run read <code>${esc(dir)}/</code>.` : `This run found no <code>${esc(dir)}/</code> folder, so it used the built-in panel.`}</div>
-      <pre class="tree">${esc(dir)}/
-├── panel.yaml              which reviewers run, and the synthesis model
-└── reviewers/
-    ├── check-security.md   replaces or extends a built-in reviewer
-    └── check-payments.md   adds a new reviewer</pre>
-      <h3>One file per reviewer</h3>
-      <p>Each file is that reviewer’s focus prompt in Markdown, with its settings in front matter. A file named after a built-in reviewer replaces its prompt; add <code>mode: append</code> to keep the built-in prompt and add yours after it. Any other name adds a new reviewer, which needs a <code>summary</code>.</p>
-      <div class="code-block"><button type="button" class="btn small" data-sact="copy-example" data-which="reviewer">Copy</button><pre>${esc(reviewer)}</pre></div>
-      <h3>panel.yaml</h3>
-      <p>Optional. It picks which reviewers run and in what order, and sets the synthesis model. Without it, every built-in reviewer runs, plus every file in <code>reviewers/</code>.</p>
-      <div class="code-block"><button type="button" class="btn small" data-sact="copy-example" data-which="panel">Copy</button><pre>${esc(example)}</pre></div>
-      <h3>Good to know</h3>
-      <ul>
-        <li>The panel reads this folder from the checkout you run it in, never from the pull request under review, so a change can’t rewrite the panel that judges it.</li>
-        <li><code>--panel DIR</code> reads another folder for one run, to try changes before you commit them.</li>
-        <li>The easiest start: open a reviewer under <strong>Reviewers</strong>, edit it, then choose <strong>Copy setup commands</strong>.</li>
-      </ul>
+      <div class="status-line ${found ? 'on' : ''}">${found ? `The review panel is using this repository’s settings from <code>${esc(dir)}/</code>.` : `The review panel is using its built-in settings. This repository has no <code>${esc(dir)}/</code> folder.`}</div>
+      <p>Add a <code>${esc(dir)}/</code> folder to the repository, with a <code>panel.yaml</code> that picks the reviewers and one Markdown file per reviewer holding its prompt. The next run reads it, and everyone who runs the panel in that repository gets the same reviewers.</p>
+      <div class="setup-card">
+        <div><h3>Set it up with your agent</h3><p>Copy this prompt into your coding agent in the repository. It asks what you want, then writes the files.</p></div>
+        <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn primary" data-sact="copy-prompt">Copy setup prompt</button></div>
+        <details><summary>Show the prompt</summary><pre class="setup-prompt">${esc(setupPrompt())}</pre></details>
+      </div>
     </div>`;
-  // Examples are rebuilt by copyExample, so they stay in step with this text.
 }
 const closeBtn = () => '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
 function renderSettings() {
@@ -1034,16 +1203,16 @@ function renderSettings() {
   holder.innerHTML = `<div class="sscrim" data-sact="close-scrim"><div class="swin" role="dialog" aria-modal="true" aria-label="Settings">
     <div class="sside">
       <div class="sside-title">Settings</div>
-      <div class="sgroup">This run</div>
+      <div class="sgroup">Review panel</div>
       <div class="snav">${nav('reviewers', 'Reviewers', cfg.reviewers.filter(r => r.included).length)}${nav('synthesis', 'Synthesis')}</div>
       <div class="sgroup">Customize</div>
       <div class="snav">${nav('repo', 'For a repository')}</div>
       <div class="sside-foot">Reads from<code>${esc(configDir())}/</code></div>
     </div>
     <div class="spane">${pane}
-      <div class="sfoot"><span class="note"><span class="dot-warn"></span>${files.length ? `${plural(files.length, 'file')} to add. Edits stay in this browser until you add the files to the repository.` : 'No changes yet. Edits stay in this browser until you add the files to the repository.'}</span>
+      ${settings.section === 'repo' ? '' : `<div class="sfoot"><span class="note"><span class="dot-warn"></span>${files.length ? `${plural(files.length, 'file')} to add. Edits stay in this browser until you add the files to the repository.` : 'No changes yet. Edits stay in this browser until you add the files to the repository.'}</span>
         <span class="note" id="setup-note"></span>
-        <button type="button" class="btn primary" data-sact="copy-setup" ${files.length ? '' : 'disabled'}>Copy setup commands</button></div>
+        <button type="button" class="btn primary" data-sact="copy-setup" ${files.length ? '' : 'disabled'}>Copy setup commands</button></div>`}
     </div>
   </div></div>`;
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret && el.setSelectionRange) el.setSelectionRange(caret[0], caret[1]); } }
@@ -1082,7 +1251,7 @@ document.getElementById('settings').addEventListener('click', async event => {
     case 'reset': if (r) Object.assign(r, r.original); break;
     case 'copy-file': if (r) await copy(reviewerFile(r), document.getElementById('cfg-note')); return;
     case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note')); return;
-    case 'copy-example': await copy(act.nextElementSibling.textContent.replace(/^# .*\n/, ''), null); act.textContent = 'Copied'; return;
+    case 'copy-prompt': await copy(setupPrompt(), document.getElementById('prompt-note')); return;
   }
   saveConfig();
   renderSettings();

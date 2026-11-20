@@ -192,6 +192,23 @@ class PureHelpers(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
 
+    def test_line_ranges_reads_the_shapes_reviewers_write(self):
+        self.assertEqual(review_panel.line_ranges('42'), [(42, 42)])
+        self.assertEqual(review_panel.line_ranges('472-484, 528'), [(472, 484), (528, 528)])
+        self.assertEqual(review_panel.line_ranges(None), [])
+        self.assertEqual(review_panel.line_ranges('1-500'), [(1, review_panel.SNIPPET_MAX_LINES)])
+
+    def test_code_snippets_stay_inside_the_checkout(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / 'code'
+            root.mkdir()
+            (root / 'a.py').write_text(''.join(f'line {n}\n' for n in range(1, 11)))
+            (Path(folder) / 'secret.txt').write_text('no')
+            found = review_panel.code_snippets(root, [{'file': 'a.py', 'line': '5'}, {'file': '../secret.txt', 'line': '1'},
+                                                      {'file': 'missing.py', 'line': '1'}])
+        self.assertEqual(list(found), ['a.py:5'])
+        self.assertEqual(found['a.py:5'][0]['lines'], ['line 3', 'line 4', 'line 5', 'line 6', 'line 7'])
+
     def test_parse_yaml_reads_scalars_lists_and_maps(self):
         text = 'reviewers:   # in order\n  - check-security\n  - "check-payments"\nsynthesis:\n  model: opus\n  effort: high\nflag: true\nsummary: "Checks #1: payments"\n'
         self.assertEqual(review_panel.parse_yaml(text, 'panel.yaml'),
@@ -348,6 +365,13 @@ class PanelRun(unittest.TestCase):
         self.assertEqual((run_dir / 'base' / 'app.py').read_text(), 'items = [1, 2, 3]\n')
         codex_call = next(c for c in self.calls() if c[0] == 'codex')
         self.assertIn('read-only', codex_call)
+        # The finding window shows the cited code, read from the reviewed snapshot.
+        excerpt = state['snippets']['app.py:2'][0]
+        self.assertEqual((excerpt['start'], excerpt['focus']), (1, [2, 2]))
+        self.assertIn('range(len(items) - 1)', excerpt['lines'][1])
+        self.assertEqual(state['target']['repo_name'], 'repo')
+        self.assertIsNone(state['target']['github'])
+        self.assertIn('review_panel.py run --base main', state['target']['rerun'])
 
     def test_repo_panel_folder_customizes_the_run(self):
         self.install('claude', FAKE_CLAUDE)

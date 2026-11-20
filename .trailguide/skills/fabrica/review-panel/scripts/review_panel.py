@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import shlex
 import shutil
 import signal
 import subprocess
@@ -381,6 +382,26 @@ def snapshot_commit(repo):
         return git(['commit-tree', tree, '-p', 'HEAD', '-m', 'review-panel snapshot'], repo, env=env)
 
 
+def github_repo(repo):
+    """owner/name when origin is a GitHub repository, else None."""
+    url = git(['remote', 'get-url', 'origin'], repo, check=False) or ''
+    match = re.search(r'github\.com[:/]([^/]+/[^/]+?)(?:\.git)?/?$', url)
+    return match.group(1) if match else None
+
+
+def open_pull_request(repo):
+    """The open pull request for the current branch, if gh can find one quickly; None otherwise."""
+    if not shutil.which('gh'):
+        return None
+    try:
+        result = subprocess.run(['gh', 'pr', 'view', '--json', 'number,title,url,state'], cwd=repo,
+                                capture_output=True, text=True, timeout=10)
+        pr = json.loads(result.stdout) if result.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return None
+    return pr if pr and pr.get('state') == 'OPEN' else None
+
+
 def prepare_target(args, repo, run_dir):
     """Return the target description and the worktree reviewers read code from.
 
@@ -398,18 +419,23 @@ def prepare_target(args, repo, run_dir):
         git(['fetch', '--quiet', 'origin', pr['baseRefName'], f"refs/pull/{pr['number']}/head"], repo)
         base, head = f"origin/{pr['baseRefName']}", pr['headRefOid']
         target = {'kind': 'pr', 'label': f"PR #{pr['number']}: {pr['title']}", 'url': pr['url'],
-                  'description': pr.get('body') or ''}
+                  'description': pr.get('body') or '', 'number': pr['number'], 'title': pr['title']}
     else:
         base = args.base or default_base(repo)
         branch = git(['branch', '--show-current'], repo, check=False) or git(['rev-parse', '--short', 'HEAD'], repo)
         # Reviewers read a snapshot, so the person can keep working while the panel runs.
         head = snapshot_commit(repo)
-        target = {'kind': 'local', 'label': f'{branch} against {base}', 'url': None, 'description': ''}
+        target = {'kind': 'local', 'label': f'{branch} against {base}', 'url': None, 'description': '', 'branch': branch}
+        # A local review of a branch that has a pull request links to it, but still reviews the local snapshot.
+        pr = open_pull_request(repo)
+        if pr:
+            target.update(url=pr['url'], number=pr['number'], title=pr['title'])
     merge_base = git(['merge-base', base, head], repo)
     worktree = run_dir / 'worktree'
     git(['worktree', 'add', '--quiet', '--detach', str(worktree), head], repo)
     log = git(['log', '--no-color', '--format=%h %s%n%n%b', f'{merge_base}..{head}'], repo)
-    target.update(base=base, merge_base=merge_base, head=head, commits=log[:20_000],
+    github = github_repo(repo)
+    target.update(repo_name=github or repo.name, github=github, base=base, merge_base=merge_base, head=head, commits=log[:20_000],
                   diff_command=f'git diff {merge_base} {head}')
     return target, worktree, git([*DIFF, merge_base, head], repo, raw=True)
 
@@ -972,6 +998,51 @@ def write_base_files(repo, target, run_dir):
     return base_dir
 
 
+SNIPPET_CONTEXT = 2       # lines shown around each cited range
+SNIPPET_MAX_LINES = 60    # longest single range shown
+SNIPPET_MAX_RANGES = 4    # ranges shown per finding
+
+
+def line_ranges(line):
+    """Parse a finding's `line` ("42", "40-55", "472-484, 528") into (start, end) pairs; [] if it has none."""
+    ranges = []
+    for start, end in re.findall(r'(\d+)(?:\s*[-\u2013]\s*(\d+))?', str(line or '')):
+        start, end = int(start), int(end or start)
+        if start > 0 and end >= start:
+            ranges.append((start, min(end, start + SNIPPET_MAX_LINES - 1)))
+    return ranges[:SNIPPET_MAX_RANGES]
+
+
+def code_snippets(code_dir, findings):
+    """Excerpts of the code each finding cites, read from the reviewed snapshot, keyed "file:line".
+
+    The page shows them in the finding window, and the standalone report keeps them after the worktree is gone.
+    """
+    root = Path(code_dir).resolve()
+    snippets = {}
+    for finding in findings:
+        file, line = finding.get('file'), finding.get('line')
+        key = f'{file}:{line}'
+        if not file or key in snippets:
+            continue
+        path = (root / file).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            continue
+        try:
+            lines = path.read_text(errors='replace').splitlines()
+        except OSError:
+            continue
+        excerpts = []
+        for start, end in line_ranges(line):
+            if start > len(lines):
+                continue
+            first, last = max(1, start - SNIPPET_CONTEXT), min(len(lines), end + SNIPPET_CONTEXT)
+            excerpts.append({'start': first, 'focus': [start, min(end, len(lines))],
+                             'lines': [text[:400] for text in lines[first - 1:last]]})
+        snippets[key] = excerpts
+    return snippets
+
+
 def initial_state(repo, run_dir, target, stat, roster, reviewers):
     def entry(agent, **extra):
         return {'agent': agent, 'status': 'queued', 'started_at': None, 'ended_at': None, 'activity': None,
@@ -982,7 +1053,7 @@ def initial_state(repo, run_dir, target, stat, roster, reviewers):
         'reviewers': {name: entry(spec['agent'], focus=spec['summary'], planned=spec['planned'], note=spec.get('note'),
                                   focus_text=spec['focus_text'], source=spec['source'])
                       for name, spec in reviewers.items()},
-        'config': roster.get('config'),
+        'config': roster.get('config'), 'snippets': {},
         'synthesis': entry(roster['synthesize']['agent'], status='waiting'),
     }
 
@@ -1010,6 +1081,8 @@ def run(args):
     (run_dir / 'reviewers').mkdir(parents=True)
     try:
         target, code_dir, diff = prepare_target(args, repo, run_dir)
+        # The page's Rerun button copies this, so a person can review the change again after fixing it.
+        target['rerun'] = shlex.join(['python3', str(Path(__file__).resolve()), *sys.argv[1:]])
         if not diff.strip():
             raise PanelError(f"there is nothing to review: no changes between {target['base']} and the working tree")
         return review(args, repo, run_dir, target, code_dir, diff, extra, roster, reviewers)
@@ -1068,7 +1141,13 @@ def run_panel(args, run_dir, code_dir, state, server, context, files, roster, re
             fallback = dict(roster['codex_fallback'])
             state.update(lambda data: entry(data).update(agent=fallback, error=None, note=f'ran on Claude: codex failed ({error})'[:300]))
             result = panel.run_stage(entry, fallback, prompt, validate_review, folder / 'fallback')
+        if result:
+            add_snippets(result['findings'])
         return result
+
+    def add_snippets(findings):
+        found = code_snippets(code_dir, findings)
+        state.update(lambda data: data.setdefault('snippets', {}).update(found))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
         results = dict(zip(reviewers, pool.map(lambda item: reviewer(*item), reviewers.items())))
@@ -1079,6 +1158,8 @@ def run_panel(args, run_dir, code_dir, state, server, context, files, roster, re
         panel.run_stage(lambda data: data['synthesis'], roster['synthesize']['agent'],
                         synthesis_prompt(context, reviews, failures),
                         lambda value: validate_synthesis(normalize_synthesis(value), reviews), run_dir / 'synthesis')
+        if state.data['synthesis'].get('result'):
+            add_snippets(state.data['synthesis']['result']['findings'])
     else:
         reason = 'cancelled' if panel.cancelled.is_set() else 'no reviewer reported'
         state.update(lambda data: data['synthesis'].update(status='skipped', error=reason))
