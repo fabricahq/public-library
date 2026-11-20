@@ -9,6 +9,8 @@ import tempfile
 import textwrap
 import time
 import unittest
+import urllib.error
+import urllib.request
 
 SKILL = Path(__file__).resolve().parent.parent
 SCRIPT = SKILL / 'scripts' / 'review_panel.py'
@@ -53,7 +55,7 @@ FAKE_CLAUDE = textwrap.dedent('''\
             'conclusions': ['Fix S1 before merging: the loop drops the last item.'], 'findings': [
             {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 'Off by one', 'file': 'app.py',
              'line': '2', 'body': 'Confirmed.', 'fix': 'Use <=.', 'merges': [n + ':F1' for n in names]}],
-            'dropped': [], 'questions': [{'question': 'Keep the old format?', 'why': 'Clients parse it.'}]}
+            'dropped': [], 'questions': [{'question': 'Keep the old format?', 'why': 'Clients parse it.', 'blocking': True}]}
         text = 'Done.\\n```json\\n' + json.dumps(value) + '\\n```'
     elif os.environ.get('FAKE_BAD_FIRST') and 'did not meet the output contract' not in prompt:
         text = 'I looked and it seems fine.'
@@ -130,6 +132,65 @@ class PureHelpers(unittest.TestCase):
         self.assertTrue(any('missing: check-rules:F1' in p for p in problems), problems)
         value['dropped'] = [{'reviewer': 'check-rules', 'finding': 'F1', 'reason': 'Already handled.'}]
         self.assertEqual(review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW}), [])
+
+    def test_validate_review_rejects_repeated_finding_ids(self):
+        bad = json.loads(json.dumps(REVIEW))
+        bad['findings'].append(dict(bad['findings'][0]))
+        self.assertIn('finding ids must be unique; repeated: F1', review_panel.validate_review(bad))
+
+    def test_validate_synthesis_rejects_a_finding_both_merged_and_dropped(self):
+        value = self.synthesis(dropped=[{'reviewer': 'check-docs', 'finding': 'F1', 'reason': 'Duplicate.'}])
+        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
+        self.assertTrue(any('listed more than once: check-docs:F1' in p for p in problems), problems)
+
+    def test_validate_synthesis_rejects_a_drop_of_a_finding_no_reviewer_raised(self):
+        value = self.synthesis(dropped=[{'reviewer': 'check-docs', 'finding': 'F9', 'reason': 'Wrong.'}])
+        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
+        self.assertTrue(any("dropped names 'check-docs:F9'" in p for p in problems), problems)
+
+    def test_validate_synthesis_ties_the_verdict_to_blocking_questions(self):
+        reviews = {'check-docs': REVIEW, 'check-rules': REVIEW}
+        merged = self.synthesis()['findings'][0]
+        advisory = dict(merged, severity='advisory')
+        ready = self.synthesis(verdict='ready', findings=[advisory], questions=[{'question': 'Q?', 'blocking': True}])
+        self.assertIn("verdict can't be 'ready' while a question is blocking", review_panel.validate_synthesis(ready, reviews))
+        decide = self.synthesis(verdict='needs-decision', findings=[advisory], questions=[{'question': 'Q?', 'blocking': False}])
+        self.assertIn("verdict 'needs-decision' needs at least one blocking question", review_panel.validate_synthesis(decide, reviews))
+        missing = self.synthesis(verdict='ready', findings=[advisory], questions=[{'question': 'Q?'}])
+        self.assertIn('questions[0].blocking must be true or false', review_panel.validate_synthesis(missing, reviews))
+
+    def test_report_lists_dropped_findings_blocking_first(self):
+        advisory = dict(REVIEW['findings'][0], id='F2', severity='advisory', title='Minor')
+        blocking = dict(REVIEW['findings'][0], severity='blocking', title='Major')
+        state = {'target': {'label': 'x'}, 'reviewers': {'check-docs': {'status': 'done', 'result': {'findings': [blocking, advisory]}}},
+                 'synthesis': {'result': {'verdict': 'ready', 'summary': 's', 'conclusions': ['c'], 'findings': [], 'questions': [],
+                                          'dropped': [{'reviewer': 'check-docs', 'finding': 'F2', 'reason': 'Style only.'},
+                                                      {'reviewer': 'check-docs', 'finding': 'F1', 'reason': 'Handled in tests.'}]}}}
+        report = review_panel.report_markdown(state)
+        self.assertIn('## Dropped by the synthesis', report)
+        self.assertLess(report.index('check-docs:F1 [blocking] Major: Handled in tests.'), report.index('check-docs:F2 [advisory] Minor'))
+
+    def test_live_server_needs_the_token_and_serves_the_fallback_log(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            (run_dir / 'reviewers' / 'check-docs' / 'fallback').mkdir(parents=True)
+            (run_dir / 'reviewers' / 'check-docs' / 'events.jsonl').write_text('codex failed')
+            (run_dir / 'reviewers' / 'check-docs' / 'fallback' / 'events.jsonl').write_text('claude ran')
+            state = review_panel.State(run_dir / 'state.json', {'status': 'running'})
+            server = review_panel.serve(state, run_dir, 0, 'tok')
+            try:
+                base = f'http://127.0.0.1:{server.server_address[1]}'
+                get = lambda path: urllib.request.urlopen(base + path, timeout=5)
+                self.assertEqual(get('/tok/').status, 200)
+                self.assertEqual(json.loads(get('/tok/state.json').read())['status'], 'running')
+                self.assertEqual(get('/tok/log/check-docs').read(), b'claude ran')
+                for path in ('/wrong/', '/wrong/state.json', '/tok/log/..', '/tok/log/check-none'):
+                    with self.assertRaises(urllib.error.HTTPError, msg=path) as caught:
+                        get(path)
+                    self.assertEqual(caught.exception.code, 404)
+            finally:
+                server.shutdown()
+                server.server_close()
 
     def test_validate_synthesis_requires_short_conclusions(self):
         problems = review_panel.validate_synthesis(self.synthesis(conclusions=['x' * 201]), {'check-docs': REVIEW, 'check-rules': REVIEW})

@@ -35,7 +35,8 @@ SYNTHESIS_VERDICTS = ('ready', 'fix-first', 'needs-decision')
 # Claude sessions read untrusted text (the diff, a pull request's description, the files it adds), so they
 # get file-reading tools only: no shell, no project settings or hooks, no MCP servers. The run directory
 # holds the patch and the base versions of changed files, so reviewers need no Git commands.
-# Codex sessions get the same guarantee from its read-only sandbox.
+# Codex sessions can run shell commands, inside a sandbox that blocks writes and network access; that is
+# an accepted risk. --claude-only gives the stricter no-shell setup for untrusted pull requests.
 CLAUDE_TOOLS = ['Read', 'Grep', 'Glob']
 CLAUDE_DENIED = ['Bash', 'Edit', 'Write', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Agent', 'Task']
 
@@ -109,6 +110,7 @@ def validate_review(value):
     _require(isinstance(findings, list), 'findings must be a list', problems)
     for index, finding in enumerate(findings if isinstance(findings, list) else []):
         _check_finding(finding, f'findings[{index}]', problems)
+    _check_unique_ids(findings, problems)
     _check_items(value, 'unverified', ('claim', 'reason'), problems)
     _check_items(value, 'checks', ('check', 'result'), problems)
     for index, check in enumerate(value.get('checks') if isinstance(value.get('checks'), list) else []):
@@ -116,6 +118,12 @@ def validate_review(value):
             _require(check.get('result') in CHECK_RESULTS, f'checks[{index}].result must be one of {", ".join(CHECK_RESULTS)}', problems)
     _require(len(value.get('summary') or '') <= 400, 'summary must be under 400 characters; put the detail in checks and findings', problems)
     return problems
+
+
+def _check_unique_ids(findings, problems):
+    ids = [f.get('id') for f in findings if isinstance(f, dict)] if isinstance(findings, list) else []
+    repeated = sorted({i for i in ids if isinstance(i, str) and ids.count(i) > 1})
+    _require(not repeated, 'finding ids must be unique; repeated: ' + ', '.join(repeated), problems)
 
 
 def _check_items(value, key, fields, problems):
@@ -137,6 +145,7 @@ def validate_synthesis(value, reviews):
     """
     known = {f'{name}:{f["id"]}' for name, review in reviews.items() for f in review.get('findings', [])}
     accounted = set()
+    seen = []
     problems = []
     if not isinstance(value, dict):
         return ['the reply is not a JSON object']
@@ -154,6 +163,8 @@ def validate_synthesis(value, reviews):
             _require(valid, f'{where}.merges names {ref!r}, which is not a reviewer finding in the reports', problems)
             if valid:
                 accounted.add(ref)
+                seen.append(ref)
+    _check_unique_ids(findings, problems)
     _require(len(value.get('summary') or '') <= 600, 'summary must be under 600 characters; put the detail in findings and questions', problems)
     conclusions = value.get('conclusions')
     _require(isinstance(conclusions, list) and 1 <= len(conclusions) <= 5, 'conclusions must list one to five short statements', problems)
@@ -162,17 +173,29 @@ def validate_synthesis(value, reviews):
     _check_items(value, 'dropped', ('reviewer', 'finding', 'reason'), problems)
     for item in value.get('dropped') if isinstance(value.get('dropped'), list) else []:
         if isinstance(item, dict):
-            accounted.add(f"{item.get('reviewer')}:{item.get('finding')}")
+            ref = f"{item.get('reviewer')}:{item.get('finding')}"
+            _require(ref in known, f'dropped names {ref!r}, which is not a reviewer finding in the reports', problems)
+            accounted.add(ref)
+            seen.append(ref)
+    repeated = sorted({ref for ref in seen if seen.count(ref) > 1})
+    _require(not repeated, 'each reviewer finding belongs in exactly one finding\'s merges or in dropped; listed more than once: '
+             + ', '.join(repeated[:10]), problems)
     missing = sorted(known - accounted)
     _require(not missing, 'every reviewer finding must be merged into a finding or dropped with a reason; missing: ' + ', '.join(missing[:10]), problems)
     _check_items(value, 'questions', ('question',), problems)
+    questions = value.get('questions') if isinstance(value.get('questions'), list) else []
+    for index, question in enumerate(questions):
+        _require(isinstance(question, dict) and isinstance(question.get('blocking'), bool),
+                 f'questions[{index}].blocking must be true or false', problems)
+    blocking_question = any(isinstance(q, dict) and q.get('blocking') is True for q in questions)
     if isinstance(findings, list):
         blocking = any(isinstance(f, dict) and f.get('severity') == 'blocking' for f in findings)
         verdict = value.get('verdict')
         _require(not (verdict == 'ready' and blocking), "verdict can't be 'ready' while a finding is blocking", problems)
         _require(not (verdict == 'fix-first' and not blocking), "verdict 'fix-first' needs a blocking finding", problems)
-        _require(not (verdict == 'needs-decision' and not value.get('questions')),
-                 "verdict 'needs-decision' needs at least one question", problems)
+        _require(not (verdict == 'needs-decision' and not blocking_question),
+                 "verdict 'needs-decision' needs at least one blocking question", problems)
+        _require(not (verdict == 'ready' and blocking_question), "verdict can't be 'ready' while a question is blocking", problems)
     return problems
 
 
@@ -686,7 +709,19 @@ def report_markdown(state):
         if finding.get('fix'):
             lines += ['Fix: ' + finding['fix'], '']
     if synthesis.get('questions'):
-        lines += ['## Questions for you', ''] + [f"- {q['question']}" for q in synthesis['questions']] + ['']
+        lines += ['## Questions for you', ''] + [f"- {'[blocking] ' if q.get('blocking') else ''}{q['question']}"
+                                                 for q in synthesis['questions']] + ['']
+    dropped = []
+    for item in synthesis.get('dropped', []):
+        result = state['reviewers'].get(item['reviewer'], {}).get('result') or {}
+        original = next((f for f in result.get('findings', []) if f.get('id') == item['finding']), {})
+        dropped.append((original.get('severity') != 'blocking', item, original))
+    if dropped:
+        lines += ['## Dropped by the synthesis', '']
+        for _, item, original in sorted(dropped, key=lambda d: d[0]):
+            lines.append(f"- {item['reviewer']}:{item['finding']} [{original.get('severity', '?')}] "
+                         f"{original.get('title', '')}: {item['reason']}")
+        lines.append('')
     for name, reviewer in state['reviewers'].items():
         if reviewer['status'] != 'done':
             lines.append(f"- {name} did not report: {reviewer.get('error') or reviewer['status']}")
@@ -733,8 +768,14 @@ def serve(state, run_dir, port, token):
                 body, kind = state.serve_snapshot().encode(), 'application/json'
             elif path.startswith(f'/{token}/log/'):
                 name = path.rsplit('/', 1)[-1]
-                log = run_dir / 'reviewers' / name / 'events.jsonl'
-                if not re.fullmatch(r'[a-z0-9-]+', name) or not log.exists():
+                if not re.fullmatch(r'[a-z0-9-]+', name):
+                    self.send_error(404)
+                    return
+                # After a Codex-to-Claude fallback, the session that produced the result logged under fallback/.
+                log = run_dir / 'reviewers' / name / 'fallback' / 'events.jsonl'
+                if not log.exists():
+                    log = run_dir / 'reviewers' / name / 'events.jsonl'
+                if not log.exists():
                     self.send_error(404)
                     return
                 body, kind = log.read_bytes()[-200_000:], 'text/plain; charset=utf-8'

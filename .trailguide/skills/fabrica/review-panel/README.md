@@ -59,4 +59,4 @@ The live page shows the Claude and OpenAI marks from Font Awesome Free 7.2.0 und
 
 ## What it does not do
 
-The panel reviews and reports. It doesn't fix findings, post comments on pull requests, or run the project's tests; ask your agent to fix findings and run the panel again on the reviewers that raised them.
+The panel reviews and reports. It doesn't fix findings, post comments on pull requests, or run the project's tests. To get findings fixed, tick them on the page and choose **Prepare handoff**: it writes a prompt you can edit and paste into the agent that will make the fixes, ending with the command that runs the panel again on the reviewers that raised them.
