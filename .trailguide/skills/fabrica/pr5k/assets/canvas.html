@@ -115,6 +115,21 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .node-thumb.dk { display: var(--thumb-d, none); }
 .preview-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
 .preview-bar a { margin-left: auto; color: var(--accent); white-space: nowrap; }
+.pv-tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.pv-tab { flex: none; border: 0; background: none; padding: 8px 12px 9px; margin-bottom: -1px; border-bottom: 2px solid transparent; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.pv-tab:hover { color: var(--ink); }
+.pv-tab[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+.pv-tab .pill { margin-left: 6px; }
+.pv-stage { display: block; width: 100%; height: 160px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+.pv-code-head { display: flex; align-items: center; gap: 8px; margin: 14px 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.pv-code-head .hint { font-weight: 400; }
+.pv-code-head button { margin-left: auto; border: 0; background: none; font: inherit; font-weight: 400; color: var(--muted); cursor: pointer; }
+.pv-code-head button:hover { color: var(--ink); }
+.pv-code { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: var(--ink); white-space: pre; }
+.pv-code code, .insp-body .pv-code code { display: block; background: none; border: 0; padding: 0; border-radius: 0; font-size: inherit; color: inherit; font-variant-ligatures: none; }
+.pv-code .k { color: #a626a4; } .pv-code .s { color: #50a14f; } .pv-code .c { color: #a0a1a7; font-style: italic; } .pv-code .t { color: #c45500; } .pv-code .a { color: #4078f2; } .pv-code .n { color: #986801; } .pv-code .p { color: #7a7a7a; }
+:root[data-theme="dark"] .pv-code .k { color: #c678dd; } :root[data-theme="dark"] .pv-code .s { color: #98c379; } :root[data-theme="dark"] .pv-code .c { color: #7f848e; } :root[data-theme="dark"] .pv-code .t { color: #e5a05b; } :root[data-theme="dark"] .pv-code .a { color: #61afef; } :root[data-theme="dark"] .pv-code .n { color: #d19a66; } :root[data-theme="dark"] .pv-code .p { color: #9da5b4; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pv-code .k { color: #c678dd; } :root:not([data-theme="light"]) .pv-code .s { color: #98c379; } :root:not([data-theme="light"]) .pv-code .c { color: #7f848e; } :root:not([data-theme="light"]) .pv-code .t { color: #e5a05b; } :root:not([data-theme="light"]) .pv-code .a { color: #61afef; } :root:not([data-theme="light"]) .pv-code .n { color: #d19a66; } :root:not([data-theme="light"]) .pv-code .p { color: #9da5b4; } }
 .preview-frame { display: block; width: 100%; height: max(420px, calc(100vh - 260px)); border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
 .node-num { font-family: var(--mono); font-size: 11px; color: var(--faint); min-width: 18px; }
 .node.table { width: 340px; padding: 0; overflow: hidden; }
@@ -700,8 +715,8 @@ function openSettings(section = 'personas') {
         <label class="wide">URL for a PR<input name="curl" value="${esc(c.url)}" placeholder="https://pr-{pr}.preview.example.com/catalog/" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></label>
         <label class="wide">How it is structured<textarea name="cabout" rows="4" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" placeholder="Each component's states live beside it in <name>.catalog.tsx ...">${esc(c.about)}</textarea></label>
         <div class="set-form-actions"><span></span><button type="button" class="tool-btn" data-catalog-cancel>Cancel</button><button type="submit" class="tool-btn primary">Done</button></div></form>`
-      : `<div class="set-row"><div class="set-row-text"><b>${c.path ? `<code>${esc(c.path)}</code>` : 'No path yet'}</b><span>${c.url ? esc(c.url) : 'No URL yet: the skill reads the catalog, but previews need a deployed one.'}</span>${c.about ? `<span>${esc(c.about)}</span>` : ''}</div><button class="icon-btn" data-catalog-edit aria-label="Edit the catalog">${PENCIL}</button></div>`;
-    main.innerHTML = `<header class="set-head"><h2>Catalog</h2><p>Optional. Without a catalog the skill builds its own previews of the components a PR changes, as of the commit it scans. With one, the canvas shows them from the project's catalog, current with every deploy.</p></header>
+      : `<div class="set-row"><div class="set-row-text"><b>${c.path ? `<code>${esc(c.path)}</code>` : 'No path yet'}</b><span>${c.url ? esc(c.url) : 'No URL yet: previews still show, built from the PR; a URL adds a link to its deployed catalog.'}</span>${c.about ? `<span>${esc(c.about)}</span>` : ''}</div><button class="icon-btn" data-catalog-edit aria-label="Edit the catalog">${PENCIL}</button></div>`;
+    main.innerHTML = `<header class="set-head"><h2>Catalog</h2><p>Optional. Without a catalog the skill builds its own previews of the components a PR changes, as of the commit it scans. With one, the canvas shows them from the project's own catalog, built at the commit it scans, and links the PR's deployed catalog.</p></header>
       <section class="set-group"><div class="set-list"><button class="set-choice" role="switch" aria-checked="${!!c.enabled}" data-catalog-toggle><span class="set-choice-text"><span>Use a component catalog</span><span class="hint">${c.enabled ? 'On: previews come from the catalog below.' : 'Off: the skill builds its own previews.'}</span></span><span class="switch" aria-hidden="true"></span></button></div></section>
       ${c.enabled ? `<section class="set-group"><h3>Where it is</h3><div class="set-list">${fields}</div></section>` : ''}
       <section class="set-group"><h3>Set one up</h3><p class="hint" style="margin:0 0 8px">A prompt for an agent in the repository: it builds a catalog the skill can show live and fills in these settings.</p><button class="tool-btn" data-catalog-prompt>Copy setup prompt</button> <span class="hint" data-prompt-msg></span></section>
@@ -1357,10 +1372,61 @@ function thumbHtml(pv) {
 }
 function previewPane(it) {
   const pv = it.preview; if (!pv?.url) return '';
+  if (pv.states?.length && typeof pv.states[0] === 'object') return statesPane(it);
   const n = pv.states?.length || 0;
   const from = pv.source === 'catalog' ? "From the project's component catalog, as of its latest deploy" : `The real component at ${esc(D.pr?.headSha || 'the scanned commit')}, against sample data`;
-  return `<div class="preview-bar"><span>${from}${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}${pv.source === 'catalog' ? '' : ', each with its code beneath'}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
+  return `<div class="preview-bar"><span>${from}${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
 }
+/* A preview given state by state: a tab per state, the bare component in a frame, and the code that state runs beneath it. */
+function stateUrl(pv, st, shot) { return pv.url + (pv.url.includes('?') ? '&' : '?') + 'c=' + encodeURIComponent(pv.component || '') + '&s=' + encodeURIComponent(st.id) + (shot ? '&shot=1' : ''); }
+const PV_ITEMS = {};
+function statesPane(it) {
+  PV_ITEMS[it.id] = it;
+  const pv = it.preview, n = pv.states.length, st = pv.states[0];
+  const from = pv.source === 'catalog' ? `From the project's component catalog at ${esc(D.pr?.headSha || 'the scanned commit')}` : `The real component at ${esc(D.pr?.headSha || 'the scanned commit')}, against sample data`;
+  const live = pv.live ? `<a href="${esc(pv.live)}" target="_blank" rel="noopener noreferrer">In the PR's preview ↗</a>` : '';
+  return `<div class="preview-bar"><span>${from}, in ${n} state${n > 1 ? 's' : ''}. Changes stay in this preview.</span>${live}<a href="${esc(previewSrc(stateUrl(pv, st)))}" target="_blank" rel="noopener noreferrer" data-pv-open style="margin-left:${live ? '12px' : 'auto'}">Open in a new tab ↗</a></div>
+    <div class="pv-tabs" role="tablist" aria-label="States">${pv.states.map((x, i) => `<button class="pv-tab" role="tab" aria-selected="${i === 0}" data-pv-state="${i}" data-pv-item="${esc(it.id)}">${esc(x.title)}${x.status === 'new' ? '<span class="pill new">New</span>' : x.status === 'changed' ? '<span class="pill changed">Changed</span>' : ''}</button>`).join('')}</div>
+    <iframe class="pv-stage" data-preview="${esc(stateUrl(pv, st, true))}" src="${esc(previewSrc(stateUrl(pv, st, true)))}" title="${esc(it.title)}, ${esc(st.title)}"></iframe>
+    <div data-pv-code>${stateCodeHtml(pv, st)}</div>`;
+}
+function stateCodeHtml(pv, st) {
+  if (!st.code) return '';
+  return `<div class="pv-code-head">Code${st.codeFrom ? `<span class="hint">from <code>${esc(st.codeFrom)}</code></span>` : ''}<button type="button" data-copy-code>Copy</button></div><pre class="pv-code"><code>${highlightCode(st.code)}</code></pre>`;
+}
+const CODE_KEYWORDS = new Set(['import', 'from', 'export', 'const', 'let', 'function', 'return', 'type', 'new', 'true', 'false', 'null', 'undefined', 'readonly', 'as']);
+const CODE_TOKEN = /(\/\/[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(<\/?)([A-Za-z][\w.]*)|([A-Za-z_]\w*)(?==)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)|([{}()[\]<>/=;,.:])/g;
+function highlightCode(code) {
+  let out = '', last = 0;
+  const span = (cls, t) => `<span class="${cls}">${esc(t)}</span>`;
+  for (const m of code.matchAll(CODE_TOKEN)) {
+    out += esc(code.slice(last, m.index));
+    const [all, comment, str, open, tag, attr, num, word, punct] = m;
+    out += comment ? span('c', comment) : str ? span('s', str) : open ? span('p', open) + span('t', tag) : attr ? span('a', attr) : num ? span('n', num) : word ? (CODE_KEYWORDS.has(word) ? span('k', word) : esc(word)) : punct ? span('p', punct) : esc(all);
+    last = m.index + all.length;
+  }
+  return out + esc(code.slice(last));
+}
+/* A frame on the canvas's own origin grows to its content; one elsewhere keeps a height that fits most states. */
+function fitStage(f) {
+  const fit = () => { try { const d = f.contentDocument; if (!d?.body) return; const h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight); if (h) f.style.height = Math.min(h + 2, 1400) + 'px'; } catch (e) { f.style.height = '420px'; } };
+  fit(); setTimeout(fit, 400); setTimeout(fit, 1200); setTimeout(fit, 2500);
+}
+document.addEventListener('load', e => { if (e.target.matches?.('iframe.pv-stage')) fitStage(e.target); }, true);
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-pv-state]');
+  if (t) {
+    const it = PV_ITEMS[t.dataset.pvItem]; const pv = it?.preview; if (!pv) return;
+    const st = pv.states[+t.dataset.pvState]; const pane = t.closest('.pv-tabs').parentElement;
+    pane.querySelectorAll('[data-pv-state]').forEach(b => b.setAttribute('aria-selected', String(b === t)));
+    const f = pane.querySelector('iframe.pv-stage'); f.dataset.preview = stateUrl(pv, st, true); f.title = `${it.title}, ${st.title}`; f.src = previewSrc(f.dataset.preview);
+    const open = pane.querySelector('[data-pv-open]'); if (open) open.href = previewSrc(stateUrl(pv, st));
+    pane.querySelector('[data-pv-code]').innerHTML = stateCodeHtml(pv, st);
+    return;
+  }
+  const c = e.target.closest('[data-copy-code]');
+  if (c) { const code = c.closest('[data-pv-code]').querySelector('pre').innerText; try { await navigator.clipboard.writeText(code); c.textContent = 'Copied'; setTimeout(() => { c.textContent = 'Copy'; }, 1200); } catch (err) {} }
+});
 /* Which other components of the PR a component draws, or is drawn by; each opens that component's window. */
 function partsHtml(title, ids) {
   return ids?.length ? `<section><h3>${esc(title)}</h3><div class="part-chips">${ids.map(id => `<button type="button" class="part-chip" data-open-node="${esc(id)}">${esc(id)}</button>`).join('')}</div></section>` : '';
