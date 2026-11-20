@@ -802,8 +802,11 @@ def apply_repo_config(roster, folder, label):
             raise PanelError(f'{path}: mode must be replace or append')
         relative = f'{label}/reviewers/{path.name}'
         if name in reviewers:
+            reviewers[name].update(file=relative, file_body=body, mode=mode)
             spec = reviewers[name]
-            if mode == 'append':
+            if not body:  # Front matter only: change the summary or agent and keep the built-in prompt.
+                spec['source'] = f'built-in prompt, settings from {relative}'
+            elif mode == 'append':
                 spec['focus_text'] += '\n\n## Added by this repository\n\n' + body
                 spec['source'] = f'built-in, extended by {relative}'
             else:
@@ -814,10 +817,11 @@ def apply_repo_config(roster, folder, label):
                 raise PanelError(f'{path}: mode append needs a built-in reviewer named {name}; this one is new')
             if not settings.get('summary'):
                 raise PanelError(f'{path}: a new reviewer needs a summary in its front matter')
-            spec = reviewers[name] = {'agent': dict(NEW_REVIEWER_AGENT), 'focus_text': body, 'source': f'added by {relative}'}
+            spec = reviewers[name] = {'agent': dict(NEW_REVIEWER_AGENT), 'focus_text': body, 'source': f'added by {relative}',
+                                      'file': relative, 'file_body': body, 'mode': mode}
             added.append(name)
-        if not body:
-            raise PanelError(f'{path}: the prompt below the front matter is empty')
+        if not body and name in added:
+            raise PanelError(f'{path}: a new reviewer needs a prompt below the front matter')
         if settings.get('summary'):
             spec['summary'] = str(settings['summary'])
         spec['agent'] = _agent_with(spec['agent'], settings, str(path))
@@ -830,19 +834,46 @@ def apply_repo_config(roster, folder, label):
             raise PanelError(f"{config_path}: no reviewer named {', '.join(missing)}; add reviewers/{missing[0]}.md "
                              f"or choose from {', '.join(reviewers)}")
         roster['reviewers'] = {n: reviewers[n] for n in chosen}
+    roster.setdefault('config', {})['panel'] = config
 
 
-def load_roster(only, claude_only, repo=None, panel=None):
+def roster_summary(roster):
+    """Every reviewer the panel would run, and where each setting comes from, for the settings window."""
+    chosen = roster['config'].get('panel', {}).get('reviewers')
+    every = {**roster.get('built_in', {}), **roster['reviewers']}
+    if chosen:
+        every = {**{n: every[n] for n in chosen if n in every}, **every}
+    return {
+        'reviewers': {name: {'summary': spec.get('summary', ''), 'agent': dict(spec['agent']), 'source': spec['source'],
+                             'builtin': 'builtin_text' in spec, 'builtin_text': spec.get('builtin_text', ''),
+                             'builtin_agent': spec.get('builtin_agent'), 'builtin_summary': spec.get('builtin_summary'),
+                             'file': spec.get('file'), 'file_body': spec.get('file_body', ''), 'mode': spec.get('mode', 'replace'),
+                             'included': chosen is None or name in chosen}
+                      for name, spec in every.items()},
+        'synthesis': dict(roster['synthesize']['agent']),
+        'builtin_synthesis': roster.get('builtin_synthesis'),
+        'codex_fallback': dict(roster['codex_fallback']),
+        'panel_codex_fallback': roster['config'].get('panel', {}).get('codex_fallback'),
+    }
+
+
+def load_roster(only, claude_only, repo=None, panel=None, settings_only=False):
     roster = json.loads(ROSTER.read_text())
     for spec in roster['reviewers'].values():
-        spec['focus_text'] = (SKILL / spec.pop('focus')).read_text().strip()
+        spec['focus_text'] = spec['builtin_text'] = (SKILL / spec.pop('focus')).read_text().strip()
+        spec['builtin_agent'], spec['builtin_summary'] = dict(spec['agent']), spec['summary']
         spec['source'] = 'built-in'
     folder = Path(panel) if panel else (repo / CONFIG_DIR if repo else None)
     if panel and not folder.is_dir():
         raise PanelError(f'--panel {panel} is not a folder')
-    roster['config'] = {'dir': str(CONFIG_DIR) if not panel else str(folder), 'found': bool(folder and folder.is_dir())}
+    roster['built_in'] = roster['reviewers']
+    roster['builtin_synthesis'] = dict(roster['synthesize']['agent'])
+    script = Path(__file__).resolve()
+    roster['config'] = {'dir': str(CONFIG_DIR) if not panel else str(folder), 'found': bool(folder and folder.is_dir()),
+                        'command': shlex.join(['python3', str(script), 'settings', *(['--panel', str(panel)] if panel else [])])}
     if roster['config']['found']:
         apply_repo_config(roster, folder, roster['config']['dir'])
+    roster['all'] = roster_summary(roster)
     reviewers = roster['reviewers']
     if only:
         unknown = [name for name in only if name not in reviewers]
@@ -855,7 +886,7 @@ def load_roster(only, claude_only, repo=None, panel=None):
         if spec['agent']['harness'] == 'codex' and (claude_only or not has_codex):
             spec['agent'] = dict(roster['codex_fallback'])
             spec['note'] = 'ran on Claude: ' + ('--claude-only' if claude_only else 'codex is not installed')
-    if not shutil.which('claude'):
+    if not shutil.which('claude') and not settings_only:
         raise PanelError('the panel needs Claude Code (`claude`) on PATH')
     return roster, reviewers
 
@@ -939,7 +970,46 @@ def standalone_html(state_json):
                         f'<script id="inline-state" type="application/json">{inline}</script>')
 
 
-def serve(state, run_dir, port, token):
+SETTINGS_FILE = re.compile(r'(panel\.yaml|reviewers/[a-z0-9-]+\.md)')
+
+
+def save_settings(repo, panel, files, remove):
+    """Write the settings window's files into the repository's config folder, after checking the result loads.
+
+    `files` maps a path inside the folder (panel.yaml or reviewers/<name>.md) to its text; `remove` lists paths to
+    delete. Nothing is written unless the folder, with these changes, is one the next run would accept."""
+    folder = Path(panel) if panel else repo / CONFIG_DIR
+    paths = [*files, *remove]
+    bad = [p for p in paths if not isinstance(p, str) or not SETTINGS_FILE.fullmatch(p)]
+    if bad:
+        raise PanelError(f'can only write panel.yaml and reviewers/<name>.md, not {bad[0]}')
+    if not all(isinstance(text, str) for text in files.values()):
+        raise PanelError('each file needs its text')
+    with tempfile.TemporaryDirectory() as scratch:
+        trial = Path(scratch) / 'review-panel'
+        if folder.is_dir():
+            shutil.copytree(folder, trial)
+        (trial / 'reviewers').mkdir(parents=True, exist_ok=True)
+        for path in remove:
+            (trial / path).unlink(missing_ok=True)
+        for path, text in files.items():
+            (trial / path).write_text(text)
+        load_roster(None, False, panel=trial, settings_only=True)  # Raises PanelError, which the page shows.
+    (folder / 'reviewers').mkdir(parents=True, exist_ok=True)
+    for path in remove:
+        (folder / path).unlink(missing_ok=True)
+    for path, text in files.items():
+        (folder / path).write_text(text)
+    roster, _ = load_roster(None, False, repo, panel, settings_only=True)
+    return roster
+
+
+def refresh_settings(data, roster):
+    data.update(roster=roster['all'], models=roster.get('models', []),
+                config={k: v for k, v in roster['config'].items() if k != 'panel'})
+
+
+def serve(state, run_dir, port, token, repo=None, panel=None):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -968,6 +1038,36 @@ def serve(state, run_dir, port, token):
                 return
             self.send_response(200)
             self.send_header('Content-Type', kind)
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self):
+            # Only the page this server handed out can save: the path holds the secret token, and a JSON body
+            # from another site needs a CORS preflight, which this server never answers.
+            if self.path != f'/{token}/settings' or repo is None:
+                self.send_error(404)
+                return
+            if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
+                self.send_error(415)
+                return
+            origin = self.headers.get('Origin')
+            if origin and origin != f'http://{self.headers.get("Host")}':
+                self.send_error(403)
+                return
+            try:
+                request = json.loads(self.rfile.read(min(int(self.headers.get('Content-Length', 0)), 2_000_000)))
+                roster = save_settings(repo, panel, dict(request.get('files') or {}), list(request.get('remove') or []))
+                state.update(lambda data: refresh_settings(data, roster))
+                status, reply = 200, {'ok': True, 'roster': state.data['roster'], 'config': state.data['config']}
+            except (ValueError, AttributeError, TypeError) as error:
+                status, reply = 400, {'ok': False, 'error': f'bad request: {error}'}
+            except (PanelError, OSError) as error:
+                status, reply = 400, {'ok': False, 'error': str(error)}
+            body = json.dumps(reply).encode()
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/json')
             self.send_header('Cache-Control', 'no-store')
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
@@ -1053,7 +1153,8 @@ def initial_state(repo, run_dir, target, stat, roster, reviewers):
         'reviewers': {name: entry(spec['agent'], focus=spec['summary'], planned=spec['planned'], note=spec.get('note'),
                                   focus_text=spec['focus_text'], source=spec['source'])
                       for name, spec in reviewers.items()},
-        'config': roster.get('config'), 'snippets': {},
+        'config': {k: v for k, v in roster.get('config', {}).items() if k != 'panel'}, 'snippets': {},
+        'models': roster.get('models', []), 'roster': roster.get('all'),
         'synthesis': entry(roster['synthesize']['agent'], status='waiting'),
     }
 
@@ -1106,7 +1207,7 @@ def review(args, repo, run_dir, target, code_dir, diff, extra, roster, reviewers
     if not args.no_serve:
         token = secrets.token_urlsafe(12)
         try:
-            server = serve(state, run_dir, args.port, token)
+            server = serve(state, run_dir, args.port, token, repo, args.panel)
         except OSError as error:
             state.path.unlink()  # Nothing ran, so the run directory is removed.
             raise PanelError(f'cannot serve the live view on port {args.port}: {error}') from error
@@ -1191,6 +1292,36 @@ def reopen(args):
     return 0
 
 
+def settings_command(args):
+    """Serve the latest run's page with its settings window open, so saved settings land in the repository."""
+    repo = Path(git(['rev-parse', '--show-toplevel'], Path.cwd()))
+    common = Path(git(['rev-parse', '--git-common-dir'], repo))
+    common = common if common.is_absolute() else repo / common
+    runs = sorted((common / 'review-panel').glob('*/state.json'))
+    if not runs:
+        raise PanelError('no review has run in this repository yet; run `review_panel.py run` once first')
+    data = json.loads(runs[-1].read_text())
+    roster, _ = load_roster(None, False, repo, args.panel, settings_only=True)
+    refresh_settings(data, roster)
+    with tempfile.TemporaryDirectory() as scratch:
+        state = State(Path(scratch) / 'state.json', data)
+        token = secrets.token_urlsafe(12)
+        try:
+            server = serve(state, runs[-1].parent, args.port, token, repo, args.panel)
+        except OSError as error:
+            raise PanelError(f'cannot serve the settings page on port {args.port}: {error}') from error
+        url = f'http://127.0.0.1:{server.server_address[1]}/{token}/#settings'
+        print(f'Settings: {url}', flush=True)
+        print('Saved settings go to ' + str(Path(args.panel) if args.panel else repo / CONFIG_DIR) + '. Press Ctrl-C to stop.', flush=True)
+        if not args.no_open:
+            open_page(url)
+        try:
+            threading.Event().wait()
+        except KeyboardInterrupt:
+            server.shutdown()
+    return 0
+
+
 def positive(value):
     number = int(value)
     if number < 1:
@@ -1218,9 +1349,13 @@ def main(argv=None):
     start.add_argument('--no-serve', action='store_true', help='skip the live view; write the report only')
     again = commands.add_parser('open', help="open a finished run's standalone report page")
     again.add_argument('run_dir')
+    config = commands.add_parser('settings', help="edit this repository's panel settings in the page, saving them to its config folder")
+    config.add_argument('--panel', metavar='DIR', help=f'save to DIR instead of {CONFIG_DIR} in the repository')
+    config.add_argument('--port', type=int, default=0, help='port for the page (default: any free port)')
+    config.add_argument('--no-open', action='store_true', help='print the URL without opening a browser')
     args = parser.parse_args(argv)
     try:
-        return run(args) if args.command == 'run' else reopen(args)
+        return {'run': run, 'open': reopen, 'settings': settings_command}[args.command](args)
     except PanelError as error:
         print(f'review-panel: {error}', file=sys.stderr)
         return 2

@@ -332,7 +332,8 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 .group-head h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .group-head .n { font-size: 12px; color: var(--faint); }
 .group-head .add { margin-left: auto; text-decoration: none; font-weight: 500; }
-.slist { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.slist { border: 1px solid var(--line); border-radius: 10px;  }
+.slist > :first-child { border-top-left-radius: 9px; border-top-right-radius: 9px; } .slist > :last-child { border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
 .srow { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--line); cursor: pointer; }
 .slist > .srow:first-child { border-top: 0; }
 .srow:hover { background: var(--hover); }
@@ -341,7 +342,7 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 .av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--code); }
 .av svg { width: 16px; height: 16px; }
 .av .claude { color: var(--claude); }
-.who { min-width: 0; } .who b { font-weight: 500; display: block; font-family: var(--mono); font-size: 13px; }
+.who { min-width: 0; } .who b { font-weight: 500; display: block; font-size: 14px; }
 .who span { color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .srow .meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .srow .model { font-size: 12px; color: var(--muted); white-space: nowrap; }
@@ -377,6 +378,40 @@ pre.tree, .code-block pre { font-family: var(--mono); font-size: 12px; line-heig
 pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; line-height: 1.55; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0 0; max-height: 320px; overflow: auto; }
 .code-block { position: relative; }
 .code-block .btn { position: absolute; top: 8px; right: 8px; }
+
+/* Where a setting comes from, and the model picker. */
+.source-note { font-size: 12.5px; color: var(--muted); background: var(--code); border-radius: 7px; padding: 7px 10px; }
+.source-note.repo { background: var(--accent-bg); color: var(--accent); }
+.source-note code { font-size: 12px; }
+.srow .model { display: inline-flex; align-items: center; gap: 5px; }
+.srow .model svg { width: 12px; height: 12px; }
+.srow .av svg.ri { width: 16px; height: 16px; color: var(--muted); }
+.dot-ok, .dot-err { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; background: var(--ok); }
+.dot-err { background: var(--block); }
+.mpick-wrap { position: relative; }
+.swin .mpick { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 7px; padding: 7px 10px; cursor: pointer; min-width: 0; }
+.swin .mpick:hover { border-color: var(--faint); }
+.swin .mpick:focus-visible, .swin .mpick[aria-expanded="true"] { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.mpick .mname { flex: none; white-space: nowrap; }
+.mpick .mid { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+.mpick > svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+.mpop { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: max(100%, 300px); background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); overflow: hidden; }
+.msearch { display: flex; align-items: center; gap: 8px; padding: 0 10px; border-bottom: 1px solid var(--line); }
+.msearch svg { width: 15px; height: 15px; color: var(--faint); flex: none; }
+.swin .msearch input { border: 0; box-shadow: none; padding: 9px 0; background: transparent; }
+.swin .msearch input:focus { box-shadow: none; }
+.mgroup { display: flex; align-items: center; gap: 6px; padding: 8px 12px 4px; font-size: 11px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+.mgroup svg { width: 12px; height: 12px; }
+.mlist { max-height: 260px; overflow-y: auto; padding: 2px 4px 4px; }
+.mopt { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 13.5px; }
+.mopt.active { background: var(--hover); }
+.mopt .mcheck { width: 14px; height: 14px; flex: none; color: var(--accent); }
+.mopt .mname { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.mopt .mnote { font-size: 11.5px; color: var(--faint); }
+.mopt .mid { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.mopt.custom .mname { color: var(--accent); }
+.mempty { padding: 14px 12px; color: var(--faint); font-size: 13px; }
+.mfoot { padding: 7px 12px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--faint); }
 @media (max-width: 720px) {
   .swin { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: calc(100vh - 32px); }
   .sside { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -550,6 +585,8 @@ const reviewerIcon = name => `<svg class="ri" viewBox="0 0 24 24" fill="none" st
 // opus → Opus, claude-opus-5-5 → Opus 5.5, gpt-6.1-sol → GPT-6.1 Sol
 function modelName(model) {
   const m = String(model || '');
+  const listed = state && state.models && state.models.find(entry => entry.id === m);
+  if (listed) return listed.name;
   const gpt = m.match(/^gpt-([\d.]+)(?:-(.+))?$/i);
   if (gpt) return `GPT-${gpt[1]}${gpt[2] ? ' ' + gpt[2].split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') : ''}`;
   const claude = m.replace(/^claude-/, '').match(/^([a-z]+)(?:-(\d+)(?:-(\d+))?)?/i);
@@ -1093,38 +1130,70 @@ document.addEventListener('keydown', event => {
 });
 
 /* ---------- settings ---------- */
-// The settings window can't write to the repository. It keeps edits in this browser and turns them into the
-// files a repository adds under .fabrica/review-panel/, which the next run reads (see apply_repo_config).
+// Settings have two sources: the skill's built-in roster, and a repository's .fabrica/review-panel/ folder, which
+// overrides the built-in setting for each reviewer it has a file for. Nothing is kept anywhere else. When the runner
+// serves this page, Save writes the folder's files into the working tree; the standalone page can only copy them.
 const EFFORTS = ['default', 'low', 'medium', 'high', 'max'];
-const settings = { open: false, section: 'reviewers', editing: null, cfg: null };
+const LIVE = !inline;
+const HARNESS_WORDS = { 'claude-code': 'Claude Code', codex: 'Codex' };
+const FALLBACK_MODELS = [
+  { id: 'opus', name: 'Opus', harness: 'claude-code', note: 'Latest Opus' },
+  { id: 'sonnet', name: 'Sonnet', harness: 'claude-code', note: 'Latest Sonnet' },
+  { id: 'gpt-6-astra', name: 'GPT-6 Astra', harness: 'codex' },
+  { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', harness: 'codex' },
+];
+const models = () => (state && state.models && state.models.length ? state.models : FALLBACK_MODELS);
+const settings = { open: false, section: 'overview', editing: null, cfg: null, picker: null, saving: false, flash: '', error: '' };
 const cfgKey = () => 'review-panel:settings:' + state.repo;
+// Runs from before the roster was recorded only know the reviewers they ran.
+function roster() {
+  if (state.roster) return state.roster;
+  const reviewers = {};
+  for (const [name, e] of Object.entries(state.reviewers)) {
+    const agent = e.planned || e.agent;
+    const source = e.source || 'built-in';
+    reviewers[name] = { summary: e.focus || '', agent, source, builtin: !source.startsWith('added by'), builtin_text: e.focus_text || '',
+      builtin_agent: agent, builtin_summary: e.focus || '', file: null, file_body: '', mode: 'replace', included: true };
+  }
+  const synthesis = state.synthesis.agent;
+  return { reviewers, synthesis, builtin_synthesis: synthesis, panel_codex_fallback: null };
+}
 function baseConfig() {
+  const r = roster();
   return {
-    reviewers: Object.entries(state.reviewers).map(([name, e]) => {
-      const agent = e.planned || e.agent;
-      const builtin = !String(e.source || 'built-in').startsWith('added by');
-      const original = { summary: e.focus || '', harness: agent.harness, model: agent.model, effort: agent.effort || 'default', prompt: e.focus_text || '', mode: 'replace' };
-      return { name, builtin, source: e.source || 'built-in', included: true, isNew: false, ...original, original };
+    reviewers: Object.entries(r.reviewers).map(([name, e]) => {
+      const original = { summary: e.summary || '', harness: e.agent.harness, model: e.agent.model, effort: e.agent.effort || 'default',
+        prompt: e.file && e.file_body ? e.file_body : e.builtin_text, mode: e.file ? e.mode : 'replace', included: e.included !== false, removeFile: false };
+      return { name, builtin: e.builtin, file: e.file, source: e.source, isNew: false, builtinText: e.builtin_text,
+        builtinAgent: e.builtin_agent, builtinSummary: e.builtin_summary, ...original, original };
     }),
-    synthesis: { harness: state.synthesis.agent.harness, model: state.synthesis.agent.model, effort: state.synthesis.agent.effort || 'default' },
-    originalSynthesis: { harness: state.synthesis.agent.harness, model: state.synthesis.agent.model, effort: state.synthesis.agent.effort || 'default' },
+    synthesis: { ...r.synthesis, effort: r.synthesis.effort || 'default' },
+    originalSynthesis: { ...r.synthesis, effort: r.synthesis.effort || 'default' },
+    builtinSynthesis: r.builtin_synthesis || r.synthesis,
+    codexFallback: r.panel_codex_fallback || null,
   };
 }
 function loadConfig() {
   const saved = recall(cfgKey());
-  settings.cfg = saved && Array.isArray(saved.reviewers) ? saved : baseConfig();
+  settings.cfg = saved && saved.basedOn === JSON.stringify(roster()) && Array.isArray(saved.reviewers) ? saved : baseConfig();
+  settings.cfg.basedOn = JSON.stringify(roster());
 }
 function saveConfig() { store(cfgKey(), settings.cfg); }
 const FIELDS = ['summary', 'harness', 'model', 'effort', 'prompt', 'mode'];
-const changed = r => r.isNew || FIELDS.some(f => r[f] !== r.original[f]);
+const edited = r => r.isNew || r.removeFile || FIELDS.some(f => r[f] !== r.original[f]);
+const changed = r => edited(r) || r.included !== r.original.included;
 const synthesisChanged = () => ['harness', 'model', 'effort'].some(f => settings.cfg.synthesis[f] !== settings.cfg.originalSynthesis[f]);
+const panelChanged = () => settings.cfg.reviewers.some(r => r.included !== r.original.included) || synthesisChanged();
 const yamlString = text => `"${String(text).replace(/"/g, "'").replace(/\n/g, ' ')}"`;
 const configDir = () => (state.config && state.config.dir) || '.fabrica/review-panel';
 function reviewerFile(r) {
   const lines = ['---', `summary: ${yamlString(r.summary)}`, `harness: ${r.harness}`, `model: ${r.model}`, `effort: ${r.effort}`];
+  // A built-in reviewer whose prompt is untouched gets front matter only, so it keeps getting the skill's prompt.
+  if (r.builtin && r.prompt.trim() === r.builtinText.trim()) return lines.concat('---', '').join('\n');
   if (r.builtin && r.mode === 'append') lines.push('mode: append');
   return lines.concat('---', '', r.prompt.trim(), '').join('\n');
 }
+const sameAgent = (a, b) => b && a.harness === b.harness && a.model === b.model && (a.effort || 'default') === (b.effort || 'default');
 function panelFile() {
   const cfg = settings.cfg;
   const lines = ['# Review panel settings for this repository. See the review-panel skill README.'];
@@ -1133,31 +1202,124 @@ function panelFile() {
   } else {
     lines.push('', '# Without a reviewers list, the panel runs every built-in reviewer plus each file in reviewers/.');
   }
-  if (synthesisChanged()) lines.push('', 'synthesis:', `  harness: ${cfg.synthesis.harness}`, `  model: ${cfg.synthesis.model}`, `  effort: ${cfg.synthesis.effort}`);
+  const s = cfg.synthesis;
+  if (!sameAgent(s, cfg.builtinSynthesis)) lines.push('', 'synthesis:', `  harness: ${s.harness}`, `  model: ${s.model}`, `  effort: ${s.effort}`);
+  const f = cfg.codexFallback;
+  if (f) lines.push('', 'codex_fallback:', ...['harness', 'model', 'effort'].filter(k => f[k]).map(k => `  ${k}: ${f[k]}`));
   return lines.join('\n') + '\n';
 }
-function pendingFiles() {
+// What Save would do: files to write and files to delete, as paths inside the config folder.
+function pendingChanges() {
   const cfg = settings.cfg;
-  const files = cfg.reviewers.filter(r => r.included && changed(r)).map(r => ({ path: `${configDir()}/reviewers/${r.name}.md`, text: reviewerFile(r) }));
-  if (cfg.reviewers.some(r => !r.included) || synthesisChanged()) files.unshift({ path: `${configDir()}/panel.yaml`, text: panelFile() });
-  return files;
+  const files = {}, remove = [];
+  if (panelChanged()) files['panel.yaml'] = panelFile();
+  for (const r of cfg.reviewers) {
+    if (r.removeFile) { if (r.file) remove.push(`reviewers/${r.name}.md`); continue; }
+    if (edited(r)) files[`reviewers/${r.name}.md`] = reviewerFile(r);
+  }
+  return { files, remove, count: Object.keys(files).length + remove.length };
 }
 function setupScript() {
-  const files = pendingFiles();
-  const lines = ['# Run from the repository root, then commit the folder.', `mkdir -p ${configDir()}/reviewers`];
-  for (const f of files) lines.push('', `cat > ${f.path} <<'REVIEW_PANEL_EOF'`, f.text.replace(/\n$/, ''), 'REVIEW_PANEL_EOF');
+  const { files, remove } = pendingChanges();
+  const dir = configDir();
+  const lines = ['# Run from the repository root, then commit the folder.', `mkdir -p ${dir}/reviewers`];
+  for (const path of remove) lines.push(`rm ${dir}/${path}`);
+  for (const [path, text] of Object.entries(files)) lines.push('', `cat > ${dir}/${path} <<'REVIEW_PANEL_EOF'`, text.replace(/\n$/, ''), 'REVIEW_PANEL_EOF');
   return lines.join('\n') + '\n';
 }
-const sourceChip = r => r.isNew ? '<span class="chip ok">new</span>' : changed(r) ? '<span class="chip edited">edited here</span>'
-  : r.source !== 'built-in' ? `<span class="chip ok" title="${esc(r.source)}">from this repository</span>` : '<span class="chip">built-in</span>';
+// Where a reviewer's settings come from, in plain words.
+function sourceChip(r) {
+  if (r.isNew) return '<span class="chip edited">new, not saved</span>';
+  if (changed(r)) return '<span class="chip edited">not saved</span>';
+  if (!r.builtin) return `<span class="chip ok" title="${esc(r.file || r.source)}">added by repository</span>`;
+  if (r.file) return `<span class="chip ok" title="${esc(r.file)}">${r.mode === 'append' ? 'built-in + repository' : 'repository'}</span>`;
+  return '<span class="chip">built-in</span>';
+}
+function sourceLine(r) {
+  const path = `${configDir()}/reviewers/${r.name}.md`;
+  if (r.removeFile) return `Saving deletes <code>${esc(path)}</code>, so this reviewer goes back to its built-in settings.`;
+  if (r.isNew) return `Saving adds <code>${esc(path)}</code>.`;
+  if (!r.file) return edited(r) ? `Saving adds <code>${esc(path)}</code>, which overrides the built-in settings for this reviewer only.` : 'Built-in settings. Change anything here and saving adds a file for this reviewer to the repository.';
+  if (!r.builtin) return `Defined by <code>${esc(r.file)}</code>.`;
+  if (r.prompt.trim() === r.builtinText.trim()) return `Built-in prompt, with settings from <code>${esc(r.file)}</code>.`;
+  return r.mode === 'append' ? `The built-in prompt, plus the text in <code>${esc(r.file)}</code>.` : `Overridden by <code>${esc(r.file)}</code>.`;
+}
+/* Model picker: a button that opens a searchable list of the models that harness runs. */
+const modelsFor = harness => models().filter(m => m.harness === harness);
+const findModel = id => models().find(m => m.id === id);
+function modelButton(scope, value) {
+  const m = findModel(value);
+  return `<div class="mpick-wrap"><button type="button" class="mpick" id="${scope}-model" data-mpick="${scope}" role="combobox" aria-haspopup="listbox" aria-expanded="${settings.picker && settings.picker.scope === scope}">
+      <span class="mname">${esc(m ? m.name : modelName(value))}</span><span class="mid">${esc(value)}</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>${settings.picker && settings.picker.scope === scope ? pickerPopover() : ''}</div>`;
+}
+function pickerMatches() {
+  const p = settings.picker;
+  const q = p.q.trim().toLowerCase();
+  const list = modelsFor(p.harness).filter(m => !q || [m.name, m.id, m.note || '', HARNESS_WORDS[m.harness]].join(' ').toLowerCase().includes(q));
+  const options = list.map(m => ({ id: m.id, model: m }));
+  if (q && !models().some(m => m.id.toLowerCase() === q)) options.push({ id: p.q.trim(), custom: true });
+  return options;
+}
+function pickerList() {
+  const p = settings.picker;
+  const options = pickerMatches();
+  p.active = Math.max(0, Math.min(p.active, options.length - 1));
+  if (!options.length) return '<div class="mempty">No model matches.</div>';
+  const check = '<svg class="mcheck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  return options.map((o, i) => `<div class="mopt ${i === p.active ? 'active' : ''} ${o.custom ? 'custom' : ''}" role="option" id="mopt-${i}" data-mchoose="${esc(o.id)}" aria-selected="${o.id === p.value}">
+      ${o.id === p.value ? check : '<span class="mcheck"></span>'}
+      ${o.custom ? `<span class="mname">Use “${esc(o.id)}” as the model ID</span>` : `<span class="mname">${esc(o.model.name)}${o.model.note ? `<span class="mnote">${esc(o.model.note)}</span>` : ''}</span><span class="mid">${esc(o.id)}</span>`}
+    </div>`).join('');
+}
+function pickerPopover() {
+  const p = settings.picker;
+  return `<div class="mpop" role="dialog" aria-label="Choose a model">
+      <div class="msearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="mpick-search" placeholder="Search ${esc(HARNESS_WORDS[p.harness] || '')} models…" value="${esc(p.q)}" spellcheck="false" autocomplete="off" role="searchbox" aria-controls="mpick-list"></div>
+      <div class="mgroup">${LOGOS[p.harness] || ''}${esc(HARNESS_WORDS[p.harness] || p.harness)}</div>
+      <div class="mlist" id="mpick-list" role="listbox">${pickerList()}</div>
+      <div class="mfoot">Type any model ID the harness accepts to use one that isn’t listed.</div>
+    </div>`;
+}
+function openPicker(scope, q = '') {
+  const target = scope === 'syn' ? settings.cfg.synthesis : settings.cfg.reviewers[settings.editing];
+  settings.picker = { scope, q, active: 0, value: target.model, harness: target.harness };
+  const options = pickerMatches();
+  settings.picker.active = Math.max(0, options.findIndex(o => o.id === target.model));
+  renderSettings();
+  const input = document.getElementById('mpick-search');
+  if (input) { input.focus(); input.setSelectionRange(q.length, q.length); }
+  scrollActive();
+}
+function closePicker(focusButton) {
+  const scope = settings.picker && settings.picker.scope;
+  settings.picker = null;
+  renderSettings();
+  if (focusButton && scope) { const b = document.getElementById(`${scope}-model`); if (b) b.focus(); }
+}
+function choosePicker(id) {
+  const p = settings.picker;
+  if (p.scope === 'syn') settings.cfg.synthesis.model = id; else settings.cfg.reviewers[settings.editing].model = id;
+  saveConfig();
+  closePicker(true);
+}
+function scrollActive() { const el = document.querySelector('#settings .mopt.active'); if (el) el.scrollIntoView({ block: 'nearest' }); }
+// Switching harness keeps a model only if the new harness runs it, else picks that harness's first model.
+function harnessChanged(target) {
+  const listed = findModel(target.model);
+  if (listed && listed.harness !== target.harness) { const first = modelsFor(target.harness)[0]; if (first) target.model = first.id; }
+}
 function reviewerEditor(r, index) {
   const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
   return `<div class="edit" data-index="${index}">
+    <div class="source-note ${r.file || r.isNew ? 'repo' : ''}">${sourceLine(r)}</div>
     ${r.isNew ? `<div class="field"><label for="cfg-name">Name</label><input id="cfg-name" data-cfg="name" value="${esc(r.name)}" spellcheck="false" pattern="[a-z0-9-]+"><span class="hint">Lowercase letters, digits, and hyphens. The file is reviewers/${esc(r.name)}.md.</span></div>` : ''}
     <div class="field"><label for="cfg-summary">Summary</label><input id="cfg-summary" data-cfg="summary" value="${esc(r.summary)}" placeholder="Checks … in one line"></div>
     <div class="fields-3">
       <div class="field"><label for="cfg-harness">Runs on</label><select id="cfg-harness" data-cfg="harness">${option('claude-code', 'Claude Code', r.harness)}${option('codex', 'Codex', r.harness)}</select></div>
-      <div class="field"><label for="cfg-model">Model</label><input id="cfg-model" data-cfg="model" value="${esc(r.model)}" spellcheck="false"></div>
+      <div class="field"><label for="cfg-model">Model</label>${modelButton('cfg', r.model)}</div>
       <div class="field"><label for="cfg-effort">Effort</label><select id="cfg-effort" data-cfg="effort">${EFFORTS.map(e => option(e, e, r.effort)).join('')}</select></div>
     </div>
     ${r.builtin ? `<div class="field"><label for="cfg-mode">Prompt</label><select id="cfg-mode" data-cfg="mode">${option('replace', 'Replace the built-in prompt with the text below', r.mode)}${option('append', 'Keep the built-in prompt and add the text below', r.mode)}</select></div>` : ''}
@@ -1166,9 +1328,10 @@ function reviewerEditor(r, index) {
     <div class="edit-actions">
       <button type="button" class="linkish danger" data-sact="toggle-include">${r.included ? 'Leave out of the panel' : 'Put back in the panel'}</button>
       ${changed(r) && !r.isNew ? '<button type="button" class="linkish" data-sact="reset">Undo my edits</button>' : ''}
+      ${r.builtin && r.file && !r.removeFile ? '<button type="button" class="linkish" data-sact="use-builtin">Go back to the built-in version</button>' : ''}
       <span class="spacer"></span>
       <span class="note" id="cfg-note"></span>
-      <button type="button" class="btn" data-sact="copy-file">Copy ${esc(r.name)}.md</button>
+      ${LIVE ? '' : `<button type="button" class="btn" data-sact="copy-file">Copy ${esc(r.name)}.md</button>`}
       <button type="button" class="btn" data-sact="done">Done</button>
     </div>
   </div>`;
@@ -1177,33 +1340,35 @@ function reviewersPane() {
   const cfg = settings.cfg;
   const rows = cfg.reviewers.map((r, i) => `
     <div class="srow ${r.included ? '' : 'out'}" data-index="${i}" tabindex="0" role="button" aria-expanded="${settings.editing === i}">
-      <span class="av">${LOGOS[r.harness] || ''}</span>
-      <span class="who"><b>${esc(r.name)}</b><span>${esc(r.summary || 'No summary yet')}</span></span>
-      <span class="meta">${r.included ? '' : '<span class="chip">left out</span>'}${sourceChip(r)}<span class="model">${esc(modelName(r.model))}${r.effort !== 'default' ? ` · ${esc(r.effort)}` : ''}</span></span>
+      <span class="av">${reviewerIcon(r.name)}</span>
+      <span class="who"><b>${esc(reviewerLabel(r.name))}</b><span>${esc(r.summary || 'No summary yet')}</span></span>
+      <span class="meta">${r.included ? '' : '<span class="chip">left out</span>'}${sourceChip(r)}<span class="model">${LOGOS[r.harness] || ''}${esc(findModel(r.model) ? findModel(r.model).name : modelName(r.model))}${r.effort !== 'default' ? ` · ${esc(r.effort)}` : ''}</span></span>
     </div>${settings.editing === i ? reviewerEditor(r, i) : ''}`).join('');
-  return `<div class="spane-head"><div><h2>Reviewers</h2><p>The experts on the review panel. Open one to read its prompt, or to change it for this repository.</p></div>${closeBtn()}</div>
+  return `<div class="spane-head"><div><h2>Reviewers</h2><p>Every reviewer on the panel, and where its settings come from. Open one to read its prompt or change it.</p></div>${closeBtn()}</div>
     <div class="sbody">
-      <div class="group-head"><button type="button" class="linkish add" data-sact="add">+ Add reviewer</button></div>
+      <div class="group-head"><span class="n">${plural(cfg.reviewers.filter(r => r.included).length, 'reviewer')} on the panel</span><button type="button" class="linkish add" data-sact="add">+ Add reviewer</button></div>
       <div class="slist">${rows}</div>
-      <p class="hint" style="margin-top:12px">${state.config && state.config.found ? `Settings from <code>${esc(configDir())}/</code> in this repository.` : 'The built-in reviewers.'} A review started with <code>--only</code> lists only the reviewers it asked for.</p>
     </div>`;
 }
 function synthesisPane() {
-  const s = settings.cfg.synthesis;
+  const cfg = settings.cfg;
+  const s = cfg.synthesis;
   const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
+  const fromRepo = !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis);
   return `<div class="spane-head"><div><h2>Synthesis</h2><p>The last step: checks every reviewer finding against the code, merges duplicates, drops false positives, and gives the verdict.</p></div>${closeBtn()}</div>
-    <div class="sbody"><div class="slist"><div class="edit" style="border-top:0">
+    <div class="sbody"><div class="slist"><div class="edit" style="border-top:0;padding-left:14px">
+      <div class="source-note ${fromRepo || synthesisChanged() ? 'repo' : ''}">${synthesisChanged() ? `Saving writes these to <code>${esc(configDir())}/panel.yaml</code>.` : fromRepo ? `Set by <code>${esc(configDir())}/panel.yaml</code>.` : 'Built-in settings. Change one and saving writes it to panel.yaml.'}</div>
       <div class="fields-3">
         <div class="field"><label for="syn-harness">Runs on</label><select id="syn-harness" data-syn="harness">${option('claude-code', 'Claude Code', s.harness)}${option('codex', 'Codex', s.harness)}</select></div>
-        <div class="field"><label for="syn-model">Model</label><input id="syn-model" data-syn="model" value="${esc(s.model)}" spellcheck="false"></div>
+        <div class="field"><label for="syn-model">Model</label>${modelButton('syn', s.model)}</div>
         <div class="field"><label for="syn-effort">Effort</label><select id="syn-effort" data-syn="effort">${EFFORTS.map(e => option(e, e, s.effort)).join('')}</select></div>
       </div>
-      <span class="hint">These go in <code>panel.yaml</code> under <code>synthesis:</code>. The synthesis prompt itself lives in the skill, at <code>prompts/synthesize.md</code>.</span>
+      <span class="hint">The synthesis prompt itself lives in the skill, at <code>prompts/synthesize.md</code>.</span>
     </div></div></div>`;
 }
 function setupPrompt() {
   const dir = configDir();
-  const roster = Object.entries(state.reviewers).map(([name, e]) => `- ${name}: ${e.focus}`).join('\n');
+  const list = Object.entries(roster().reviewers).map(([name, e]) => `- ${name}: ${e.summary}`).join('\n');
   return `Set up the review panel's settings for this repository.
 
 The review-panel skill reads ${dir}/ from the repository it runs in:
@@ -1214,51 +1379,79 @@ The review-panel skill reads ${dir}/ from the repository it runs in:
 Both files use a small YAML subset: \`key: value\` lines, and one level of list or map under a key.
 
 The review panel's current reviewers:
-${roster}
+${list}
 
 First ask me which reviewers to keep, change, or add, and what this repository needs them to watch for. Then write the files, keeping each reviewer's prompt to one concern, and show me what you wrote.
 `;
 }
-function repoPane() {
+function overviewPane() {
   const dir = configDir();
   const found = state.config && state.config.found;
-  return `<div class="spane-head"><div><h2>Customize for a repository</h2><p>Choose a repository's reviewers and change their prompts with a folder in the repository.</p></div>${closeBtn()}</div>
+  const cfg = settings.cfg;
+  const fromRepo = cfg.reviewers.filter(r => r.file && r.builtin).length;
+  const added = cfg.reviewers.filter(r => !r.builtin && !r.isNew).length;
+  const out = cfg.reviewers.filter(r => !r.original.included).length;
+  const parts = [fromRepo && `${plural(fromRepo, 'reviewer')} changed`, added && `${added} added`, out && `${out} left out`,
+    !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis) && 'synthesis model changed'].filter(Boolean);
+  const command = state.config && state.config.command;
+  return `<div class="spane-head"><div><h2>Overview</h2><p>Where the panel’s settings come from, and how to change them.</p></div>${closeBtn()}</div>
     <div class="sbody prose">
-      <div class="status-line ${found ? 'on' : ''}">${found ? `The review panel is using this repository’s settings from <code>${esc(dir)}/</code>.` : `The review panel is using its built-in settings. This repository has no <code>${esc(dir)}/</code> folder.`}</div>
-      <p>Add a <code>${esc(dir)}/</code> folder to the repository, with a <code>panel.yaml</code> that picks the reviewers and one Markdown file per reviewer holding its prompt. The next run reads it, and everyone who runs the panel in that repository gets the same reviewers.</p>
+      <div class="status-line ${found ? 'on' : ''}">${found
+        ? `Using this repository’s settings from <code>${esc(dir)}/</code>${parts.length ? `: ${esc(parts.join(', '))}` : ''}. Everything else is built-in.`
+        : `Using the built-in settings. This repository has no <code>${esc(dir)}/</code> folder.`}</div>
+      <h3>How it works</h3>
+      <ul>
+        <li>Every reviewer and the synthesis start from the skill’s <b>built-in</b> settings.</li>
+        <li>A file in <code>${esc(dir)}/</code> <b>overrides</b> the built-in settings for what it covers: <code>reviewers/&lt;name&gt;.md</code> for one reviewer’s prompt and model, <code>panel.yaml</code> for which reviewers run and the synthesis model. Anything without a file stays built-in.</li>
+        <li>Settings live only in the repository. Each run reads them from the code it reviews, so <b>commit the folder</b> to share them with everyone who runs the panel there.</li>
+      </ul>
+      <h3>Change them</h3>
+      ${LIVE
+        ? `<p>Edit reviewers and the synthesis in this window, then press <b>Save to repository</b>. The files land in <code>${esc(dir)}/</code> in your working tree, ready to review and commit.</p>`
+        : `<p>This page is a saved report, so it can’t write files. To edit and save here, run this in the repository:</p>
+           <div class="code-block"><pre>${esc(command || 'python3 <skill>/scripts/review_panel.py settings')}</pre><button type="button" class="btn small" data-sact="copy-command">Copy</button></div>
+           <p class="hint" id="command-note"></p>`}
       <div class="setup-card">
-        <div><h3>Set it up with your agent</h3><p>Copy this prompt into your coding agent in the repository. It asks what you want, then writes the files.</p></div>
-        <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn primary" data-sact="copy-prompt">Copy setup prompt</button></div>
+        <div><h3>Or set it up with your agent</h3><p>Copy this prompt into your coding agent in the repository. It asks what you want, then writes the files.</p></div>
+        <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn" data-sact="copy-prompt">Copy setup prompt</button></div>
         <details><summary>Show the prompt</summary><pre class="setup-prompt">${esc(setupPrompt())}</pre></details>
       </div>
     </div>`;
 }
 const closeBtn = () => '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+function footer() {
+  const { count } = pendingChanges();
+  const dir = configDir();
+  let note;
+  if (settings.error) note = `<span class="dot-err"></span>${esc(settings.error)}`;
+  else if (settings.flash && !count) note = `<span class="dot-ok"></span>${settings.flash}`;
+  else if (!count) note = LIVE ? `Saving writes to <code>${esc(dir)}/</code> in your working tree.` : 'No changes.';
+  else note = `<span class="dot-warn"></span>${plural(count, 'file')} to ${LIVE ? 'save' : 'add'}.${LIVE ? '' : ' This page can’t write files: copy the commands, or open settings from the runner.'}`;
+  return `<div class="sfoot"><span class="note" id="setup-note">${note}</span>
+    ${count ? '<button type="button" class="btn" data-sact="discard">Discard</button>' : ''}
+    ${LIVE ? `<button type="button" class="btn primary" data-sact="save" ${count && !settings.saving ? '' : 'disabled'}>${settings.saving ? 'Saving…' : 'Save to repository'}</button>`
+      : `<button type="button" class="btn primary" data-sact="copy-setup" ${count ? '' : 'disabled'}>Copy setup commands</button>`}</div>`;
+}
 function renderSettings() {
   const holder = document.getElementById('settings');
   if (!settings.open) { holder.innerHTML = ''; return; }
   const cfg = settings.cfg;
-  const files = pendingFiles();
   const nav = (id, label, count) => `<button type="button" data-sect="${id}" ${settings.section === id ? 'aria-current="page"' : ''}>${label}${count !== undefined ? `<span class="count">${count}</span>` : ''}</button>`;
-  const pane = settings.section === 'synthesis' ? synthesisPane() : settings.section === 'repo' ? repoPane() : reviewersPane();
+  const pane = settings.section === 'synthesis' ? synthesisPane() : settings.section === 'reviewers' ? reviewersPane() : overviewPane();
   const active = document.activeElement;
   const focusId = active && holder.contains(active) ? active.id : null;
   const caret = focusId && 'selectionStart' in active ? [active.selectionStart, active.selectionEnd] : null;
   const scroll = holder.querySelector('.sbody') ? holder.querySelector('.sbody').scrollTop : 0;
+  const found = state.config && state.config.found;
   holder.innerHTML = `<div class="sscrim" data-sact="close-scrim"><div class="swin" role="dialog" aria-modal="true" aria-label="Settings">
     <div class="sside">
       <div class="sside-title">Settings</div>
+      <div class="snav">${nav('overview', 'Overview')}</div>
       <div class="sgroup">Review panel</div>
       <div class="snav">${nav('reviewers', 'Reviewers', cfg.reviewers.filter(r => r.included).length)}${nav('synthesis', 'Synthesis')}</div>
-      <div class="sgroup">Customize</div>
-      <div class="snav">${nav('repo', 'For a repository')}</div>
-      <div class="sside-foot">Reads from<code>${esc(configDir())}/</code></div>
+      <div class="sside-foot">${found ? 'Using' : 'No folder yet:'}<code>${esc(configDir())}/</code></div>
     </div>
-    <div class="spane">${pane}
-      ${settings.section === 'repo' ? '' : `<div class="sfoot"><span class="note"><span class="dot-warn"></span>${files.length ? `${plural(files.length, 'file')} to add. Edits stay in this browser until you add the files to the repository.` : 'No changes yet. Edits stay in this browser until you add the files to the repository.'}</span>
-        <span class="note" id="setup-note"></span>
-        <button type="button" class="btn primary" data-sact="copy-setup" ${files.length ? '' : 'disabled'}>Copy setup commands</button></div>`}
-    </div>
+    <div class="spane">${pane}${footer()}</div>
   </div></div>`;
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret && el.setSelectionRange) el.setSelectionRange(caret[0], caret[1]); } }
   const body = holder.querySelector('.sbody');
@@ -1266,13 +1459,38 @@ function renderSettings() {
 }
 function openSettings(open) {
   settings.open = open;
-  if (open && !settings.cfg) loadConfig();
+  settings.picker = null;
+  if (open) loadConfig();
   renderSettings();
   if (open) { const first = document.querySelector('#settings [aria-current="page"]'); if (first) first.focus(); }
   else document.querySelector('[data-act="settings"]').focus();
 }
+async function saveSettings() {
+  const { files, remove } = pendingChanges();
+  settings.saving = true; settings.error = ''; renderSettings();
+  try {
+    const response = await fetch('settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files, remove }) });
+    const reply = await response.json().catch(() => ({ error: `the runner answered ${response.status}` }));
+    if (!response.ok || !reply.ok) throw new Error(reply.error || `the runner answered ${response.status}`);
+    state.roster = reply.roster; state.config = reply.config;
+    const written = Object.keys(files).length + remove.length;
+    settings.cfg = null; store(cfgKey(), null); loadConfig();
+    if (settings.editing !== null && settings.editing >= settings.cfg.reviewers.length) settings.editing = null;
+    settings.flash = `Saved ${plural(written, 'file')} to <code>${esc(configDir())}/</code>. Commit the folder to share it.`;
+  } catch (error) {
+    settings.error = `Not saved: ${error.message}`;
+  }
+  settings.saving = false;
+  renderSettings();
+}
 document.getElementById('settings').addEventListener('click', async event => {
   const t = event.target;
+  if (settings.picker && !t.closest('.mpick-wrap')) { settings.picker = null; renderSettings(); if (!t.closest('[data-sact], [data-sect], .srow')) return; }
+  const choose = t.closest('[data-mchoose]');
+  if (choose) { choosePicker(choose.dataset.mchoose); return; }
+  const mpick = t.closest('[data-mpick]');
+  if (mpick) { settings.picker ? closePicker(true) : openPicker(mpick.dataset.mpick); return; }
+  if (t.closest('.mpop')) return;
   const sect = t.closest('[data-sect]');
   if (sect) { settings.section = sect.dataset.sect; settings.editing = null; renderSettings(); return; }
   if (t.matches('.sscrim')) { openSettings(false); return; }
@@ -1282,48 +1500,88 @@ document.getElementById('settings').addEventListener('click', async event => {
   if (!act) return;
   const cfg = settings.cfg;
   const r = settings.editing !== null ? cfg.reviewers[settings.editing] : null;
+  settings.flash = ''; settings.error = '';
   switch (act.dataset.sact) {
     case 'close': openSettings(false); return;
     case 'done': settings.editing = null; break;
     case 'add': {
       let n = 1; while (cfg.reviewers.some(x => x.name === `check-custom-${n}`)) n += 1;
-      const blank = { summary: '', harness: 'claude-code', model: 'opus', effort: 'high', prompt: '', mode: 'replace' };
-      cfg.reviewers.push({ name: `check-custom-${n}`, builtin: false, source: 'new', included: true, isNew: true, ...blank, original: blank });
+      const first = modelsFor('claude-code')[0];
+      const blank = { summary: '', harness: 'claude-code', model: first ? first.id : 'opus', effort: 'high', prompt: '', mode: 'replace', included: true, removeFile: false };
+      cfg.reviewers.push({ name: `check-custom-${n}`, builtin: false, file: null, source: 'new', isNew: true, ...blank, original: blank });
       settings.editing = cfg.reviewers.length - 1;
+      settings.section = 'reviewers';
       break;
     }
-    case 'toggle-include': if (r) r.included = !r.included; break;
+    case 'toggle-include': if (r) { if (r.isNew && r.included) { cfg.reviewers.splice(settings.editing, 1); settings.editing = null; } else r.included = !r.included; } break;
     case 'reset': if (r) Object.assign(r, r.original); break;
+    case 'use-builtin': if (r) Object.assign(r, { summary: r.builtinSummary || r.summary, harness: r.builtinAgent.harness, model: r.builtinAgent.model, effort: r.builtinAgent.effort || 'default', prompt: r.builtinText, mode: 'replace', removeFile: true }); break;
+    case 'discard': settings.cfg = null; store(cfgKey(), null); loadConfig(); settings.editing = null; break;
+    case 'save': await saveSettings(); return;
     case 'copy-file': if (r) await copy(reviewerFile(r), document.getElementById('cfg-note')); return;
     case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note')); return;
     case 'copy-prompt': await copy(setupPrompt(), document.getElementById('prompt-note')); return;
+    case 'copy-command': await copy(state.config.command, document.getElementById('command-note')); return;
   }
   saveConfig();
   renderSettings();
 });
+function refreshFooter() {
+  const foot = document.querySelector('#settings .sfoot');
+  if (foot) foot.outerHTML = footer();
+}
 document.getElementById('settings').addEventListener('input', event => {
   const t = event.target;
+  settings.flash = ''; settings.error = '';
+  if (t.id === 'mpick-search') {
+    settings.picker.q = t.value; settings.picker.active = 0;
+    document.getElementById('mpick-list').innerHTML = pickerList();
+    document.getElementById('mpick-list').scrollTop = 0;
+    return;
+  }
   if (t.dataset.cfg && settings.editing !== null) {
-    const value = t.dataset.cfg === 'name' ? t.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : t.value;
-    settings.cfg.reviewers[settings.editing][t.dataset.cfg] = value;
+    const r = settings.cfg.reviewers[settings.editing];
+    r[t.dataset.cfg] = t.dataset.cfg === 'name' ? t.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : t.value;
+    if (t.dataset.cfg === 'harness') harnessChanged(r);
+    r.removeFile = false;
     saveConfig();
     if (t.tagName === 'SELECT') renderSettings();
     else { // Typing redraws only the footer and the row summary, so the field keeps its caret.
-      const foot = document.querySelector('#settings .sfoot .note');
-      const n = pendingFiles().length;
-      if (foot) foot.innerHTML = `<span class="dot-warn"></span>${n ? `${plural(n, 'file')} to add. Edits stay in this browser until you add the files to the repository.` : 'No changes yet. Edits stay in this browser until you add the files to the repository.'}`;
-      const setup = document.querySelector('#settings [data-sact="copy-setup"]');
-      if (setup) setup.disabled = !n;
-      // Keep the open reviewer's row in step without redrawing the field being typed in.
-      const r = settings.cfg.reviewers[settings.editing];
+      refreshFooter();
       const row = document.querySelector(`#settings .srow[data-index="${settings.editing}"]`);
-      if (row) { row.querySelector('.who b').textContent = r.name; row.querySelector('.who span').textContent = r.summary || 'No summary yet'; }
+      if (row) { row.querySelector('.who b').textContent = reviewerLabel(r.name); row.querySelector('.who span').textContent = r.summary || 'No summary yet'; }
     }
   }
-  if (t.dataset.syn) { settings.cfg.synthesis[t.dataset.syn] = t.value; saveConfig(); if (t.tagName === 'SELECT') renderSettings(); }
+  if (t.dataset.syn) {
+    settings.cfg.synthesis[t.dataset.syn] = t.value;
+    if (t.dataset.syn === 'harness') harnessChanged(settings.cfg.synthesis);
+    saveConfig(); renderSettings();
+  }
 });
 document.getElementById('settings').addEventListener('keydown', event => {
-  const row = event.target.closest && event.target.closest('.srow');
+  const t = event.target;
+  if (settings.picker && t.id === 'mpick-search') {
+    const options = pickerMatches();
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      settings.picker.active = (settings.picker.active + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % Math.max(options.length, 1);
+      document.getElementById('mpick-list').innerHTML = pickerList();
+      scrollActive();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (options[settings.picker.active]) choosePicker(options[settings.picker.active].id);
+    } else if (event.key === 'Escape') {
+      event.preventDefault(); event.stopPropagation();
+      closePicker(true);
+    } else if (event.key === 'Tab') closePicker(false);
+    return;
+  }
+  const mpick = t.closest && t.closest('[data-mpick]');
+  if (mpick && !settings.picker) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); openPicker(mpick.dataset.mpick); return; }
+    if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey && event.key !== ' ') { event.preventDefault(); openPicker(mpick.dataset.mpick, event.key); return; }
+  }
+  const row = t.closest && t.closest('.srow');
   if (row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); row.click(); }
 });
 
@@ -1384,6 +1642,8 @@ async function poll() {
   if (!terminal(state.status)) setTimeout(poll, 1500);
 }
 if (state) { const s = state; state = null; adopt(s); render(); } else poll();
+// The runner's settings command opens the page at #settings.
+if (location.hash === '#settings') (function waitForState() { if (state) openSettings(true); else setTimeout(waitForState, 100); })();
 setInterval(() => {
   if (!state || state.ended_at) return;
   renderChrome();

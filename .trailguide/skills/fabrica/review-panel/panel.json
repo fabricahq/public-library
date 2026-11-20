@@ -84,5 +84,55 @@
       "model": "opus",
       "effort": "high"
     }
-  }
+  },
+  "models": [
+    {
+      "id": "opus",
+      "name": "Opus",
+      "harness": "claude-code",
+      "note": "Latest Opus"
+    },
+    {
+      "id": "sonnet",
+      "name": "Sonnet",
+      "harness": "claude-code",
+      "note": "Latest Sonnet"
+    },
+    {
+      "id": "haiku",
+      "name": "Haiku",
+      "harness": "claude-code",
+      "note": "Latest Haiku"
+    },
+    {
+      "id": "claude-fable-5-2",
+      "name": "Fable 5.2",
+      "harness": "claude-code"
+    },
+    {
+      "id": "claude-opus-5-5",
+      "name": "Opus 5.5",
+      "harness": "claude-code"
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "name": "Sonnet 5.5",
+      "harness": "claude-code"
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "name": "Haiku 5.5",
+      "harness": "claude-code"
+    },
+    {
+      "id": "gpt-6-astra",
+      "name": "GPT-6 Astra",
+      "harness": "codex"
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "name": "GPT-6.1 Sol",
+      "harness": "codex"
+    }
+  ]
 }

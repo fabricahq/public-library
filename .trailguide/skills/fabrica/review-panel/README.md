@@ -56,9 +56,15 @@ A repository changes its panel with a folder of plain files, `.fabrica/review-pa
     └── check-payments.md   adds a new reviewer
 ```
 
-Each reviewer file is that reviewer's focus prompt in Markdown, with `summary`, `harness` (`claude-code` or `codex`), `model`, and `effort` in its front matter. A file named after a built-in reviewer replaces its prompt, or adds to it with `mode: append`. Any other name adds a reviewer, which needs a `summary`. `panel.yaml` is optional: its `reviewers` list picks and orders the panel, and its `synthesis` map sets the synthesis model. Without a list, every built-in reviewer runs, plus every file in `reviewers/`.
+Each reviewer file is that reviewer's focus prompt in Markdown, with `summary`, `harness` (`claude-code` or `codex`), `model`, and `effort` in its front matter. A file named after a built-in reviewer replaces its prompt, adds to it with `mode: append`, or, with front matter only, keeps the built-in prompt and changes just its settings. Any other name adds a reviewer, which needs a `summary` and a prompt. `panel.yaml` is optional: its `reviewers` list picks and orders the panel, and its `synthesis` map sets the synthesis model. Without a list, every built-in reviewer runs, plus every file in `reviewers/`.
 
-The panel reads this folder from the checkout it runs in, never from a pull request under review, so a change can't rewrite the panel that judges it. `--panel DIR` reads another folder for one run. The page's settings window shows each reviewer's prompt, lets you edit them, and copies the commands that write the files.
+The panel reads this folder from the checkout it runs in, never from a pull request under review, so a change can't rewrite the panel that judges it. `--panel DIR` reads another folder for one run. To edit the folder in a page instead, run this in the repository:
+
+```sh
+python3 PATH_TO_SKILL/scripts/review_panel.py settings
+```
+
+It opens the latest run's page at its settings window, which shows where each reviewer's settings come from (built-in or the repository) and saves edits as files in `.fabrica/review-panel/`, uncommitted, for you to review and commit. A saved report page can't write files, so its settings window copies the commands that write them instead.
 
 ## Requirements and cost
 

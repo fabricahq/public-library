@@ -267,6 +267,61 @@ class PureHelpers(unittest.TestCase):
             with self.subTest(message), self.assertRaisesRegex(review_panel.PanelError, message):
                 review_panel.apply_repo_config(self.roster(), self.config_folder(files), '.fabrica/review-panel')
 
+    def test_save_settings_writes_only_a_folder_the_next_run_accepts(self):
+        repo = Path(tempfile.mkdtemp())
+        folder = repo / '.fabrica' / 'review-panel'
+        roster = review_panel.save_settings(repo, None, {'reviewers/check-docs.md': '---\nmodel: sonnet\n---\nOur docs.\n'}, [])
+        self.assertTrue((folder / 'reviewers' / 'check-docs.md').exists())
+        docs = roster['all']['reviewers']['check-docs']
+        self.assertEqual((docs['file'], docs['agent']['model'], docs['file_body']), ('.fabrica/review-panel/reviewers/check-docs.md', 'sonnet', 'Our docs.'))
+        self.assertTrue(docs['builtin'])
+        with self.assertRaisesRegex(review_panel.PanelError, 'a new reviewer needs a summary'):
+            review_panel.save_settings(repo, None, {'reviewers/check-new.md': 'Prompt only.\n'}, [])
+        self.assertFalse((folder / 'reviewers' / 'check-new.md').exists())
+        with self.assertRaisesRegex(review_panel.PanelError, 'can only write'):
+            review_panel.save_settings(repo, None, {'../escape.md': 'x'}, [])
+        roster = review_panel.save_settings(repo, None, {}, ['reviewers/check-docs.md'])
+        self.assertFalse((folder / 'reviewers' / 'check-docs.md').exists())
+        self.assertEqual(roster['all']['reviewers']['check-docs']['source'], 'built-in')
+
+    def test_front_matter_only_keeps_the_built_in_prompt(self):
+        roster = self.roster()
+        review_panel.apply_repo_config(roster, self.config_folder({'reviewers/check-docs.md': '---\nmodel: sonnet\n---\n'}), '.fabrica/review-panel')
+        self.assertEqual(roster['reviewers']['check-docs']['agent']['model'], 'sonnet')
+        self.assertIn('Built-in docs focus.', roster['reviewers']['check-docs']['focus_text'])
+        with self.assertRaisesRegex(review_panel.PanelError, 'a new reviewer needs a prompt'):
+            review_panel.apply_repo_config(self.roster(), self.config_folder({'reviewers/check-new.md': '---\nsummary: S\n---\n'}), '.fabrica/review-panel')
+
+    def test_roster_summary_keeps_reviewers_panel_yaml_leaves_out(self):
+        repo = Path(tempfile.mkdtemp())
+        roster = review_panel.save_settings(repo, None, {'panel.yaml': 'reviewers:\n  - check-docs\n'}, [])
+        everyone = roster['all']['reviewers']
+        self.assertEqual(list(everyone)[0], 'check-docs')
+        self.assertTrue(everyone['check-docs']['included'])
+        self.assertFalse(everyone['check-security']['included'])
+        self.assertEqual(list(roster['reviewers']), ['check-docs'])
+
+    def test_settings_endpoint_needs_its_token_and_a_json_body(self):
+        repo = Path(tempfile.mkdtemp())
+        state = review_panel.State(repo / 'state.json', {'roster': None, 'config': None})
+        server = review_panel.serve(state, repo, 0, 'tok', repo, None)
+        self.addCleanup(server.shutdown)
+        base = f'http://127.0.0.1:{server.server_address[1]}'
+        def post(path, body, kind='application/json'):
+            request = urllib.request.Request(base + path, data=json.dumps(body).encode(), headers={'Content-Type': kind}, method='POST')
+            try:
+                with urllib.request.urlopen(request) as response:
+                    return response.status, json.loads(response.read())
+            except urllib.error.HTTPError as error:
+                return error.code, None
+        self.assertEqual(post('/wrong/settings', {})[0], 404)
+        self.assertEqual(post('/tok/settings', {}, 'text/plain')[0], 415)
+        status, reply = post('/tok/settings', {'files': {'reviewers/check-docs.md': '---\neffort: max\n---\nDocs.\n'}})
+        self.assertEqual(status, 200)
+        self.assertEqual(reply['roster']['reviewers']['check-docs']['agent']['effort'], 'max')
+        self.assertTrue(reply['config']['found'])
+        self.assertTrue((repo / '.fabrica' / 'review-panel' / 'reviewers' / 'check-docs.md').exists())
+
     def test_validate_synthesis_requires_short_conclusions(self):
         problems = review_panel.validate_synthesis(self.synthesis(conclusions=['x' * 201]), {'check-docs': REVIEW, 'check-rules': REVIEW})
         self.assertIn('conclusions[0] must be a statement under 200 characters', problems)
