@@ -158,7 +158,7 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .zoom .lvl { font-family: var(--mono); font-size: 11px; color: var(--muted); align-self: center; padding: 0 6px; min-width: 44px; text-align: center; }
 
 .doc { position: absolute; inset: 0; overflow-y: auto; padding-block: 28px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.doc-inner { max-width: 880px; margin: 0 auto; display: grid; gap: 28px; }
+.doc-inner { max-width: 880px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 .doc h1 { font-size: 22px; line-height: 1.3; margin: 0; text-wrap: balance; }
 .doc h2 { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
 .doc p { margin: 0; max-width: 68ch; }
@@ -191,12 +191,34 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .stack a { color: inherit; text-decoration: none; border-radius: 4px; padding: 1px 3px; margin: -1px -3px; }
 .stack a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .stack .cur { color: var(--ink); font-weight: 600; }
-.rows { display: grid; gap: 8px; }
+.rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.row > * { min-width: 0; overflow-wrap: anywhere; }
 .row { display: grid; grid-template-columns: 64px 1fr; gap: 4px 12px; align-items: start; background: var(--node); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
 .row .row-title { font-weight: 600; }
 .row .row-detail { grid-column: 2; color: var(--muted); font-size: 13px; }
 .media-card { display: grid; gap: 4px; background: var(--node); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
 .callout { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; font-size: 13px; }
+.pill.exp { color: var(--accent); background: var(--accent-soft); text-transform: none; letter-spacing: .02em; vertical-align: 1px; margin-left: 6px; }
+.ev-tally { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.ev-item { background: var(--node); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.ev-item > summary > *, .ev-list li > * { min-width: 0; }
+.ev-item > summary .pill { justify-self: start; }
+.ev-item > summary { display: grid; grid-template-columns: 104px 1fr auto; gap: 4px 12px; align-items: start; padding: 12px 14px; cursor: pointer; list-style: none; }
+.ev-item > summary::-webkit-details-marker { display: none; }
+.ev-item > summary .row-title { font-weight: 600; }
+.ev-item > summary .hint { grid-column: 2; margin: 0; }
+.ev-item > summary .ev-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.ev-item[open] > summary { border-bottom: 1px solid var(--line); }
+.ev-body { padding: 12px 14px; display: grid; gap: 12px; font-size: 13px; }
+.ev-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ev-list li { display: grid; grid-template-columns: 72px 1fr; gap: 2px 10px; }
+.ev-kind { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+.ev-list .ev-where { grid-column: 2; font-size: 12px; color: var(--faint); }
+.ev-list code { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.ev-list .ev-where, .ev-gap { overflow-wrap: anywhere; }
+.ev-gap { border-left: 3px solid var(--changed); padding: 2px 0 2px 10px; }
+.ev-body .handoff { margin: 0; }
+@media (max-width: 640px) { .ev-item > summary { grid-template-columns: 1fr; } .ev-item > summary .hint { grid-column: 1; } }
 
 .insp-body, .insp-body > *, .ba > * { min-width: 0; }
 .win { position: absolute; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 36px #0000002b, 0 1px 3px #0000001a; overflow: hidden; min-width: 0; }
@@ -1148,6 +1170,7 @@ const views = {
     $('#main').innerHTML = `<div class="doc"><div class="doc-inner">
       <h1>Verification</h1>
       ${v.agentNote ? `<div class="callout">${esc(v.agentNote)}</div>` : ''}
+      ${evidenceSection(v.evidence)}
       ${vs ? `<section><h2>${esc(vs.name)} runs</h2><div class="rows"><div class="row"><span>${pill(vs.walked ? 'pass' : 'warn', vs.walked ? 'Walked' : 'Not walked')}</span><span class="row-title">${esc(vs.journeys)}</span><span class="row-detail">${esc(vs.detail)}</span></div></div></section>` : ''}
       <section><h2>Found, then fixed</h2><div class="rows">${(v.foundAndFixed || []).map(f => `<div class="row"><span>${pill('new', 'Fixed')}</span><span class="row-title">${esc(f.found)}</span><span class="row-detail"><b>Found by</b> ${esc(f.by)}. <b>Fix:</b> ${esc(f.fix)} <span class="chip">${esc(f.ref)}</span></span></div>`).join('')}</div></section>
       <section><h2>Checks run</h2>${groupBy(v.runs || []).map(([g, runs]) => `${g ? `<h4 class="subhead">${esc(g)}</h4>` : ''}<div class="rows">${runs.map(r => `<div class="row"><span>${pill(r.result, { pass: 'Pass', warn: 'Partly', skip: 'Not run', fail: 'Fail' }[r.result])}</span><span class="row-title">${esc(r.name)}</span>${r.detail ? `<span class="row-detail">${esc(r.detail)}</span>` : ''}</div>`).join('')}</div>`).join('')}</section>
@@ -1188,7 +1211,13 @@ function handoffPrompt(it) {
   const pr = D.pr || {}, p = D.principles || {}, book = (p.source || 'the design principles').split('. ')[0];
   const out = [`You are working in ${pr.repo}, on pull request #${pr.number}, "${pr.title}" (${pr.url}). Its branch is ${pr.head}.`,
     `A ${it.dead ? 'dead code scan' : 'design review'} of this PR was made at commit ${pr.headSha}. Check out the branch, pull it, and look at what changed since that commit before you start.`, ''];
-  if (it.dead) {
+  if (it.evidenceGap) {
+    out[1] = `An evidence check of this PR was made at commit ${pr.headSha}. Check out the branch, pull it, and look at what changed since that commit before you start.`;
+    const src = D.verification?.evidence?.sources || {};
+    out.push(`Goal: leave evidence that "${it.title}". ${it.from ? `It comes from: ${it.from}.` : ''}`, '', 'Evidence found so far:',
+      ...((it.evidence || []).map(e => `- ${e.name}${e.file ? ` (${e.file})` : ''}${src[e.ran] ? `, from ${src[e.ran].label}` : ''}`)), '', `Gap: ${it.gap}`, '',
+      `What to do: ${it.handoff || 'Write the smallest test that fails without this behavior and passes with it, at the lowest layer that can show it. Make sure CI runs it, and say in your report which step does.'} If what you find shows the product is wrong, stop and report before fixing it.`);
+  } else if (it.dead) {
     out.push(`Goal: remove unused code the scan found: ${it.label || it.name} (${it.where}).`, '', `Finding: ${it.finding}`);
     if (it.why) out.push(`Why it is unused: ${it.why}`);
     if (it.entries?.length) out.push('Entries:', ...it.entries.map(e => `- ${e.name} (${e.where})`));
@@ -1210,7 +1239,7 @@ function handoffPrompt(it) {
 }
 function handoffBox(id, it) {
   const text = handoffPrompt(it); handoffs.set(id, text);
-  return `<section class="handoff"><div class="handoff-bar"><b>Handoff prompt</b><span class="hint">Give it to an agent to act on this ${it.dead ? 'finding' : it.flag ? 'red flag' : 'principle'}.</span><button type="button" class="tool-btn" data-handoff="${esc(id)}">Copy prompt</button></div><details><summary>Show prompt</summary><pre>${esc(text)}</pre></details></section>`;
+  return `<section class="handoff"><div class="handoff-bar"><b>Handoff prompt</b><span class="hint">Give it to an agent to act on this ${it.evidenceGap ? 'gap' : it.dead ? 'finding' : it.flag ? 'red flag' : 'principle'}.</span><button type="button" class="tool-btn" data-handoff="${esc(id)}">Copy prompt</button></div><details><summary>Show prompt</summary><pre>${esc(text)}</pre></details></section>`;
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-handoff]'); if (!b) return;
@@ -1218,6 +1247,36 @@ document.addEventListener('click', async e => {
   const ok = await copyText(handoffs.get(b.dataset.handoff) || '');
   b.textContent = ok ? 'Copied' : "Couldn't copy"; clearTimeout(b._t); b._t = setTimeout(() => { b.textContent = 'Copy prompt'; }, 1600);
 });
+
+/* Experimental: what the change should prove, each matched to evidence the PR can't self-report. */
+const EV_STATUS = { proven: ['pass', 'Proven'], partial: ['warn', 'Partly proven'], claimed: ['skip', 'Claimed only'], missing: ['fail', 'Missing'] };
+const EV_ORDER = ['missing', 'claimed', 'partial', 'proven'];
+const EV_KIND = { test: 'Test', e2e: 'Browser', showcase: 'Showcase', ci: 'CI', schema: 'Schema', claim: 'Claim' };
+function evidenceSection(ev) {
+  if (!ev?.expectations?.length) return '';
+  handoffs.clear();
+  const src = ev.sources || {};
+  const items = [...ev.expectations].sort((a, b) => EV_ORDER.indexOf(a.status) - EV_ORDER.indexOf(b.status));
+  const tally = EV_ORDER.map(st => [st, items.filter(x => x.status === st).length]).filter(([, n]) => n);
+  const ran = e => { const s = src[e.ran]; if (!s) return ''; const label = esc(s.label);
+    return s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${label}</a>${s.result === 'pass' ? ', passed' : ''}` : label; };
+  const row = x => {
+    const [cls, word] = EV_STATUS[x.status] || ['context', x.status];
+    const real = (x.evidence || []).filter(e => e.kind !== 'claim').length;
+    return `<details class="ev-item"><summary>${pill(cls, word)}<span class="row-title">${esc(x.title)}</span><span class="ev-count">${real ? `${real} piece${real > 1 ? 's' : ''} of evidence` : 'No evidence'}</span>${x.from ? `<span class="hint">${esc(x.from)}</span>` : ''}</summary>
+      <div class="ev-body">
+        <ul class="ev-list">${(x.evidence || []).map(e => `<li><span class="ev-kind">${esc(EV_KIND[e.kind] || e.kind)}</span><span>${e.kind === 'test' || e.kind === 'e2e' ? `<code>${esc(e.name)}</code>` : esc(e.name)}${e.detail ? ` - ${esc(e.detail)}` : ''}</span><span class="ev-where">${e.file ? `${esc(e.file)} · ` : ''}${ran(e)}</span></li>`).join('')}</ul>
+        ${x.gap ? `<p class="ev-gap"><b>Gap.</b> ${esc(x.gap)}</p>` : ''}
+        ${x.note ? `<p class="sub">${esc(x.note)}</p>` : ''}
+        ${x.gap ? handoffBox('ev-' + x.id, { ...x, evidenceGap: true }) : ''}
+      </div></details>`;
+  };
+  return `<section><h2>Evidence check<span class="pill exp">Experimental</span></h2>
+    ${ev.method ? `<p class="sub">${esc(ev.method)}</p>` : ''}
+    <div class="ev-tally">${tally.map(([st, n]) => pill(EV_STATUS[st][0], `${n} ${EV_STATUS[st][1].toLowerCase()}`)).join('')}</div>
+    <div class="rows">${items.map(row).join('')}</div>
+    ${ev.limits ? `<p class="hint">${esc(ev.limits)}</p>` : ''}</section>`;
+}
 
 function thumbHtml(pv) {
   if (!pv?.thumb) return '';
