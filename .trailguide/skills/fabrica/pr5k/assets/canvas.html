@@ -1359,7 +1359,7 @@ function previewPane(it) {
   const pv = it.preview; if (!pv?.url) return '';
   const n = pv.states?.length || 0;
   const from = pv.source === 'catalog' ? "From the project's component catalog, as of its latest deploy" : `The real component at ${esc(D.pr?.headSha || 'the scanned commit')}, against sample data`;
-  return `<div class="preview-bar"><span>${from}${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}${pv.source === 'catalog' ? '' : '. Show code gives each state\'s code'}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
+  return `<div class="preview-bar"><span>${from}${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}${pv.source === 'catalog' ? '' : ', each with its code beneath'}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
 }
 /* Which other components of the PR a component draws, or is drawn by; each opens that component's window. */
 function partsHtml(title, ids) {
