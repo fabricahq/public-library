@@ -1502,7 +1502,7 @@ function overviewPane() {
   const command = (state.config && state.config.command) || 'python3 <skill>/scripts/review_panel.py settings';
   let detail;
   if (viewMode() === 'builtin' && !found) {
-    detail = `<p>The panel runs the skill’s ${plural(cfg.reviewers.length, 'reviewer')} with their built-in prompts and models. Open <b>Reviewers</b> to read them. There’s nothing to set up.</p>`;
+    detail = `<button type="button" class="linkish" data-sect="reviewers">See the ${plural(cfg.reviewers.length, 'reviewer')} →</button>`;
   } else if (viewMode() === 'builtin') {
     detail = `<p>This repository has a <code>${esc(dir)}/</code> folder, so the panel uses it. To go back to the built-in settings, delete the folder and commit:</p>${copyLine(`git rm -r ${dir}`, 'copy-remove', 'remove-note')}`;
   } else if (found) {
@@ -1528,11 +1528,11 @@ function overviewPane() {
         <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn small" data-sact="copy-prompt">Copy setup prompt</button></div>
         <pre class="setup-prompt">${esc(setupPrompt())}</pre></details>`;
   }
-  return `<div class="spane-head"><div><h2>Overview</h2><p>Choose where the panel’s settings come from.</p></div>${closeBtn()}</div>
+  return `<div class="spane-head"><div><h2>Overview</h2></div>${closeBtn()}</div>
     <div class="sbody prose">
       <div class="modes" role="radiogroup" aria-label="Settings mode">
-        ${modeCard('builtin', 'Built-in settings', 'The skill’s reviewers, prompts, and models. Nothing to set up.')}
-        ${modeCard('config', 'Config file', `A <code>${esc(dir)}/</code> folder in this repository overrides them, for everyone who runs the panel there.`)}
+        ${modeCard('builtin', 'Built-in settings', 'The skill’s reviewers, as shipped.')}
+        ${modeCard('config', 'Config file', `This repository’s <code>${esc(dir)}/</code> overrides them.`)}
       </div>
       <div class="mode-detail">${detail}</div>
     </div>`;
