@@ -1026,7 +1026,8 @@
         "verdict": "Plans only fit invoices.",
         "evidence": [
           "A subscription feature would need its own split logic."
-        ]
+        ],
+        "handoff": "Split a total into dated parts in one function that takes an amount, a count and a first date, and have installment plans call it, so a later subscription feature can reuse it. Keep the plan tables as they are."
       },
       {
         "n": 8,

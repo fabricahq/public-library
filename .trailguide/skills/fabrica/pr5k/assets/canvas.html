@@ -133,6 +133,18 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .zoom { position: absolute; left: max(14px, env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
 .zoom button { border: 0; background: none; border-radius: 6px; padding: 3px 9px; cursor: pointer; font-size: 13px; }
 .zoom button:hover { background: var(--hover); }
+.table .node-head { cursor: grab; }
+.node.moving { z-index: 5; box-shadow: 0 12px 32px #00000030; }
+.node.moving .node-head { cursor: grabbing; }
+.rescan-btn { display: inline-flex; align-items: center; gap: 6px; }
+.rescan-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.rescan-btn:disabled { cursor: default; color: var(--muted); background: var(--node); }
+.handoff { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 0 0 14px; }
+.handoff-bar { display: flex; align-items: center; gap: 10px; }
+.handoff-bar b { font-size: 13px; font-weight: 600; }
+.handoff-bar .hint { margin: 0; flex: 1; font-size: 12px; }
+.handoff summary { cursor: pointer; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.handoff pre { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; line-height: 1.5; max-height: 320px; overflow: auto; background: var(--surface); border-radius: 8px; padding: 10px; margin: 8px 0 0; }
 .zoom .lvl { font-family: var(--mono); font-size: 11px; color: var(--muted); align-self: center; padding: 0 6px; min-width: 44px; text-align: center; }
 
 .doc { position: absolute; inset: 0; overflow-y: auto; padding-block: 28px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -446,6 +458,7 @@ body.chat-resizing { cursor: col-resize; user-select: none; }
     <span class="pr-num" id="prNum"></span>
     <span class="pr-title" id="prTitle"></span>
     <a class="tool-btn open-gh" id="prLink" target="_blank" rel="noopener noreferrer"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Open on GitHub ↗</a>
+    <button class="tool-btn rescan-btn" id="rescanBtn" hidden title="Ask the agent that built this canvas to rescan the PR and republish it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span></span></button>
     <button class="tool-btn chat-btn" id="chatBtn" aria-expanded="false" aria-controls="chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/></svg><span>Chat</span></button>
     <button class="theme-btn" id="settingsBtn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </header>
@@ -631,6 +644,32 @@ function openSettings(section = 'personas') {
 $('#prNum').textContent = `${pr.repo.split('/')[1]} #${pr.number}`;
 $('#prTitle').textContent = pr.title;
 $('#prLink').href = pr.url;
+/* Rescan asks the agent that built this canvas, through a comment on the PR title, to rebuild the snapshot at
+   the PR's latest head and republish. It shows only where this page can send comments. */
+{
+  const btn = $('#rescanBtn'), label = $('span', btn), idle = `Rescan #${pr.number}`;
+  label.textContent = idle;
+  setTimeout(() => capability('comments').then(c => { if (c) btn.hidden = false; }));
+  const say = (text, title) => { label.textContent = text; btn.title = title; };
+  btn.addEventListener('click', async () => {
+    const c = await capability('comments'); if (!c || btn.disabled) return;
+    let state = 'off'; try { state = await c.canSendToClaude(); } catch (e) {}
+    if (state !== 'available') {
+      say(state === 'no_session' ? 'No agent is watching' : 'Rescan not available', state === 'no_session' ? 'No agent session is watching this page right now. Try again later.' : 'Only editors of this page can ask for a rescan.');
+      setTimeout(() => say(idle, 'Ask the agent that built this canvas to rescan the PR and republish it'), 3000); return;
+    }
+    btn.disabled = true; say('Sending…', '');
+    try {
+      const anchor = await c.anchorFor($('#prTitle'));
+      await c.sendToClaude({ anchor, text: `Rescan #${pr.number}: fetch the PR's latest head, rebuild this canvas's snapshot at it, and republish this page. This version shows ${pr.headSha}.` });
+      say('Rescan requested', 'The agent replies in a comment on the PR title and republishes this page when the rescan is done.');
+    } catch (e) {
+      btn.disabled = false;
+      say(e?.code === 'consent_required' || e?.code === 'forbidden' ? 'Sending not allowed' : "Couldn't send", 'The request was not sent.');
+      setTimeout(() => say(idle, 'Ask the agent that built this canvas to rescan the PR and republish it'), 3000);
+    }
+  });
+}
 const st = pr.stats || {};
 
 /* Rail. */
@@ -799,17 +838,44 @@ function fit(readable) {
   cam.k = readable ? Math.min(1, Math.max(0.8, whole)) : Math.max(0.25, whole);
   cam.x = Math.max(24, (vw - w * cam.k) / 2); cam.y = 24; setCam();
 }
-function mountBoard(build) {
+/* opts.movable: a selector for nodes the reader can drag by their head. Their positions are kept in this
+   browser per PR and board (opts.layoutKey) until Reset layout. opts.separate pushes overlapping nodes apart. */
+function mountBoard(build, opts = {}) {
   const main = $('#main');
   main.innerHTML = `<div class="viewport" id="viewport"><div class="world" id="world"><svg class="edges" id="edges"></svg></div></div>
-    <div class="zoom"><button data-z="out" aria-label="Zoom out">−</button><span class="lvl" id="zoomLvl">100%</span><button data-z="in" aria-label="Zoom in">+</button><button data-z="fit">Fit</button></div>`;
+    <div class="zoom"><button data-z="out" aria-label="Zoom out">−</button><span class="lvl" id="zoomLvl">100%</span><button data-z="in" aria-label="Zoom in">+</button><button data-z="fit">Fit</button>${opts.movable ? '<button data-z="reset" hidden title="Put every table back where it started">Reset layout</button>' : ''}</div>`;
   viewport = $('#viewport'); world = $('#world'); zoomLabel = $('#zoomLvl');
-  const edges = build(world);
-  world.style.width = world.scrollWidth + 'px'; world.style.height = world.scrollHeight + 'px';
-  drawEdges(edges || []);
+  boardEdges = build(world) || [];
+  const nodes = [...world.querySelectorAll('.node')];
+  if (opts.separate) separateNodes(nodes);
+  nodes.forEach(n => { n.dataset.x0 = n.offsetLeft; n.dataset.y0 = n.offsetTop; });
+  const resetBtn = $('[data-z="reset"]');
+  if (opts.movable) { applyLayout(opts.layoutKey); resetBtn.hidden = !Object.keys(readLayout(opts.layoutKey)).length; }
+  sizeWorld();
+  drawEdges(boardEdges);
   fit(true);
   $('.zoom').addEventListener('click', e => { const z = e.target.closest('button')?.dataset.z; if (!z) return; const r = viewport.getBoundingClientRect();
+    if (z === 'reset') { resetLayout(opts.layoutKey); resetBtn.hidden = true; return; }
     if (z === 'fit') fit(); else zoomAt(z === 'in' ? 1.2 : 1 / 1.2, r.width / 2, r.height / 2); });
+  if (opts.movable) world.addEventListener('pointerdown', e => {
+    const n = e.target.closest(opts.movable);
+    if (!n || e.button !== 0 || !e.target.closest('.node-head') || e.target.closest('button, a')) return;
+    e.preventDefault(); n.setPointerCapture(e.pointerId);
+    const start = { x: e.clientX, y: e.clientY, l: n.offsetLeft, t: n.offsetTop }; let moved = false;
+    const move = ev => {
+      const dx = (ev.clientX - start.x) / cam.k, dy = (ev.clientY - start.y) / cam.k;
+      if (!moved && Math.abs(ev.clientX - start.x) + Math.abs(ev.clientY - start.y) < 4) return;
+      moved = true; n.classList.add('moving');
+      n.style.left = Math.max(0, start.l + dx) + 'px'; n.style.top = Math.max(0, start.t + dy) + 'px'; drawEdges(boardEdges);
+    };
+    const up = () => {
+      n.removeEventListener('pointermove', move); n.removeEventListener('pointerup', up); n.removeEventListener('pointercancel', up);
+      if (!moved) return;
+      n.classList.remove('moving'); n._dragged = true; sizeWorld(); drawEdges(boardEdges);
+      saveLayout(opts.layoutKey, opts.movable); resetBtn.hidden = false;
+    };
+    n.addEventListener('pointermove', move); n.addEventListener('pointerup', up); n.addEventListener('pointercancel', up);
+  });
   let gesture = null;
   viewport.addEventListener('wheel', e => { e.preventDefault(); const r = viewport.getBoundingClientRect();
     if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top);
@@ -821,10 +887,45 @@ function mountBoard(build) {
   viewport.addEventListener('pointerdown', e => { if (e.target.closest('.node')) return; drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; viewport.setPointerCapture(e.pointerId); viewport.classList.add('dragging'); });
   viewport.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; cam.x = drag.cx + dx; cam.y = drag.cy + dy; setCam(); });
   viewport.addEventListener('pointerup', () => { drag = null; viewport.classList.remove('dragging'); });
-  world.addEventListener('click', e => { const n = e.target.closest('.node'); if (!n) return; selectNode(n.dataset.id); });
+  world.addEventListener('click', e => { const n = e.target.closest('.node'); if (!n) return; if (n._dragged) { n._dragged = false; return; } selectNode(n.dataset.id); });
   world.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('node')) { e.preventDefault(); selectNode(e.target.dataset.id); } });
 }
 let nodeHandlers = {};
+let boardEdges = [];
+function sizeWorld() {
+  let w = 0, h = 0;
+  [...world.children].filter(n => n.id !== 'edges').forEach(n => { w = Math.max(w, n.offsetLeft + n.offsetWidth); h = Math.max(h, n.offsetTop + n.offsetHeight); });
+  world.style.width = (w + 40) + 'px'; world.style.height = (h + 40) + 'px';
+}
+/* Tables placed by hand in the snapshot can collide once one grows. Walk them top to bottom and push each one
+   below any earlier one it would overlap, so no two tables ever touch. */
+function separateNodes(nodes, gap = 56) {
+  const placed = [];
+  [...nodes].sort((a, b) => a.offsetTop - b.offsetTop || a.offsetLeft - b.offsetLeft).forEach(n => {
+    const l = n.offsetLeft, w = n.offsetWidth, h = n.offsetHeight; let y = n.offsetTop, bumped = true;
+    while (bumped) {
+      bumped = false;
+      for (const p of placed) if (l < p.r + 24 && p.l < l + w + 24 && y < p.b + gap && p.t < y + h + gap) { y = p.b + gap; bumped = true; }
+    }
+    n.style.top = y + 'px'; placed.push({ l, r: l + w, t: y, b: y + h });
+  });
+}
+const layoutStoreKey = key => `pr5k-layout:${D.pr?.repo || ''}#${D.pr?.number || ''}:${key}`;
+function readLayout(key) { try { return JSON.parse(localStorage.getItem(layoutStoreKey(key))) || {}; } catch (e) { return {}; } }
+function applyLayout(key) {
+  const saved = readLayout(key);
+  world.querySelectorAll('.node').forEach(n => { const s = saved[n.dataset.id]; if (s) { n.style.left = s.x + 'px'; n.style.top = s.y + 'px'; } });
+}
+function saveLayout(key, selector) {
+  const out = {};
+  world.querySelectorAll(selector).forEach(n => { if (n.offsetLeft != n.dataset.x0 || n.offsetTop != n.dataset.y0) out[n.dataset.id] = { x: n.offsetLeft, y: n.offsetTop }; });
+  try { localStorage.setItem(layoutStoreKey(key), JSON.stringify(out)); } catch (e) {}
+}
+function resetLayout(key) {
+  try { localStorage.removeItem(layoutStoreKey(key)); } catch (e) {}
+  world.querySelectorAll('.node').forEach(n => { n.style.left = n.dataset.x0 + 'px'; n.style.top = n.dataset.y0 + 'px'; });
+  sizeWorld(); drawEdges(boardEdges);
+}
 /* A button that copies a column's name, used on the board and in a table's window. */
 const COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 3.5v-.5A1.5 1.5 0 0 0 9 1.5H3A1.5 1.5 0 0 0 1.5 3v6A1.5 1.5 0 0 0 3 10.5h.5" stroke="currentColor" stroke-width="1.4"/></svg>';
 const DONE_ICON = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -855,6 +956,7 @@ function placeNode(html, x, y, id, extraClass = '') {
 }
 function placeText(cls, text, x, y) { const el = document.createElement('div'); el.className = cls; el.style.left = x + 'px'; el.style.top = y + 'px'; el.textContent = text; world.appendChild(el); return el; }
 function drawEdges(list) {
+  world.querySelectorAll('.edge-label').forEach(l => l.remove());
   const svg = $('#edges'); svg.setAttribute('width', world.scrollWidth); svg.setAttribute('height', world.scrollHeight);
   const box = (id, col) => { const n = world.querySelector(`.node[data-id="${CSS.escape(id)}"]`); if (!n) return null;
     const row = col && n.querySelector(`[data-col="${CSS.escape(col)}"]`);
@@ -927,7 +1029,7 @@ const views = {
         nodeHandlers[t.id] = () => inspectTable(t, db);
       });
       return db.relations;
-    });
+    }, { movable: '.table', layoutKey: 'database', separate: true });
   },
 
   backend() { entityBoard(D.backend); },
@@ -952,17 +1054,18 @@ const views = {
       { title: 'Mixed', items: p.items.filter(i => i.rating === 'mixed') },
       { title: 'Applied well', items: p.items.filter(i => i.rating === 'strong') },
     ].filter(g => g.items.length);
+    handoffs.clear();
     columnBoard(p.method, groups, it => it.flag ? ({
       id: 'flag-' + it.name, cls: 'flag',
       html: `<div class="node-head"><span class="node-title">${esc(it.name)}</span></div><div class="node-sum">${esc(it.where)}</div>`,
-      onSelect: () => openWindow({ title: it.name, statusWord: 'Red flag', status: 'removed', body: it.issue
+      onSelect: () => openWindow({ title: it.name, statusWord: 'Red flag', status: 'removed', body: handoffBox('flag-' + it.name, it) + (it.issue
         ? `<div class="dg-pair">${dgPanel('The issue', it.issue, it.where)}${it.fix ? dgPanel('A simple fix', it.fix.diagram, it.fix.text) : ''}</div><p class="hint">${esc(p.source)}</p>`
-        : `<p>${md(it.where)}</p>${it.fix ? `<section><h3>A simple fix</h3><p>${md(it.fix.text)}</p></section>` : ''}<p class="hint">${esc(p.source)}</p>` }),
+        : `<p>${md(it.where)}</p>${it.fix ? `<section><h3>A simple fix</h3><p>${md(it.fix.text)}</p></section>` : ''}<p class="hint">${esc(p.source)}</p>`) }),
     }) : ({
       id: 'p' + it.n, cls: 'rating-' + it.rating,
       html: `<div class="node-head"><span class="node-num">${it.n}</span><span class="node-title">${esc(it.title)}</span></div><div class="node-sum">${esc(it.verdict)}</div>`,
       onSelect: () => openWindow({ title: it.title, status: it.rating, statusWord: { strong: 'Applied well', mixed: 'Mixed', weak: 'Weak' }[it.rating], kind: `Principle ${it.n}`, file: it.page,
-        body: `<p class="lead">${esc(it.verdict)}</p><section><h3>Evidence in this PR</h3><ul class="ev">${it.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section><p class="hint">${esc(p.source)}</p>` }),
+        body: `<p class="lead">${esc(it.verdict)}</p>${handoffBox('p' + it.n, it)}<section><h3>Evidence in this PR</h3><ul class="ev">${it.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section><p class="hint">${esc(p.source)}</p>` }),
     }), { perColumn: 5, width: 300 });
   },
 
@@ -987,6 +1090,39 @@ const views = {
         : `<div class="media-card"><b>${esc(i.title)}</b><span class="sub">${esc(i.detail || '')}</span>${i.url ? `<a href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open ↗</a>` : ''}</div>`).join('')}</div></div></div>`;
   },
 };
+
+/* A prompt the reader can copy and give to an agent working in the repository, so it acts on one principle or
+   red flag. It carries the PR, the rating and evidence, and the snapshot's own ask (handoff) when it has one. */
+const handoffs = new Map();
+function handoffPrompt(it) {
+  const pr = D.pr || {}, p = D.principles || {}, book = (p.source || 'the design principles').split('. ')[0];
+  const out = [`You are working in ${pr.repo}, on pull request #${pr.number}, "${pr.title}" (${pr.url}). Its branch is ${pr.head}.`,
+    `A design review of this PR was made at commit ${pr.headSha}. Check out the branch, pull it, and look at what changed since that commit before you start.`, ''];
+  if (it.flag) {
+    out.push(`Goal: remove the red flag "${it.name}" from this PR. The red flags come from ${book}.`, '', `Where the review saw it: ${it.where}`);
+    if (it.fix?.text) out.push('', `Proposed fix: ${it.fix.text}`);
+    out.push('', `What to do: ${it.handoff || (it.fix?.text ? 'Apply the proposed fix, or a simpler one if you find it, then check that nothing else in the PR shows the same red flag.' : 'Remove the red flag where the review saw it, then check that nothing else in the PR shows it.')}`);
+  } else {
+    const word = { strong: 'applied well', mixed: 'mixed', weak: 'weak' }[it.rating] || it.rating;
+    out.push(`Goal: make this PR follow principle ${it.n}, "${it.title}", from ${book}${it.page ? ` (${it.page})` : ''}.`, '',
+      `The review rated it ${word}: ${it.verdict}`, 'Evidence it cited:', ...(it.evidence || []).map(e => `- ${e}`), '',
+      `What to do: ${it.handoff || (it.rating === 'strong'
+        ? `This principle is applied well. Check that the commits since ${pr.headSha} still follow it, and fix any place that doesn't. Change nothing that already follows it.`
+        : 'Using the evidence above, find where the PR falls short of this principle. Close the gaps that belong in this PR, and list the ones that belong in a follow-up in your report instead of growing the PR.')}`);
+  }
+  out.push('', "Before changing code, read the repository's agent instructions (AGENTS.md or CLAUDE.md) and follow its engineering rules. Keep each change to one concern and commit on the PR's branch. If a change would alter what the product does, or goes against a decision the PR records, stop and ask instead of choosing. Finish with a short report: what you changed, what you left alone and why, and how you checked it.");
+  return out.join('\n');
+}
+function handoffBox(id, it) {
+  const text = handoffPrompt(it); handoffs.set(id, text);
+  return `<section class="handoff"><div class="handoff-bar"><b>Handoff prompt</b><span class="hint">Give it to an agent to act on this ${it.flag ? 'red flag' : 'principle'}.</span><button type="button" class="tool-btn" data-handoff="${esc(id)}">Copy prompt</button></div><details><summary>Show prompt</summary><pre>${esc(text)}</pre></details></section>`;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-handoff]'); if (!b) return;
+  e.preventDefault();
+  const ok = await copyText(handoffs.get(b.dataset.handoff) || '');
+  b.textContent = ok ? 'Copied' : "Couldn't copy"; clearTimeout(b._t); b._t = setTimeout(() => { b.textContent = 'Copy prompt'; }, 1600);
+});
 
 function entityBoard(sec) {
   columnBoard(sec.summary, sec.groups, it => ({
