@@ -198,9 +198,9 @@ tr.row.flash td { animation: flash 2.4s ease-out; }
 .fact dd { margin: 0; font-size: 13.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
 .fact dd .sep { margin-left: -6px; }
 .who { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.who svg { width: 13px; height: 13px; flex: none; }
-.who svg.claude { color: var(--claude); }
-.whos { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.linkish-quiet { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.linkish-quiet:hover { color: var(--accent); text-decoration: underline; }
+.whos { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; font-size: 13px; }
 .linkish.mono { font-family: var(--mono); font-size: 12.5px; }
 .fw-tabs { margin-top: 14px; }
 .finding-window .fw-scroll { border-top: 0; margin-top: 0; padding-top: 14px; }
@@ -641,10 +641,11 @@ function reviewerLabel(name) {
   const base = String(name).replace(/^check-/, '').split('-').filter(Boolean).join(' ');
   return base ? base[0].toUpperCase() + base.slice(1) + ' reviewer' : name;
 }
-function reviewerTag(name) {
-  const entry = state.reviewers[name];
-  const harness = entry && entry.agent && entry.agent.harness;
-  return `<span class="who">${(harness && LOGOS[harness]) || ''}${esc(reviewerLabel(name))}</span>`;
+// A reviewer's name, linking to its view; `merges` picks out the reviewer's own finding there to highlight.
+function reviewerTag(name, merges) {
+  if (!state.reviewers[name]) return `<span class="who">${esc(reviewerLabel(name))}</span>`;
+  const ref = (merges || []).find(m => m.startsWith(name + ':'));
+  return `<button type="button" class="who linkish-quiet" data-reviewer="${esc(name)}"${ref ? ` data-ref="R:${esc(ref)}"` : ''} title="Open the ${esc(reviewerLabel(name))}'s view">${esc(reviewerLabel(name))}</button>`;
 }
 function lineLabel(line) { return line ? (/[,-]/.test(String(line)) ? `lines ${line}` : `line ${line}`) : ''; }
 function fileLink(file, start, end) {
@@ -709,7 +710,7 @@ function detailHtml(r) {
     <dl class="facts">
       <div class="fact" title="${esc(sevHint)}"><dt>Severity</dt><dd><span class="pill sev-${esc(r.severity)}">${esc(sevWord)}</span></dd></div>
       ${r.category ? `<div class="fact" title="${esc(catHint)}"><dt>Type</dt><dd>${esc(catWord)}</dd></div>` : ''}
-      ${finders.length ? `<div class="fact"><dt>Found by</dt><dd>${finders.map(reviewerTag).join('<span class="sep">,</span> ')}</dd></div>` : ''}
+      ${finders.length ? `<div class="fact"><dt>Found by</dt><dd>${finders.map(w => reviewerTag(w, r.merges)).join('<span class="sep">,</span> ')}</dd></div>` : ''}
       ${where ? `<div class="fact"><dt>Where</dt><dd>${where}</dd></div>` : ''}
       ${outcome}
     </dl>
@@ -750,12 +751,16 @@ function gotoFinding(key) {
   ui.view = '__synthesis'; ui.tab.__synthesis = 'findings'; ui.raw = false;
   ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all';
   renderChrome(); renderPane(true);
+  highlightRow(key);
+}
+function highlightRow(key) {
   const row = [...document.querySelectorAll('#pane tr.row')].find(tr => tr.dataset.key === key);
-  if (!row) return;
+  if (!row) return false;
   row.scrollIntoView({ block: 'center' });
   row.focus({ preventScroll: true });
   row.classList.add('flash');
   setTimeout(() => row.classList.remove('flash'), 2400);
+  return true;
 }
 function stepDetail(delta) {
   const keys = visibleKeys();
@@ -768,7 +773,7 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
   const body = shown.map(r => {
     const where = r.file ? `${r.file.split('/').pop()}${r.line ? `:${r.line}` : ''}` : '';
     const picked = ui.picked.has(r.key);
-    const who = r.reviewers.slice(0, 2).map(reviewerTag).join('') + (r.reviewers.length > 2 ? `<span class="chip more">+${r.reviewers.length - 2}</span>` : '');
+    const who = r.reviewers.slice(0, 2).map(w => reviewerTag(w, r.merges)).join('') + (r.reviewers.length > 2 ? `<span class="chip more">+${r.reviewers.length - 2}</span>` : '');
     const num = r.key.startsWith('S:') ? r.id.replace(/^S/, '') : '';
     const outcome = r.outcome && r.outcome.startsWith('in ') ? `<button type="button" class="linkish" data-goto="S:${esc(r.outcome.slice(3))}" title="Show it in the synthesis's findings">Merged into finding ${esc(r.outcome.slice(4))}</button>` : r.outcome === 'dropped' ? 'Dropped' : '';
     return `<tr class="row ${picked ? 'picked' : ''} ${ui.detail === r.key ? 'current' : ''}" data-key="${esc(r.key)}" tabindex="0">
@@ -996,6 +1001,15 @@ document.addEventListener('click', async event => {
   if (sev) { ui.sev = sev.dataset.sev; document.querySelectorAll('[data-sev]').forEach(b => b.classList.toggle('on', b.dataset.sev === ui.sev)); renderTable(); return; }
   if (t.matches('[data-pick]')) { t.checked ? ui.picked.add(t.dataset.pick) : ui.picked.delete(t.dataset.pick); savePicks(); renderTable(); renderHandoff(); if (ui.detail) document.querySelectorAll('#pane tr.row').forEach(tr => tr.classList.toggle('current', tr.dataset.key === ui.detail)); return; }
   const row = t.closest('tr.row');
+  const who = t.closest('[data-reviewer]');
+  if (who) {
+    if (ui.detail) { ui.detail = null; renderDetail(); }
+    ui.view = who.dataset.reviewer; ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all';
+    ui.tab[ui.view] = 'findings';
+    renderChrome(); renderPane(true);
+    if (!(who.dataset.ref && highlightRow(who.dataset.ref))) document.querySelector('#nav .navrow.sel')?.focus();
+    return;
+  }
   const go = t.closest('[data-goto]');
   if (go) { gotoFinding(go.dataset.goto); return; }
   const fwTab = t.closest('[data-fwtab]');
