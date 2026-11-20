@@ -8,7 +8,7 @@
 <style>
 /* Layout, after PR 10K: a persistent top bar, a sidebar of the synthesis and reviewers, and the selected view filling the rest. */
 :root {
-  --bg: #f6f5f2; --panel: #ffffff; --side: #f3f2ee; --ink: #1f1e1b; --muted: #6f6b62; --faint: #9a958a; --line: #e6e3dc; --line-strong: #d6d2c8;
+  --bg: #f6f5f2; --panel: #ffffff; --side: #f3f2ee; --rail: #eae7df; --ink: #1f1e1b; --muted: #6f6b62; --faint: #9a958a; --line: #e6e3dc; --line-strong: #d6d2c8;
   --hover: #efede7; --active: #e8e5dd; --accent: #2f5d50; --accent-fg: #ffffff; --accent-bg: #e3ece8;
   --block: #b3392b; --block-bg: #f9e9e6; --adv: #8a6200; --adv-bg: #f7efd9; --ok: #2c6e4a; --ok-bg: #e4f0e8; --code: #efede7; --claude: #c96442;
   --scrim: rgba(31,30,27,.28); --shadow: 0 24px 64px rgba(31,30,27,.18), 0 2px 6px rgba(31,30,27,.08);
@@ -17,14 +17,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #171715; --panel: #1f1f1c; --side: #1a1a18; --ink: #ecebe6; --muted: #a29e94; --faint: #7a766d; --line: #2f2e2a; --line-strong: #3d3b36;
+    --bg: #171715; --panel: #1f1f1c; --side: #1a1a18; --rail: #121211; --ink: #ecebe6; --muted: #a29e94; --faint: #7a766d; --line: #2f2e2a; --line-strong: #3d3b36;
     --hover: #2a2926; --active: #33322e; --accent: #7fb8a5; --accent-fg: #10201b; --accent-bg: #22332d;
     --block: #ef8b7d; --block-bg: #3a2220; --adv: #e2b555; --adv-bg: #393020; --ok: #7fc79c; --ok-bg: #1e3327; --code: #2a2926; --claude: #e08a6a;
     --scrim: rgba(0,0,0,.5); --shadow: 0 24px 64px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #171715; --panel: #1f1f1c; --side: #1a1a18; --ink: #ecebe6; --muted: #a29e94; --faint: #7a766d; --line: #2f2e2a; --line-strong: #3d3b36;
+  --bg: #171715; --panel: #1f1f1c; --side: #1a1a18; --rail: #121211; --ink: #ecebe6; --muted: #a29e94; --faint: #7a766d; --line: #2f2e2a; --line-strong: #3d3b36;
   --hover: #2a2926; --active: #33322e; --accent: #7fb8a5; --accent-fg: #10201b; --accent-bg: #22332d;
   --block: #ef8b7d; --block-bg: #3a2220; --adv: #e2b555; --adv-bg: #393020; --ok: #7fc79c; --ok-bg: #1e3327; --code: #2a2926; --claude: #e08a6a;
   --scrim: rgba(0,0,0,.5); --shadow: 0 24px 64px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3); color-scheme: dark;
@@ -52,8 +52,8 @@ h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; overf
 .progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; }
 .progress div { height: 100%; background: var(--accent); transition: width .4s; }
 .shell { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 0; }
-nav#nav { background: var(--side); border-right: 1px solid var(--line); overflow-y: auto; padding: 12px 10px 24px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-main { overflow-y: auto; min-width: 0; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 110px 28px; }
+nav#nav { background: var(--rail); border-right: 1px solid var(--line-strong); box-shadow: inset -6px 0 10px -8px rgba(31,30,27,.18); overflow-y: auto; padding: 12px 10px 24px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+main { overflow-y: auto; min-width: 0; background: var(--panel); padding: 22px max(16px, env(safe-area-inset-right, 0px)) 110px 28px; }
 @media (max-width: 860px) {
   .app { height: auto; display: block; }
   .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; flex-wrap: wrap; gap: 8px 12px; }
@@ -67,12 +67,12 @@ main { overflow-y: auto; min-width: 0; padding: 22px max(16px, env(safe-area-ins
   nav#nav .card .desc, nav#nav .card .stats { display: none; }
 }
 .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 18px 0 8px; font-weight: 500; }
-nav .section-title { margin: 14px 10px 4px; }
+nav .section-title { margin: 12px 4px 6px; }
 
 /* Cards */
-.card { background: none; border: 0; border-radius: 8px; padding: 9px 10px; cursor: pointer; text-align: left; width: 100%; display: flex; flex-direction: column; gap: 3px; color: var(--ink); }
-.card:hover { background: var(--hover); }
-.card.sel { background: var(--active); box-shadow: inset 3px 0 0 var(--accent); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; text-align: left; width: 100%; display: flex; flex-direction: column; gap: 3px; color: var(--ink); margin-bottom: 6px; box-shadow: 0 1px 2px rgba(31,30,27,.05); }
+.card:hover { border-color: var(--line-strong); }
+.card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(31,30,27,.08); }
 .card .top { display: flex; align-items: center; gap: 8px; }
 .card .name { font-weight: 600; font-size: 13.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .desc { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
@@ -118,7 +118,7 @@ nav .section-title { margin: 14px 10px 4px; }
 .canvas-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
 .canvas-head .section-title { margin: 0; }
 .canvas .toolbar { margin-top: 10px; }
-.rail-block { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px 14px 14px; }
+.rail-block { background: var(--side); border: 1px solid var(--line); border-radius: 10px; padding: 4px 14px 14px; }
 .rail-block .section-title { margin: 12px 0 8px; }
 .rail-block .section-title .n { color: var(--faint); margin-left: 4px; }
 .conclusions { margin: 0; padding: 0; list-style: none; counter-reset: c; display: flex; flex-direction: column; gap: 10px; }
