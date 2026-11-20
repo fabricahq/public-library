@@ -52,7 +52,7 @@ FAKE_CLAUDE = textwrap.dedent('''\
     if 'You are the synthesis step' in prompt:
         names = re.findall(r'^## (check-[a-z-]+)$', prompt, re.M)
         value = {'verdict': 'fix-first', 'summary': 'One blocking defect.',
-            'conclusions': ['Fix S1 before merging: the loop drops the last item.'], 'findings': [
+            'conclusions': [{'kind': 'fix', 'headline': 'Loop drops the last item', 'detail': None, 'findings': ['S1']}], 'findings': [
             {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 'Off by one', 'file': 'app.py',
              'line': '2', 'body': 'Confirmed.', 'fix': 'Use <=.', 'merges': [n + ':F1' for n in names]}],
             'dropped': [], 'questions': [{'question': 'Keep the old format?', 'why': 'Clients parse it.', 'blocking': True}]}
@@ -110,7 +110,7 @@ class PureHelpers(unittest.TestCase):
         self.assertIn('findings[0].severity must be one of blocking, advisory', review_panel.validate_review(bad))
 
     def synthesis(self, **changes):
-        value = {'verdict': 'fix-first', 'summary': 's', 'conclusions': ['Fix S1.'], 'findings': [
+        value = {'verdict': 'fix-first', 'summary': 's', 'conclusions': [{'kind': 'fix', 'headline': 'Off by one', 'detail': 'Use <=.', 'findings': ['S1']}], 'findings': [
             {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 't', 'body': 'b',
              'merges': ['check-docs:F1', 'check-rules:F1']}]}
         value.update(changes)
@@ -322,9 +322,21 @@ class PureHelpers(unittest.TestCase):
         self.assertTrue(reply['config']['found'])
         self.assertTrue((repo / '.fabrica' / 'review-panel' / 'reviewers' / 'check-docs.md').exists())
 
-    def test_validate_synthesis_requires_short_conclusions(self):
-        problems = review_panel.validate_synthesis(self.synthesis(conclusions=['x' * 201]), {'check-docs': REVIEW, 'check-rules': REVIEW})
-        self.assertIn('conclusions[0] must be a statement under 200 characters', problems)
+    def test_validate_synthesis_requires_scannable_conclusions(self):
+        reviews = {'check-docs': REVIEW, 'check-rules': REVIEW}
+        bad = [{'kind': 'maybe', 'headline': 'x' * 61, 'detail': 'y' * 201, 'findings': ['S9']}, 'A plain string']
+        problems = review_panel.validate_synthesis(self.synthesis(conclusions=bad), reviews)
+        for message in ('conclusions[0].kind must be one of fix, decide, check, note',
+                        'conclusions[0].headline must be a few words under 60 characters',
+                        'conclusions[0].detail must be one sentence under 200 characters, or null',
+                        "conclusions[0].findings names 'S9', which is not one of your findings",
+                        'conclusions[1] must be an object with kind, headline, detail, and findings'):
+            self.assertIn(message, problems)
+
+    def test_report_writes_conclusions_old_and_new(self):
+        self.assertEqual(review_panel.conclusion_line('Old style.'), '- Old style.')
+        item = {'kind': 'decide', 'headline': 'Who owns retries', 'detail': 'Both layers retry today.', 'findings': ['S2', 'S3']}
+        self.assertEqual(review_panel.conclusion_line(item), '- **Decide:** Who owns retries. Both layers retry today. (S2, S3)')
 
     def test_normalize_synthesis_derives_raised_by_from_merges(self):
         value = review_panel.normalize_synthesis(self.synthesis())

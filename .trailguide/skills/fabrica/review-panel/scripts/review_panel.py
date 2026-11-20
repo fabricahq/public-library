@@ -144,6 +144,34 @@ def _check_items(value, key, fields, problems):
                      f'{key}[{index}].{field} must be a non-empty string', problems)
 
 
+CONCLUSION_KINDS = ('fix', 'decide', 'check', 'note')
+
+
+def _check_conclusion(item, where, ids, problems):
+    if not isinstance(item, dict):
+        _require(False, f'{where} must be an object with kind, headline, detail, and findings', problems)
+        return
+    _require(set(item) <= {'kind', 'headline', 'detail', 'findings'}, f"{where} has unknown keys; use kind, headline, detail, and findings", problems)
+    _require(item.get('kind') in CONCLUSION_KINDS, f"{where}.kind must be one of {', '.join(CONCLUSION_KINDS)}", problems)
+    headline = item.get('headline')
+    _require(isinstance(headline, str) and headline.strip() and len(headline) <= 60, f'{where}.headline must be a few words under 60 characters', problems)
+    detail = item.get('detail')
+    _require(detail is None or (isinstance(detail, str) and len(detail) <= 200), f'{where}.detail must be one sentence under 200 characters, or null', problems)
+    refs = item.get('findings', [])
+    _require(isinstance(refs, list) and all(isinstance(r, str) for r in refs), f'{where}.findings must list finding IDs such as "S1"', problems)
+    for ref in refs if isinstance(refs, list) else []:
+        _require(ref in ids, f'{where}.findings names {ref!r}, which is not one of your findings', problems)
+
+
+def conclusion_line(item):
+    """One conclusion as a Markdown list item; earlier runs wrote plain strings."""
+    if isinstance(item, str):
+        return f'- {item}'
+    refs = f" ({', '.join(item.get('findings') or [])})" if item.get('findings') else ''
+    detail = f" {item['detail']}" if item.get('detail') else ''
+    return f"- **{item['kind'].capitalize()}:** {item['headline']}.{detail}{refs}"
+
+
 def validate_synthesis(value, reviews):
     """Return the list of ways the synthesis JSON breaks its contract (empty when valid).
 
@@ -174,9 +202,10 @@ def validate_synthesis(value, reviews):
     _check_unique_ids(findings, problems)
     _require(len(value.get('summary') or '') <= 600, 'summary must be under 600 characters; put the detail in findings and questions', problems)
     conclusions = value.get('conclusions')
-    _require(isinstance(conclusions, list) and 1 <= len(conclusions) <= 5, 'conclusions must list one to five short statements', problems)
-    for index, line in enumerate(conclusions if isinstance(conclusions, list) else []):
-        _require(isinstance(line, str) and line.strip() and len(line) <= 200, f'conclusions[{index}] must be a statement under 200 characters', problems)
+    _require(isinstance(conclusions, list) and 1 <= len(conclusions) <= 5, 'conclusions must list one to five conclusions', problems)
+    ids = {f.get('id') for f in findings if isinstance(f, dict)} if isinstance(findings, list) else set()
+    for index, item in enumerate(conclusions if isinstance(conclusions, list) else []):
+        _check_conclusion(item, f'conclusions[{index}]', ids, problems)
     _check_items(value, 'dropped', ('reviewer', 'finding', 'reason'), problems)
     for item in value.get('dropped') if isinstance(value.get('dropped'), list) else []:
         if isinstance(item, dict):
@@ -914,7 +943,7 @@ def report_markdown(state):
     if synthesis is None:
         return unsynthesized_markdown(state)
     lines = [f"# Review panel: {state['target']['label']}", '', f"Verdict: **{synthesis['verdict']}**", '']
-    lines += [f'- {line}' for line in synthesis.get('conclusions', [])] + ['', synthesis['summary'], '']
+    lines += [conclusion_line(item) for item in synthesis.get('conclusions', [])] + ['', synthesis['summary'], '']
     for finding in synthesis['findings']:
         where = finding.get('file') or ''
         if finding.get('line'):

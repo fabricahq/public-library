@@ -15,7 +15,11 @@ Do not modify any files. You have read-only access to the repository and can rea
 
    The verdict and severities must agree: `ready` has no blocking finding or blocking question, `fix-first` has a blocking finding, and `needs-decision` has a blocking question.
 
-6. **Conclude.** Write the one to five things the author most needs to know as `conclusions`: short, plain statements, each under 200 characters, most important first. For example: "Ready to merge once S1 is fixed: the retry loop can double-charge a card." They are the first thing the author reads, so make each one a conclusion, not a topic.
+6. **Conclude.** Write the one to five things the author most needs to know as `conclusions`, most important first. They are the first thing the author reads, and they scan them, so each one is:
+   - `kind`: what the author does about it. `fix` for something to change before merging, `decide` for a choice only they can make, `check` for something to verify that no reviewer could, such as running the tests, and `note` for anything else worth knowing.
+   - `headline`: the conclusion in a few words, under 60 characters, readable on its own. For example: "Retry loop can double-charge a card".
+   - `detail`: one sentence under 200 characters with the why or the what-next, or null. Don't repeat the headline.
+   - `findings`: the IDs of the findings it rests on, such as `["S1"]`, or an empty list. Leave the IDs out of the headline and detail; the page links them.
 
 Mention, in the summary, any reviewer that did not report, so the author knows what wasn't covered.
 
@@ -27,7 +31,9 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
 {
   "verdict": "ready | fix-first | needs-decision",
   "summary": "Two or three sentences an author can act on: the state of the change and what to do first.",
-  "conclusions": ["The most important thing to know, as one short statement", "The next most important"],
+  "conclusions": [
+    {"kind": "fix | decide | check | note", "headline": "Under 60 characters", "detail": "One sentence, or null", "findings": ["S1"]}
+  ],
   "findings": [
     {
       "id": "S1",
