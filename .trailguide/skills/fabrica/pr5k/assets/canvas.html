@@ -391,6 +391,7 @@ pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line);
 .colrow .ty { font-family: var(--mono); font-size: 12px; color: var(--faint); }
 .colname.old { color: var(--muted); font-weight: 500; text-decoration: line-through; text-decoration-color: var(--faint); }
 .colname.gone { color: var(--muted); text-decoration: line-through; }
+.node.st-removed .node-title { color: var(--muted); text-decoration: line-through; }
 .colrow .arrow { color: var(--faint); font-size: 13px; }
 .colrow .was { white-space: nowrap; } .colrow .was .colname.old { font-size: 12px; }
 .colgroup .dot.st-renamed { background: var(--renamed); }
@@ -745,7 +746,7 @@ function openWindow({ id, title, status, statusWord, kind, file, body, tabs }) {
   const meta = [kind, file].filter(Boolean).join(' · ');
   el.innerHTML = `<header class="win-bar" tabindex="0" title="Drag to move. Double-click to fill the canvas. Arrow keys move it; Shift and arrow keys resize it.">
       <span class="win-title">${esc(title)}</span>${pill(status, statusWord)}<span class="win-kind">${esc(meta)}</span>
-      <div class="win-actions"><button data-act="max" aria-label="Fill the canvas">${WIN_ICONS.max}</button><button data-act="close" aria-label="Close">${WIN_ICONS.close}</button></div></header>
+      <div class="win-actions"><button data-act="max" aria-label="Fill the canvas">${WIN_ICONS.max}</button><button data-act="close" aria-label="Close" title="Close (Esc or Option+W)">${WIN_ICONS.close}</button></div></header>
     ${tabs.length > 1 ? `<div class="win-tabs" role="tablist">${tabs.map((t, i) => `<button role="tab" aria-selected="${i === first}" data-tab="${esc(t.id)}">${t.label}</button>`).join('')}</div>` : ''}
     ${tabs.map((t, i) => `<div class="win-body" data-pane="${esc(t.id)}" role="tabpanel"${i !== first ? ' hidden' : ''}><div class="insp-body">${t.html}</div></div>`).join('')}
     ${['e', 'w', 's', 'se', 'sw'].map(d => `<div class="win-edge ${d}" data-edge="${d}"></div>`).join('')}`;
@@ -790,7 +791,9 @@ function openWindow({ id, title, status, statusWord, kind, file, body, tabs }) {
   return el;
 }
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape' || !wins.size) return;
+  const altW = e.altKey && !e.metaKey && !e.ctrlKey && e.code === 'KeyW';
+  if ((e.key !== 'Escape' && !altW) || !wins.size) return;
+  if (altW) e.preventDefault();
   const inWin = e.target.closest?.('.win');
   const top = inWin || [...wins.values()].map(w => w.el).sort((a, b) => b.style.zIndex - a.style.zIndex)[0];
   const id = [...wins].find(([, w]) => w.el === top)?.[0];
