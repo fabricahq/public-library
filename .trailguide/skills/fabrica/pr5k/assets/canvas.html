@@ -105,6 +105,8 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 .node-title { font-weight: 600; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .node-head .pill { margin-left: auto; }
 .node-kind { font-family: var(--mono); font-size: 11px; color: var(--faint); overflow-wrap: anywhere; }
+.node-nopv { margin: 6px 0 2px; font-size: 12px; color: var(--muted); font-style: italic; }
+.pv-missing { border: 1px dashed var(--line); border-radius: 8px; padding: 16px 18px; color: var(--muted); font-size: 14px; } .pv-missing b { color: var(--ink); } .pv-missing p { margin: 6px 0 0; }
 .node-made { margin-top: 8px; font-size: 12px; color: var(--muted); } .node-made span { font-weight: 600; color: var(--ink); }
 .part-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .part-chip { font: inherit; font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
@@ -1371,7 +1373,10 @@ function thumbHtml(pv) {
   return `<div class="node-thumb-box"><img class="node-thumb" src="${esc(pv.thumb)}"${dims} alt="" loading="lazy">${pv.thumbDark ? `<img class="node-thumb dk" src="${esc(pv.thumbDark)}"${dims} alt="" loading="lazy">` : ''}</div>`;
 }
 function previewPane(it) {
-  const pv = it.preview; if (!pv?.url) return '';
+  const pv = it.preview;
+  /* A changed component the project's catalog has no states for: say so, and say how to add them. */
+  if (pv?.missing) return `<div class="pv-missing"><b>No states in the project's catalog at ${esc(D.pr?.headSha || 'the scanned commit')}.</b><p>${md(pv.missing)}</p></div>`;
+  if (!pv?.url) return '';
   if (pv.states?.length && typeof pv.states[0] === 'object') return statesPane(it);
   const n = pv.states?.length || 0;
   const from = pv.source === 'catalog' ? "From the project's component catalog, as of its latest deploy" : `The real component at ${esc(D.pr?.headSha || 'the scanned commit')}, against sample data`;
@@ -1435,7 +1440,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-open
 function entityBoard(sec) {
   columnBoard(sec.summary, sec.groups, it => ({
     id: it.id, cls: 'st-' + it.status,
-    html: `<div class="node-head"><span class="node-title">${esc(it.title)}</span>${pill(it.status)}</div><div class="node-kind">${esc(it.kind)}</div>${thumbHtml(it.preview)}<div class="node-sum">${esc(it.summary)}</div>${it.madeOf?.length ? `<div class="node-made"><span>Made of</span> ${it.madeOf.map(esc).join(', ')}</div>` : ''}`,
+    html: `<div class="node-head"><span class="node-title">${esc(it.title)}</span>${pill(it.status)}</div><div class="node-kind">${esc(it.kind)}</div>${thumbHtml(it.preview)}${it.preview?.missing ? '<div class="node-nopv">No catalog states yet</div>' : ''}<div class="node-sum">${esc(it.summary)}</div>${it.madeOf?.length ? `<div class="node-made"><span>Made of</span> ${it.madeOf.map(esc).join(', ')}</div>` : ''}`,
     onSelect: () => exampleJump(openWindow({ title: it.title, status: it.status, kind: it.kind, file: it.file, wide: !!it.preview?.url, section: currentSection(), tabs: [
       { id: 'preview', label: 'Preview', html: previewPane(it) },
       { id: 'summary', label: 'Summary', html: `<section><h3>What it is</h3><p>${md(it.summary)}</p></section>${partsHtml('Made of', it.madeOf)}${partsHtml('Used in', it.usedIn)}${points('Worth knowing', it.notes)}` },
