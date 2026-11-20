@@ -200,13 +200,12 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 .guide-toc { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
 .guide-toc a { font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); text-decoration: none; }
 .guide-toc a.on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
-.guide-body { overflow-y: auto; padding: 4px 18px 40px; scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { .guide-body { scroll-behavior: auto; } }
-.guide-body section { padding: 18px 0 6px; border-bottom: 1px solid var(--line); }
-.guide-body section:last-child { border-bottom: 0; }
+.guide-body { overflow-y: auto; padding: 4px 18px 20px; flex: 1; min-height: 0; }
+.guide-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+.guide-body section { padding: 18px 0 6px; }
 .guide-body h3 { font-size: 14px; margin: 0 0 4px; }
 .guide-body .lede { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
-.guide-body dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; align-items: baseline; }
+.guide-body dl { margin: 0; display: grid; grid-template-columns: 158px minmax(0, 1fr); gap: 10px 12px; align-items: baseline; }
 .guide-body dt { white-space: nowrap; }
 .guide-body dd { margin: 0; font-size: 13px; line-height: 1.45; }
 .guide-body dd .eg { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
@@ -303,6 +302,7 @@ a.raw { color: var(--accent); font-size: 12.5px; }
       <p>Your ticks are remembered in this browser for this run.</p>
     </section>
   </div>
+  <div class="guide-foot"><button type="button" class="btn" id="guide-prev">← Previous</button><span class="note" id="guide-count"></span><button type="button" class="btn primary" id="guide-next">Next →</button></div>
 </aside>
 <div id="detail"></div>
 <div id="handoff"></div>
@@ -744,6 +744,7 @@ document.addEventListener('keydown', event => {
     return;
   }
   if (event.key === 'Enter' && event.target.matches('tr.row')) { openDetail(event.target.dataset.key); return; }
+  if (!document.getElementById('guide').hidden && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) { showGuide(guideAt + (event.key === 'ArrowRight' ? 1 : -1)); return; }
   if (!closeKey) return;
   if (!document.getElementById('guide').hidden) { openGuide(false); return; }
   if (ui.dialog) { ui.dialog = false; renderHandoff(); }
@@ -757,24 +758,26 @@ function openGuide(open) {
   if (open) guide.querySelector('[data-act="guide-close"]').focus();
   else document.querySelector('.guide-btn').focus();
 }
-// Clicking a section chip scrolls the guide, not the page (the page's hash stays untouched).
+// The guide shows one section at a time: the chips jump to a section, Previous and Next step through them.
+let guideAt = 0;
+function showGuide(index) {
+  const sections = [...document.querySelectorAll('#guide-body section')];
+  guideAt = Math.max(0, Math.min(sections.length - 1, index));
+  sections.forEach((section, i) => { section.hidden = i !== guideAt; });
+  document.querySelectorAll('.guide-toc a').forEach((a, i) => { a.classList.toggle('on', i === guideAt); a.setAttribute('aria-current', i === guideAt ? 'step' : 'false'); });
+  document.getElementById('guide-prev').disabled = guideAt === 0;
+  document.getElementById('guide-next').disabled = guideAt === sections.length - 1;
+  document.getElementById('guide-count').textContent = `${guideAt + 1} of ${sections.length}`;
+}
 document.querySelector('.guide-toc').addEventListener('click', event => {
   const link = event.target.closest('a');
   if (!link) return;
   event.preventDefault();
-  const target = document.querySelector(link.getAttribute('href'));
-  const body = document.getElementById('guide-body');
-  body.scrollTop = target.offsetTop - body.offsetTop;
+  showGuide([...document.querySelectorAll('.guide-toc a')].indexOf(link));
 });
-// Light up the section you're reading as you scroll.
-document.getElementById('guide-body').addEventListener('scroll', event => {
-  const body = event.target;
-  let current = body.querySelector('section').id;
-  for (const section of body.querySelectorAll('section')) if (section.offsetTop - body.offsetTop <= body.scrollTop + 40) current = section.id;
-  if (body.scrollTop + body.clientHeight >= body.scrollHeight - 4) current = body.querySelector('section:last-child').id;
-  document.querySelectorAll('.guide-toc a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + current));
-}, { passive: true });
-document.querySelector('.guide-toc a').classList.add('on');
+document.getElementById('guide-prev').addEventListener('click', () => showGuide(guideAt - 1));
+document.getElementById('guide-next').addEventListener('click', () => showGuide(guideAt + 1));
+showGuide(0);
 
 /* ---------- data ---------- */
 // The handoff dialog isn't redrawn by polls while it's open, so edits in it survive a live run.
