@@ -426,6 +426,20 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .mempty { padding: 14px 12px; color: var(--faint); font-size: 13px; }
 .mfoot { padding: 7px 12px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--faint); }
 
+
+.ta-wrap { position: relative; }
+.ta-wrap textarea { padding-right: 40px; }
+.ta-copy { position: absolute; top: 6px; right: 18px; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--muted); cursor: pointer; }
+.ta-copy:hover { color: var(--ink); background: var(--hover); }
+.ta-copy.done { color: var(--ok); }
+.ta-copy svg { width: 14px; height: 14px; }
+.with-icon { display: inline-flex; align-items: center; gap: 6px; }
+.with-icon svg, .btn.danger svg { width: 14px; height: 14px; }
+.btn.danger { background: var(--block); border-color: var(--block); color: #fff; display: inline-flex; align-items: center; gap: 6px; }
+.confirm { border: 1px solid var(--block); background: var(--block-bg); border-radius: 9px; padding: 12px 14px; display: grid; gap: 6px; }
+.confirm b { font-size: 14px; }
+.confirm p { margin: 0; font-size: 13px; color: var(--ink); }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 /* Settings mode switch */
 .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode { all: unset; box-sizing: border-box; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
@@ -1244,7 +1258,7 @@ const FIELDS = ['summary', 'harness', 'model', 'effort', 'prompt', 'mode'];
 const edited = r => r.isNew || r.removeFile || FIELDS.some(f => r[f] !== r.original[f]);
 const changed = r => edited(r) || r.included !== r.original.included;
 const synthesisChanged = () => ['harness', 'model', 'effort'].some(f => settings.cfg.synthesis[f] !== settings.cfg.originalSynthesis[f]);
-const panelChanged = () => settings.cfg.reviewers.some(r => r.included !== r.original.included) || synthesisChanged();
+const panelChanged = () => settings.cfg.reviewers.some(r => r.builtin && r.included !== r.original.included) || synthesisChanged();
 const yamlString = text => `"${String(text).replace(/"/g, "'").replace(/\n/g, ' ')}"`;
 const configDir = () => (state.config && state.config.dir) || '.fabrica/review-panel';
 function reviewerFile(r) {
@@ -1258,7 +1272,7 @@ const sameAgent = (a, b) => b && a.harness === b.harness && a.model === b.model 
 function panelFile() {
   const cfg = settings.cfg;
   const lines = ['# Review panel settings for this repository. See the review-panel skill README.'];
-  if (cfg.reviewers.some(r => !r.included)) {
+  if (cfg.reviewers.some(r => !r.included && r.builtin)) {
     lines.push('', '# Run only these reviewers, in this order.', 'reviewers:', ...cfg.reviewers.filter(r => r.included).map(r => `  - ${r.name}`));
   } else {
     lines.push('', '# Without a reviewers list, the panel runs every built-in reviewer plus each file in reviewers/.');
@@ -1373,6 +1387,21 @@ function harnessChanged(target) {
   const listed = findModel(target.model);
   if (listed && listed.harness !== target.harness) { const first = modelsFor(target.harness)[0]; if (first) target.model = first.id; }
 }
+const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
+const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+// Deleting asks first, in the page: the viewer's frame refuses confirm().
+function deleteConfirm(r) {
+  const what = r.isNew ? 'It hasn’t been saved, so it’s simply discarded.'
+    : r.builtin ? 'It won’t run in this repository’s panel. The skill keeps its built-in version, so you can restore it later.'
+    : `Saving deletes <code>${esc(r.file || `reviewers/${r.name}.md`)}</code>.`;
+  return `<div class="confirm" role="alertdialog" aria-labelledby="confirm-title">
+    <b id="confirm-title">Are you sure you want to delete this reviewer?</b>
+    <p>${esc(reviewerLabel(r.name))}: ${what}</p>
+    <div class="confirm-actions"><button type="button" class="btn" id="confirm-cancel" data-sact="cancel-delete">Cancel</button>
+      <button type="button" class="btn danger" data-sact="delete">${ICON_TRASH}Delete reviewer</button></div>
+  </div>`;
+}
 function reviewerEditor(r, index) {
   const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
   return `<div class="edit ${canEdit() ? '' : 'locked'}" data-index="${index}">
@@ -1386,17 +1415,19 @@ function reviewerEditor(r, index) {
       <div class="field"><label for="cfg-effort">Effort</label><select id="cfg-effort" data-cfg="effort">${EFFORTS.map(e => option(e, e, r.effort)).join('')}</select></div>
     </div>
     ${r.builtin ? `<div class="field"><label for="cfg-mode">Prompt</label><select id="cfg-mode" data-cfg="mode">${option('replace', 'Replace the built-in prompt with the text below', r.mode)}${option('append', 'Keep the built-in prompt and add the text below', r.mode)}</select></div>` : ''}
-    <div class="field"><label for="cfg-prompt">${r.builtin && r.mode === 'append' ? 'Text to add' : 'Focus prompt'}</label><textarea id="cfg-prompt" data-cfg="prompt" spellcheck="false" rows="12">${esc(r.prompt)}</textarea>
+    <div class="field"><label for="cfg-prompt">${r.builtin && r.mode === 'append' ? 'Text to add' : 'Focus prompt'}</label><div class="ta-wrap"><textarea id="cfg-prompt" data-cfg="prompt" spellcheck="false" rows="12">${esc(r.prompt)}</textarea>
+      <button type="button" class="ta-copy" data-sact="copy-file" title="Copy reviewers/${esc(r.name)}.md" aria-label="Copy reviewers/${esc(r.name)}.md">${ICON_COPY}</button></div>
       <span class="hint">Every reviewer also gets the shared instructions and output format, then the change. This is the part that makes it this reviewer.</span></div>
     </fieldset>
+    ${settings.confirmDelete ? deleteConfirm(r) : ''}
     ${canEdit() ? '' : '<div class="edit-actions"><span class="spacer"></span><button type="button" class="btn" data-sact="done">Done</button></div>'}
     <div class="edit-actions" ${canEdit() ? '' : 'hidden'}>
-      <button type="button" class="linkish danger" data-sact="toggle-include">${r.included ? 'Leave out of the panel' : 'Put back in the panel'}</button>
+      ${r.included ? `<button type="button" class="linkish danger with-icon" data-sact="ask-delete">${ICON_TRASH}Delete reviewer</button>`
+        : '<button type="button" class="linkish with-icon" data-sact="restore">Restore reviewer</button>'}
       ${changed(r) && !r.isNew ? '<button type="button" class="linkish" data-sact="reset">Undo my edits</button>' : ''}
       ${r.builtin && r.file && !r.removeFile ? '<button type="button" class="linkish" data-sact="use-builtin">Go back to the built-in version</button>' : ''}
       <span class="spacer"></span>
       <span class="note" id="cfg-note"></span>
-      ${LIVE ? '' : `<button type="button" class="btn" data-sact="copy-file">Copy ${esc(r.name)}.md</button>`}
       <button type="button" class="btn" data-sact="done">Done</button>
     </div>
   </div>`;
@@ -1407,7 +1438,7 @@ function reviewersPane() {
     <div class="srow ${r.included ? '' : 'out'}" data-index="${i}" tabindex="0" role="button" aria-expanded="${settings.editing === i}">
       <span class="av">${reviewerIcon(r.name)}</span>
       <span class="who"><b>${esc(reviewerLabel(r.name))}</b><span>${esc(r.summary || 'No summary yet')}</span></span>
-      <span class="meta">${r.included ? '' : '<span class="chip">left out</span>'}${sourceChip(r)}<span class="model">${LOGOS[r.harness] || ''}${esc(findModel(r.model) ? findModel(r.model).name : modelName(r.model))}${r.effort !== 'default' ? ` · ${esc(r.effort)}` : ''}</span></span>
+      <span class="meta">${r.included ? '' : '<span class="chip">deleted</span>'}${sourceChip(r)}<span class="model">${LOGOS[r.harness] || ''}${esc(findModel(r.model) ? findModel(r.model).name : modelName(r.model))}${r.effort !== 'default' ? ` · ${esc(r.effort)}` : ''}</span></span>
     </div>${settings.editing === i ? reviewerEditor(r, i) : ''}`).join('');
   return `<div class="spane-head"><div><h2>Reviewers</h2><p>Every reviewer on the panel, and where its settings come from. Open one to read its prompt or change it.</p></div>${closeBtn()}</div>
     <div class="sbody">
@@ -1478,7 +1509,7 @@ function overviewPane() {
     const fromRepo = cfg.reviewers.filter(r => r.file && r.builtin).length;
     const added = cfg.reviewers.filter(r => !r.builtin && !r.isNew).length;
     const out = cfg.reviewers.filter(r => !r.original.included).length;
-    const parts = [fromRepo && `${plural(fromRepo, 'reviewer')} changed`, added && `${added} added`, out && `${out} left out`,
+    const parts = [fromRepo && `${plural(fromRepo, 'reviewer')} changed`, added && `${added} added`, out && `${out} deleted`,
       !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis) && 'synthesis model changed'].filter(Boolean);
     detail = `<p>The panel reads <code>${esc(dir)}/</code> from the code it reviews${parts.length ? `: ${esc(parts.join(', '))}` : ''}. Anything without a file there stays built-in.</p>
       <p>${LIVE ? 'Change reviewers and the synthesis here and press <b>Save to repository</b>, then commit the folder.' : `This page is a saved report and can’t write files. To edit and save, run this in the repository:`}</p>
@@ -1597,11 +1628,12 @@ document.getElementById('settings').addEventListener('click', async event => {
   if (t.matches('.sscrim')) { openSettings(false); return; }
   const act = t.closest('[data-sact]:not(.sscrim)');
   const row = t.closest('.srow');
-  if (!act && row) { const i = Number(row.dataset.index); settings.editing = settings.editing === i ? null : i; renderSettings(); return; }
+  if (!act && row) { settings.confirmDelete = false; const i = Number(row.dataset.index); settings.editing = settings.editing === i ? null : i; renderSettings(); return; }
   if (!act) return;
   const cfg = settings.cfg;
   const r = settings.editing !== null ? cfg.reviewers[settings.editing] : null;
   settings.flash = ''; settings.error = '';
+  if (!['ask-delete', 'delete', 'cancel-delete'].includes(act.dataset.sact)) settings.confirmDelete = false;
   switch (act.dataset.sact) {
     case 'close': openSettings(false); return;
     case 'done': settings.editing = null; break;
@@ -1615,12 +1647,19 @@ document.getElementById('settings').addEventListener('click', async event => {
       settings.justAdded = true;
       break;
     }
-    case 'toggle-include': if (r) { if (r.isNew && r.included) { cfg.reviewers.splice(settings.editing, 1); settings.editing = null; } else r.included = !r.included; } break;
+    case 'ask-delete': settings.confirmDelete = true; renderSettings(); { const c = document.getElementById('confirm-cancel'); if (c) c.focus(); } return;
+    case 'cancel-delete': settings.confirmDelete = false; break;
+    case 'delete':
+      settings.confirmDelete = false;
+      if (r && r.isNew) { cfg.reviewers.splice(settings.editing, 1); settings.editing = null; }
+      else if (r) { r.included = false; if (!r.builtin) r.removeFile = true; settings.editing = null; }
+      break;
+    case 'restore': if (r) { r.included = true; if (!r.builtin) r.removeFile = false; } break;
     case 'reset': if (r) Object.assign(r, r.original); break;
     case 'use-builtin': if (r) Object.assign(r, { summary: r.builtinSummary || r.summary, harness: r.builtinAgent.harness, model: r.builtinAgent.model, effort: r.builtinAgent.effort || 'default', prompt: r.builtinText, mode: 'replace', removeFile: true }); break;
     case 'discard': settings.cfg = null; store(cfgKey(), null); loadConfig(); settings.editing = null; break;
     case 'save': await saveSettings(); return;
-    case 'copy-file': if (r) await copy(reviewerFile(r), document.getElementById('cfg-note')); return;
+    case 'copy-file': if (r && await copy(reviewerFile(r), document.getElementById('cfg-note'))) { act.innerHTML = ICON_CHECK; act.classList.add('done'); setTimeout(() => { act.innerHTML = ICON_COPY; act.classList.remove('done'); }, 1500); } return;
     case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note')); return;
     case 'copy-prompt': await copy(setupPrompt(), document.getElementById('prompt-note')); return;
     case 'copy-command': await copy(state.config.command, document.getElementById('command-note')); return;
