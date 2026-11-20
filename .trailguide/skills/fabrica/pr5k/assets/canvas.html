@@ -1063,9 +1063,9 @@ const views = {
     columnBoard(p.method, groups, it => it.flag ? ({
       id: 'flag-' + it.name, cls: 'flag',
       html: `<div class="node-head"><span class="node-title">${esc(it.name)}</span></div><div class="node-sum">${esc(it.where)}</div>`,
-      onSelect: () => openWindow({ title: it.name, statusWord: 'Red flag', status: 'removed', body: handoffBox('flag-' + it.name, it) + (it.issue
-        ? `<div class="dg-pair">${dgPanel('The issue', it.issue, it.where)}${it.fix ? dgPanel('A simple fix', it.fix.diagram, it.fix.text) : ''}</div><p class="hint">${esc(p.source)}</p>`
-        : `<p>${md(it.where)}</p>${it.fix ? `<section><h3>A simple fix</h3><p>${md(it.fix.text)}</p></section>` : ''}<p class="hint">${esc(p.source)}</p>`) }),
+      onSelect: () => openWindow({ title: it.name, statusWord: 'Red flag', status: 'removed', body: `<p class="lead">${md(it.where)}</p>` + handoffBox('flag-' + it.name, it) + (it.issue
+        ? `<div class="dg-pair">${dgPanel('The issue', it.issue)}${it.fix ? dgPanel('A simple fix', it.fix.diagram, it.fix.text) : ''}</div><p class="hint">${esc(p.source)}</p>`
+        : `${it.fix ? `<section><h3>A simple fix</h3><p>${md(it.fix.text)}</p></section>` : ''}<p class="hint">${esc(p.source)}</p>`) }),
     }) : ({
       id: 'p' + it.n, cls: 'rating-' + it.rating,
       html: `<div class="node-head"><span class="node-num">${it.n}</span><span class="node-title">${esc(it.title)}</span></div><div class="node-sum">${esc(it.verdict)}</div>`,
