@@ -42,6 +42,10 @@
     },
     "generatedAt": "2026-11-18"
   },
+  "scan": {
+    "head": "4c1d9e2",
+    "base": "9a03b71"
+  },
   "people": {
     "b7e2c4a0-0000-4000-8000-000000000001": "Ana Ruiz",
     "b7e2c4a0-0000-4000-8000-000000000002": "Jon Park (bookkeeper)",

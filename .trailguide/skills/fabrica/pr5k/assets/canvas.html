@@ -1006,8 +1006,28 @@ function mountBoard(build, opts = {}) {
     if (opts.movable) { applyLayout(opts.layoutKey); resetBtn.hidden = !Object.keys(readLayout(opts.layoutKey)).length; }
     sizeWorld(); drawEdges(boardEdges); fit(true);
   };
-  if (!nodes.length || nodes[0].offsetHeight) layout();
-  else { const ro = new ResizeObserver(() => { if (!nodes[0].offsetHeight) return; ro.disconnect(); if (world?.contains(nodes[0])) layout(); }); ro.observe(nodes[0]); }
+  /* A node can grow after it was placed: the web font swaps in and rewraps its text, or a thumbnail loads.
+     Place everything again when any node's height changes, keeping the camera where it is, so a taller card
+     pushes the ones below it down instead of running under them. */
+  const heights = new Map();
+  let pending = 0;
+  const relayout = () => {
+    pending = 0;
+    if (!world?.contains(nodes[0])) { grow.disconnect(); return; }
+    opts.arrange?.();
+    if (opts.separate) separateNodes(nodes);
+    nodes.forEach(n => { n.dataset.x0 = parseFloat(n.style.left) || 0; n.dataset.y0 = parseFloat(n.style.top) || 0; });
+    if (opts.movable) applyLayout(opts.layoutKey);
+    sizeWorld(); drawEdges(boardEdges);
+  };
+  const grow = new ResizeObserver(entries => {
+    let changed = false;
+    for (const e of entries) { const h = e.target.offsetHeight, was = heights.get(e.target); heights.set(e.target, h); if (was !== undefined && h && h !== was) changed = true; }
+    if (changed && !pending) pending = requestAnimationFrame(relayout);
+  });
+  const watch = () => nodes.forEach(n => { heights.set(n, n.offsetHeight); grow.observe(n); });
+  if (!nodes.length || nodes[0].offsetHeight) { layout(); watch(); }
+  else { const ro = new ResizeObserver(() => { if (!nodes[0].offsetHeight) return; ro.disconnect(); if (world?.contains(nodes[0])) { layout(); watch(); } }); ro.observe(nodes[0]); }
   $('.zoom').addEventListener('click', e => { const z = e.target.closest('button')?.dataset.z; if (!z) return; const r = viewport.getBoundingClientRect();
     if (z === 'reset') { resetLayout(opts.layoutKey); resetBtn.hidden = true; return; }
     if (z === 'fit') fit(); else zoomAt(z === 'in' ? 1.2 : 1 / 1.2, r.width / 2, r.height / 2); });
@@ -1383,7 +1403,7 @@ function previewPane(it) {
   return `<div class="preview-bar"><span>${from}${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
 }
 /* A preview given state by state: a tab per state, the bare component in a frame, and the code that state runs beneath it. */
-function stateUrl(pv, st, shot) { return pv.url + (pv.url.includes('?') ? '&' : '?') + 'c=' + encodeURIComponent(pv.component || '') + '&s=' + encodeURIComponent(st.id) + (shot ? '&shot=1' : ''); }
+function stateUrl(pv, st, shot) { return pv.url + (pv.url.includes('?') ? '&' : '?') + 'c=' + encodeURIComponent(st.component || pv.component || '') + '&s=' + encodeURIComponent(st.id) + (shot ? '&shot=1' : ''); }
 const PV_ITEMS = {};
 function statesPane(it) {
   PV_ITEMS[it.id] = it;
