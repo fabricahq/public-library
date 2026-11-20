@@ -388,6 +388,10 @@ pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line);
 .set-list > * + * { border-top: 1px solid var(--line); }
 .set-row { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 14px; }
 .set-pick { justify-content: space-between; cursor: default; }
+.switch { margin-left: auto; flex: none; width: 34px; height: 20px; border-radius: 999px; background: var(--line); position: relative; transition: background .15s; }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--node); box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s; }
+[aria-checked="true"] > .switch { background: var(--accent); } [aria-checked="true"] > .switch::after { transform: translateX(14px); }
+.set-row-text code { font-family: var(--mono); font-size: 12.5px; }
 .set-pick + .set-pick { border-top: 1px solid var(--line); }
 .set-pick select { font: inherit; font-size: 13px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: 8px; padding: 6px 28px 6px 10px; min-width: 210px; max-width: 60%; }
 .set-pick select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
@@ -627,12 +631,36 @@ function slug(t) { return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').re
 function currentSection() { const id = (location.hash || '').slice(1); return views[id] ? id : (D.database ? 'database' : 'overview'); }
 function redrawOverview() { if (currentSection() !== 'overview') return; const doc = $('#main .doc'); if (doc) doc.outerHTML = overviewHtml(); }
 function savePersonas() { try { localStorage.setItem(PERSONA_KEY, JSON.stringify(personas)); } catch (e) {} redrawOverview(); }
+/* Catalog: an optional component catalog the project keeps, which the skill shows instead of building its own previews.
+   Off unless the settings file turns it on; edits here stay in this browser until copied back into it. */
+const CATALOG_KEY = 'pr5k-catalog:' + pr.repo;
+const fileCatalog = { enabled: false, path: '', url: '', about: '', ...(D.catalog || {}) };
+let catalog = fileCatalog;
+try { const saved = JSON.parse(localStorage.getItem(CATALOG_KEY)); if (saved && typeof saved === 'object') catalog = { ...fileCatalog, ...saved }; } catch (e) {}
+function saveCatalog() { try { localStorage.setItem(CATALOG_KEY, JSON.stringify(catalog)); } catch (e) {} }
+const settingsEdited = () => { try { return !!(localStorage.getItem(PERSONA_KEY) || localStorage.getItem(CATALOG_KEY)); } catch (e) { return false; } };
 function settingsYaml() {
   const q = v => JSON.stringify(v ?? '');
-  return `# Settings for the pr5k skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`;
+  return `# Settings for the pr5k skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`
+    + `# catalog: a component catalog the project keeps. When enabled, the canvas shows its components from it, live,\n# instead of building previews of its own. url may hold {pr} and {sha}, filled in for the PR under review.\ncatalog:\n  enabled: ${catalog.enabled ? 'true' : 'false'}\n  path: ${q(catalog.path)}\n  url: ${q(catalog.url)}\n  about: ${q(catalog.about)}\n`;
+}
+/* A prompt that sets up a catalog the skill can use, for an agent working in the repository. */
+function catalogSetupPrompt() {
+  return [`You are working in ${pr.repo}. Add a component catalog: one page that renders any of the app's components in each of its states, so people and the pr5k skill can look at and use components without running the whole app.`, '',
+    'What the catalog must do:',
+    '- Render one component per URL: ?c=<ComponentName>&s=<state index>. &theme=light or dark picks the theme, and &shot=1 hides everything but the component, for screenshots. With no c, list every component and its states.',
+    '- Keep each component\'s states next to it in the repository, in a file that follows one naming rule, so adding a component means adding one file. A state has a name and renders the component with sample data.',
+    '- Answer the network calls components make from an in-memory fake with sample data that applies changes, so a component can be used, not only looked at. Never reach a real backend.',
+    '- Build with the app\'s own build tool, styles and providers, so components look exactly as they do in the app.',
+    '- Type-check the catalog with the rest of the code, and add a test that renders every state and fails on an error, so a change to a component that breaks its states fails CI.',
+    '- Deploy it with each pull request\'s preview, at a URL that names the PR, so it always shows the PR\'s latest code.', '',
+    'Then turn it on for pr5k in .pr5k/settings.yaml at the repository root:',
+    'catalog:', '  enabled: true', '  path: "<folder that holds the catalog\'s entry and fake API>"', '  url: "<the deployed catalog for a PR, with {pr} where the PR number goes>"',
+    '  about: "<a few sentences: how a component\'s states file is named and found, what a state holds, and anything a component needs to be catalogued>"', '',
+    "Follow the repository's agent instructions (AGENTS.md or CLAUDE.md) and its engineering rules. Start with the components the open pull requests change, and say in your report which components have no states yet."].join('\n');
 }
 /* Settings window: a sidebar of sections, Personas first. A persona's small form saves on Done; Cancel discards. */
-const SETTINGS_SECTIONS = [{ id: 'personas', label: 'Personas', icon: CAP_ICONS.people }, { id: 'windows', label: 'Windows', icon: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17"/><path d="M8 5v4"/>' }, { id: 'appearance', label: 'Appearance', icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>' }];
+const SETTINGS_SECTIONS = [{ id: 'personas', label: 'Personas', icon: CAP_ICONS.people }, { id: 'catalog', label: 'Catalog', icon: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>' }, { id: 'windows', label: 'Windows', icon: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17"/><path d="M8 5v4"/>' }, { id: 'appearance', label: 'Appearance', icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>' }];
 const PENCIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
 function openSettings(section = 'personas') {
   if (wins.has('settings')) { const w = wins.get('settings').el; focusWin(w); $(`[data-sec="${section}"]`, w)?.click(); return; }
@@ -662,10 +690,27 @@ function openSettings(section = 'personas') {
       <p class="hint" style="margin-top:8px">A window without that tab opens on its first tab.</p>
       <button class="tool-btn" data-open-all="summary" style="margin-top:12px">Open all on Summary</button></section>`;
   };
-  const draw = () => sec === 'appearance' ? drawAppearance() : sec === 'windows' ? drawWindows() : drawPersonas();
+  const settingsFoot = () => { const edited = settingsEdited(); return `<footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.pr5k/settings.yaml</code> in the repository.'}</span>
+        ${edited ? '<button class="link" data-reset>Undo my edits</button>' : ''}<button class="tool-btn" data-copy-settings>Copy settings file</button></footer>`; };
+  let catalogEditing = false;
+  const drawCatalog = () => {
+    const c = catalog;
+    const fields = catalogEditing ? `<form class="set-form" data-catalog-form autocomplete="off">
+        <label class="wide">Path<input name="cpath" value="${esc(c.path)}" placeholder="frontend/catalog" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></label>
+        <label class="wide">URL for a PR<input name="curl" value="${esc(c.url)}" placeholder="https://pr-{pr}.preview.example.com/catalog/" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></label>
+        <label class="wide">How it is structured<textarea name="cabout" rows="4" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" placeholder="Each component's states live beside it in <name>.catalog.tsx ...">${esc(c.about)}</textarea></label>
+        <div class="set-form-actions"><span></span><button type="button" class="tool-btn" data-catalog-cancel>Cancel</button><button type="submit" class="tool-btn primary">Done</button></div></form>`
+      : `<div class="set-row"><div class="set-row-text"><b>${c.path ? `<code>${esc(c.path)}</code>` : 'No path yet'}</b><span>${c.url ? esc(c.url) : 'No URL yet: the skill reads the catalog, but previews need a deployed one.'}</span>${c.about ? `<span>${esc(c.about)}</span>` : ''}</div><button class="icon-btn" data-catalog-edit aria-label="Edit the catalog">${PENCIL}</button></div>`;
+    main.innerHTML = `<header class="set-head"><h2>Catalog</h2><p>Optional. Without a catalog the skill builds its own previews of the components a PR changes, as of the commit it scans. With one, the canvas shows them from the project's catalog, current with every deploy.</p></header>
+      <section class="set-group"><div class="set-list"><button class="set-choice" role="switch" aria-checked="${!!c.enabled}" data-catalog-toggle><span class="set-choice-text"><span>Use a component catalog</span><span class="hint">${c.enabled ? 'On: previews come from the catalog below.' : 'Off: the skill builds its own previews.'}</span></span><span class="switch" aria-hidden="true"></span></button></div></section>
+      ${c.enabled ? `<section class="set-group"><h3>Where it is</h3><div class="set-list">${fields}</div></section>` : ''}
+      <section class="set-group"><h3>Set one up</h3><p class="hint" style="margin:0 0 8px">A prompt for an agent in the repository: it builds a catalog the skill can show live and fills in these settings.</p><button class="tool-btn" data-catalog-prompt>Copy setup prompt</button> <span class="hint" data-prompt-msg></span></section>
+      ${settingsFoot()}`;
+    const f = $('[data-catalog-form]', main); if (f) f.elements.cpath.focus();
+  };
+  const draw = () => sec === 'appearance' ? drawAppearance() : sec === 'windows' ? drawWindows() : sec === 'catalog' ? drawCatalog() : drawPersonas();
   onThemeChange = () => { if (sec === 'appearance' && document.body.contains(main)) drawAppearance(); };
   const drawPersonas = () => {
-    const edited = (() => { try { return !!localStorage.getItem(PERSONA_KEY); } catch (e) { return false; } })();
     const gs = groups(); if (editing && 'group' in editing && !gs.includes(editing.group)) gs.push(editing.group);
     main.innerHTML = `<header class="set-head"><h2>Personas</h2><p>Who the product serves. The skill names them when it describes what a change lets people do.</p></header>
       ${gs.map(g => `<section class="set-group"><h3>${esc(g || 'Other')}</h3><div class="set-list">
@@ -674,30 +719,35 @@ function openSettings(section = 'personas') {
         </div><button class="link" data-add="${esc(g)}">+ Add persona</button></section>`).join('')}
       ${gs.length ? '' : `<p class="hint">No personas yet. <button class="link" data-add="">Add the first one</button></p>`}
       <datalist id="set-groups">${groups().filter(Boolean).map(g => `<option value="${esc(g)}">`).join('')}</datalist>
-      <footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.pr5k/settings.yaml</code> in the repository.'}</span>
-        ${edited ? '<button class="link" data-reset>Undo my edits</button>' : ''}<button class="tool-btn" data-copy>Copy settings file</button></footer>`;
+      ${settingsFoot()}`;
     const f = $('[data-form]', main); if (f) { f.elements.pname.focus(); f.elements.pname.select(); }
   };
   draw();
   main.addEventListener('submit', e => {
-    e.preventDefault(); const f = e.target.elements, v = { name: f.pname.value.trim(), group: f.pgroup.value.trim(), about: f.pabout.value.trim() };
+    e.preventDefault();
+    if (e.target.matches('[data-catalog-form]')) { const f = e.target.elements; catalog = { ...catalog, path: f.cpath.value.trim(), url: f.curl.value.trim(), about: f.cabout.value.trim() }; catalogEditing = false; saveCatalog(); draw(); return; }
+    const f = e.target.elements, v = { name: f.pname.value.trim(), group: f.pgroup.value.trim(), about: f.pabout.value.trim() };
     if (!v.name) { f.pname.focus(); return; }
     if ('i' in editing) personas = personas.map((p, i) => i === editing.i ? { ...p, ...v } : p);
     else { let id = slug(v.name), n = 2; while (personas.some(p => p.id === id)) id = slug(v.name) + '-' + n++; personas = [...personas, { id, ...v }]; }
     editing = null; savePersonas(); draw();
   });
   main.addEventListener('change', e => { const sel = e.target.closest('[data-open-sec]'); if (sel) setOpenTabs({ [sel.dataset.openSec]: sel.value }); });
-  main.addEventListener('keydown', e => { if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; draw(); } });
+  main.addEventListener('keydown', e => { if (e.key === 'Escape' && (editing || catalogEditing)) { e.stopPropagation(); editing = null; catalogEditing = false; draw(); } });
   main.addEventListener('click', async e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.themeValue) { setTheme(t.dataset.themeValue); return; }
+    if (t.hasAttribute('data-catalog-toggle')) { catalog = { ...catalog, enabled: !catalog.enabled }; catalogEditing = catalog.enabled && !catalog.path; saveCatalog(); draw(); return; }
+    if (t.hasAttribute('data-catalog-edit')) { catalogEditing = true; draw(); return; }
+    if (t.hasAttribute('data-catalog-cancel')) { catalogEditing = false; draw(); return; }
+    if (t.hasAttribute('data-catalog-prompt')) { const ok = await copyText(catalogSetupPrompt()); const m = $('[data-prompt-msg]', main); if (m) m.textContent = ok ? 'Copied.' : "Couldn't copy."; return; }
     if (t.dataset.openAll) { setOpenTabs(Object.fromEntries(Object.keys(WINDOW_TABS).map(k => [k, t.dataset.openAll]))); drawWindows(); return; }
     if (t.dataset.edit !== undefined) { editing = { i: +t.dataset.edit }; draw(); }
     else if (t.dataset.add !== undefined) { editing = { group: t.dataset.add }; draw(); }
     else if (t.hasAttribute('data-cancel')) { editing = null; draw(); }
     else if (t.hasAttribute('data-remove')) { personas = personas.filter((_, i) => i !== editing.i); editing = null; savePersonas(); draw(); }
-    else if (t.hasAttribute('data-reset')) { personas = filePersonas; try { localStorage.removeItem(PERSONA_KEY); } catch (x) {} redrawOverview(); editing = null; draw(); }
-    else if (t.hasAttribute('data-copy')) {
+    else if (t.hasAttribute('data-reset')) { personas = filePersonas; catalog = fileCatalog; try { localStorage.removeItem(PERSONA_KEY); localStorage.removeItem(CATALOG_KEY); } catch (x) {} redrawOverview(); editing = null; catalogEditing = false; draw(); }
+    else if (t.hasAttribute('data-copy-settings')) {
       const msg = $('[data-msg]', main);
       try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.pr5k/settings.yaml</code> at the repository root and commit it.'; }
       catch (x) { msg.innerHTML = `Copy this into <code>.pr5k/settings.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
@@ -1308,7 +1358,8 @@ function thumbHtml(pv) {
 function previewPane(it) {
   const pv = it.preview; if (!pv?.url) return '';
   const n = pv.states?.length || 0;
-  return `<div class="preview-bar"><span>The real component against sample data${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
+  const from = pv.source === 'catalog' ? "From the project's component catalog, as of its latest deploy" : `The real component at ${esc(D.pr?.headSha || 'the scanned commit')}, against sample data`;
+  return `<div class="preview-bar"><span>${from}${n ? `, in ${n} state${n > 1 ? 's' : ''}` : ''}. Changes stay in this preview.</span><a href="${esc(previewSrc(pv.url))}" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="preview-frame" data-preview="${esc(pv.url)}" src="${esc(previewSrc(pv.url))}" title="${esc(it.title)}, live"></iframe>`;
 }
 /* Which other components of the PR a component draws, or is drawn by; each opens that component's window. */
 function partsHtml(title, ids) {
