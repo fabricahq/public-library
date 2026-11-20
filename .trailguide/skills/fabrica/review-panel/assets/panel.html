@@ -198,6 +198,7 @@ td.fid { font-family: var(--mono); color: var(--muted); font-size: 12px; white-s
 tr.row.current td { background: var(--accent-bg); }
 tr.row.flash td { animation: flash 2.4s ease-out; }
 @keyframes flash { 0%, 40% { background: var(--adv-bg); } 100% { background: transparent; } }
+.srow.flash { animation: flash 2.4s ease-out; }
 .finding-window { width: min(800px, 100%); gap: 4px; outline: none; }
 .finding-window .body, .finding-window .fix { max-width: none; }
 .finding-window > :not(.fw-scroll) { flex: none; }
@@ -422,6 +423,31 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .mopt.custom .mname { color: var(--accent); }
 .mempty { padding: 14px 12px; color: var(--faint); font-size: 13px; }
 .mfoot { padding: 7px 12px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--faint); }
+
+/* Settings mode switch */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode { all: unset; box-sizing: border-box; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
+.mode:hover { border-color: var(--line-strong); background: var(--hover); }
+.mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mode.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--accent-bg); }
+.mode .radio { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--line-strong); margin-top: 2px; background: var(--panel); }
+.mode.on .radio { border: 5px solid var(--accent); }
+.mtext { display: grid; gap: 3px; min-width: 0; }
+.mtext b { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.mtext > span { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.inuse { font-size: 11px; font-weight: 600; color: var(--ok); background: var(--ok-bg); border-radius: 999px; padding: 0 7px; }
+.mode-detail { margin-top: 16px; }
+.mode-detail > p:first-child { margin-top: 0; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 12px; }
+ol.steps li { font-size: 13.5px; line-height: 1.55; padding-left: 4px; }
+ol.steps .btn { margin-left: 6px; }
+ol.steps .code-block { margin-top: 6px; }
+.agent-setup { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+.agent-setup summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.agent-setup .rowline { justify-content: flex-end; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 12px; }
+.edit.locked .swin input, .edit.locked select, .edit.locked textarea, .edit.locked .mpick { opacity: .75; cursor: default; }
+@media (max-width: 720px) { .modes { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 720px) {
   .swin { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: calc(100vh - 32px); }
   .sside { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -1346,8 +1372,9 @@ function harnessChanged(target) {
 }
 function reviewerEditor(r, index) {
   const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
-  return `<div class="edit" data-index="${index}">
-    <div class="source-note ${r.file || r.isNew ? 'repo' : ''}">${sourceLine(r)}</div>
+  return `<div class="edit ${canEdit() ? '' : 'locked'}" data-index="${index}">
+    <div class="source-note ${r.file || r.isNew ? 'repo' : ''}">${canEdit() ? sourceLine(r) : 'Built-in settings, shown read-only. To change them, switch to <button type="button" class="linkish" data-mode="config">Config file</button> in Overview.'}</div>
+    <fieldset ${canEdit() ? '' : 'disabled'}>
     ${r.isNew ? `<div class="field"><label for="cfg-name">Name</label><input id="cfg-name" data-cfg="name" value="${esc(r.name)}" spellcheck="false" pattern="[a-z0-9-]+"><span class="hint">Lowercase letters, digits, and hyphens. The file is reviewers/${esc(r.name)}.md.</span></div>` : ''}
     <div class="field"><label for="cfg-summary">Summary</label><input id="cfg-summary" data-cfg="summary" value="${esc(r.summary)}" placeholder="Checks … in one line"></div>
     <div class="fields-3">
@@ -1358,7 +1385,9 @@ function reviewerEditor(r, index) {
     ${r.builtin ? `<div class="field"><label for="cfg-mode">Prompt</label><select id="cfg-mode" data-cfg="mode">${option('replace', 'Replace the built-in prompt with the text below', r.mode)}${option('append', 'Keep the built-in prompt and add the text below', r.mode)}</select></div>` : ''}
     <div class="field"><label for="cfg-prompt">${r.builtin && r.mode === 'append' ? 'Text to add' : 'Focus prompt'}</label><textarea id="cfg-prompt" data-cfg="prompt" spellcheck="false" rows="12">${esc(r.prompt)}</textarea>
       <span class="hint">Every reviewer also gets the shared instructions and output format, then the change. This is the part that makes it this reviewer.</span></div>
-    <div class="edit-actions">
+    </fieldset>
+    ${canEdit() ? '' : '<div class="edit-actions"><span class="spacer"></span><button type="button" class="btn" data-sact="done">Done</button></div>'}
+    <div class="edit-actions" ${canEdit() ? '' : 'hidden'}>
       <button type="button" class="linkish danger" data-sact="toggle-include">${r.included ? 'Leave out of the panel' : 'Put back in the panel'}</button>
       ${changed(r) && !r.isNew ? '<button type="button" class="linkish" data-sact="reset">Undo my edits</button>' : ''}
       ${r.builtin && r.file && !r.removeFile ? '<button type="button" class="linkish" data-sact="use-builtin">Go back to the built-in version</button>' : ''}
@@ -1379,7 +1408,7 @@ function reviewersPane() {
     </div>${settings.editing === i ? reviewerEditor(r, i) : ''}`).join('');
   return `<div class="spane-head"><div><h2>Reviewers</h2><p>Every reviewer on the panel, and where its settings come from. Open one to read its prompt or change it.</p></div>${closeBtn()}</div>
     <div class="sbody">
-      <div class="group-head"><span class="n">${plural(cfg.reviewers.filter(r => r.included).length, 'reviewer')} on the panel</span><button type="button" class="linkish add" data-sact="add">+ Add reviewer</button></div>
+      <div class="group-head"><span class="n">${plural(cfg.reviewers.filter(r => r.included).length, 'reviewer')} on the panel</span>${canEdit() ? '<button type="button" class="linkish add" data-sact="add">+ Add reviewer</button>' : ''}</div>
       <div class="slist">${rows}</div>
     </div>`;
 }
@@ -1390,12 +1419,12 @@ function synthesisPane() {
   const fromRepo = !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis);
   return `<div class="spane-head"><div><h2>Synthesis</h2><p>The last step: checks every reviewer finding against the code, merges duplicates, drops false positives, and gives the verdict.</p></div>${closeBtn()}</div>
     <div class="sbody"><div class="slist"><div class="edit" style="border-top:0;padding-left:14px">
-      <div class="source-note ${fromRepo || synthesisChanged() ? 'repo' : ''}">${synthesisChanged() ? `Saving writes these to <code>${esc(configDir())}/panel.yaml</code>.` : fromRepo ? `Set by <code>${esc(configDir())}/panel.yaml</code>.` : 'Built-in settings. Change one and saving writes it to panel.yaml.'}</div>
-      <div class="fields-3">
+      <div class="source-note ${fromRepo || synthesisChanged() ? 'repo' : ''}">${!canEdit() ? 'Built-in settings, shown read-only. To change them, switch to <button type="button" class="linkish" data-mode="config">Config file</button> in Overview.' : synthesisChanged() ? `Saving writes these to <code>${esc(configDir())}/panel.yaml</code>.` : fromRepo ? `Set by <code>${esc(configDir())}/panel.yaml</code>.` : 'Built-in settings. Change one and saving writes it to panel.yaml.'}</div>
+      <fieldset ${canEdit() ? '' : 'disabled'}><div class="fields-3">
         <div class="field"><label for="syn-harness">Runs on</label><select id="syn-harness" data-syn="harness">${option('claude-code', 'Claude Code', s.harness)}${option('codex', 'Codex', s.harness)}</select></div>
         <div class="field"><label for="syn-model">Model</label>${modelButton('syn', s.model)}</div>
         <div class="field"><label for="syn-effort">Effort</label><select id="syn-effort" data-syn="effort">${EFFORTS.map(e => option(e, e, s.effort)).join('')}</select></div>
-      </div>
+      </div></fieldset>
       <span class="hint">The synthesis prompt itself lives in the skill, at <code>prompts/synthesize.md</code>.</span>
     </div></div></div>`;
 }
@@ -1417,43 +1446,68 @@ ${list}
 First ask me which reviewers to keep, change, or add, and what this repository needs them to watch for. Then write the files, keeping each reviewer's prompt to one concern, and show me what you wrote.
 `;
 }
+// The two settings modes. The mode in use is a fact about the repository (does the folder exist?); the switch
+// shows what each mode means and what it takes to move to the other one.
+const folderFound = () => !!(state.config && state.config.found);
+const viewMode = () => settings.mode || (folderFound() ? 'config' : 'builtin');
+const canEdit = () => viewMode() === 'config';
+function modeCard(id, title, text) {
+  const inUse = (id === 'config') === folderFound();
+  return `<button type="button" class="mode ${viewMode() === id ? 'on' : ''}" data-mode="${id}" role="radio" aria-checked="${viewMode() === id}">
+      <span class="radio" aria-hidden="true"></span>
+      <span class="mtext"><b>${title}${inUse ? '<span class="inuse">In use</span>' : ''}</b><span>${text}</span></span>
+    </button>`;
+}
+function copyLine(text, act, noteId) {
+  return `<div class="code-block"><pre>${esc(text)}</pre><button type="button" class="btn small" data-sact="${act}">Copy</button></div><p class="hint" id="${noteId}"></p>`;
+}
 function overviewPane() {
   const dir = configDir();
-  const found = state.config && state.config.found;
+  const found = folderFound();
   const cfg = settings.cfg;
-  const fromRepo = cfg.reviewers.filter(r => r.file && r.builtin).length;
-  const added = cfg.reviewers.filter(r => !r.builtin && !r.isNew).length;
-  const out = cfg.reviewers.filter(r => !r.original.included).length;
-  const parts = [fromRepo && `${plural(fromRepo, 'reviewer')} changed`, added && `${added} added`, out && `${out} left out`,
-    !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis) && 'synthesis model changed'].filter(Boolean);
-  const command = state.config && state.config.command;
-  return `<div class="spane-head"><div><h2>Overview</h2><p>Where the panel’s settings come from, and how to change them.</p></div>${closeBtn()}</div>
+  const command = (state.config && state.config.command) || 'python3 <skill>/scripts/review_panel.py settings';
+  let detail;
+  if (viewMode() === 'builtin' && !found) {
+    detail = `<p>The panel runs the skill’s ${plural(cfg.reviewers.length, 'reviewer')} with their built-in prompts and models. Open <b>Reviewers</b> to read them. There’s nothing to set up.</p>`;
+  } else if (viewMode() === 'builtin') {
+    detail = `<p>This repository has a <code>${esc(dir)}/</code> folder, so the panel uses it. To go back to the built-in settings, delete the folder and commit:</p>${copyLine(`git rm -r ${dir}`, 'copy-remove', 'remove-note')}`;
+  } else if (found) {
+    const fromRepo = cfg.reviewers.filter(r => r.file && r.builtin).length;
+    const added = cfg.reviewers.filter(r => !r.builtin && !r.isNew).length;
+    const out = cfg.reviewers.filter(r => !r.original.included).length;
+    const parts = [fromRepo && `${plural(fromRepo, 'reviewer')} changed`, added && `${added} added`, out && `${out} left out`,
+      !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis) && 'synthesis model changed'].filter(Boolean);
+    detail = `<p>The panel reads <code>${esc(dir)}/</code> from the code it reviews${parts.length ? `: ${esc(parts.join(', '))}` : ''}. Anything without a file there stays built-in.</p>
+      <p>${LIVE ? 'Change reviewers and the synthesis here and press <b>Save to repository</b>, then commit the folder.' : `This page is a saved report and can’t write files. To edit and save, run this in the repository:`}</p>
+      ${LIVE ? '' : copyLine(command, 'copy-command', 'command-note')}`;
+  } else {
+    const steps = LIVE
+      ? [`<b>Create the folder.</b> This writes <code>${esc(dir)}/panel.yaml</code> with the current settings. <button type="button" class="btn small primary" data-sact="create-folder">Create ${esc(dir)}/</button>`,
+         '<b>Change what you need</b> under Reviewers and Synthesis, and press Save. Each reviewer you change gets its own file; the rest stay built-in.',
+         '<b>Commit the folder</b>, so everyone who runs the panel in this repository gets the same settings.']
+      : [`<b>Open the settings page</b> by running this in the repository:${copyLine(command, 'copy-command', 'command-note')}`,
+         '<b>Change what you need</b> under Reviewers and Synthesis, and press Save. Each reviewer you change gets its own file; the rest stay built-in.',
+         '<b>Commit the folder</b>, so everyone who runs the panel in this repository gets the same settings.'];
+    detail = `<ol class="steps">${steps.map(s => `<li>${s}</li>`).join('')}</ol>
+      <details class="agent-setup"><summary>Or have your coding agent set it up</summary>
+        <p>Copy this prompt into your agent in the repository. It asks what you want, then writes the files.</p>
+        <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn small" data-sact="copy-prompt">Copy setup prompt</button></div>
+        <pre class="setup-prompt">${esc(setupPrompt())}</pre></details>`;
+  }
+  return `<div class="spane-head"><div><h2>Overview</h2><p>Choose where the panel’s settings come from.</p></div>${closeBtn()}</div>
     <div class="sbody prose">
-      <div class="status-line ${found ? 'on' : ''}">${found
-        ? `Using this repository’s settings from <code>${esc(dir)}/</code>${parts.length ? `: ${esc(parts.join(', '))}` : ''}. Everything else is built-in.`
-        : `Using the built-in settings. This repository has no <code>${esc(dir)}/</code> folder.`}</div>
-      <h3>How it works</h3>
-      <ul>
-        <li>Every reviewer and the synthesis start from the skill’s <b>built-in</b> settings.</li>
-        <li>A file in <code>${esc(dir)}/</code> <b>overrides</b> the built-in settings for what it covers: <code>reviewers/&lt;name&gt;.md</code> for one reviewer’s prompt and model, <code>panel.yaml</code> for which reviewers run and the synthesis model. Anything without a file stays built-in.</li>
-        <li>Settings live only in the repository. Each run reads them from the code it reviews, so <b>commit the folder</b> to share them with everyone who runs the panel there.</li>
-      </ul>
-      <h3>Change them</h3>
-      ${LIVE
-        ? `<p>Edit reviewers and the synthesis in this window, then press <b>Save to repository</b>. The files land in <code>${esc(dir)}/</code> in your working tree, ready to review and commit.</p>`
-        : `<p>This page is a saved report, so it can’t write files. To edit and save here, run this in the repository:</p>
-           <div class="code-block"><pre>${esc(command || 'python3 <skill>/scripts/review_panel.py settings')}</pre><button type="button" class="btn small" data-sact="copy-command">Copy</button></div>
-           <p class="hint" id="command-note"></p>`}
-      <div class="setup-card">
-        <div><h3>Or set it up with your agent</h3><p>Copy this prompt into your coding agent in the repository. It asks what you want, then writes the files.</p></div>
-        <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn" data-sact="copy-prompt">Copy setup prompt</button></div>
-        <details><summary>Show the prompt</summary><pre class="setup-prompt">${esc(setupPrompt())}</pre></details>
+      <div class="modes" role="radiogroup" aria-label="Settings mode">
+        ${modeCard('builtin', 'Built-in settings', 'The skill’s reviewers, prompts, and models. Nothing to set up.')}
+        ${modeCard('config', 'Config file', `A <code>${esc(dir)}/</code> folder in this repository overrides them, for everyone who runs the panel there.`)}
       </div>
+      <div class="mode-detail">${detail}</div>
     </div>`;
 }
 const closeBtn = () => '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
 function footer() {
+  if (!canEdit()) return '';
   const { count } = pendingChanges();
+  if (!count && settings.section === 'overview' && !settings.flash && !settings.error) return '';
   const dir = configDir();
   let note;
   if (settings.error) note = `<span class="dot-err"></span>${esc(settings.error)}`;
@@ -1475,20 +1529,28 @@ function renderSettings() {
   const focusId = active && holder.contains(active) ? active.id : null;
   const caret = focusId && 'selectionStart' in active ? [active.selectionStart, active.selectionEnd] : null;
   const scroll = holder.querySelector('.sbody') ? holder.querySelector('.sbody').scrollTop : 0;
-  const found = state.config && state.config.found;
   holder.innerHTML = `<div class="sscrim" data-sact="close-scrim"><div class="swin" role="dialog" aria-modal="true" aria-label="Settings">
     <div class="sside">
       <div class="sside-title">Settings</div>
       <div class="snav">${nav('overview', 'Overview')}</div>
       <div class="sgroup">Review panel</div>
       <div class="snav">${nav('reviewers', 'Reviewers', cfg.reviewers.filter(r => r.included).length)}${nav('synthesis', 'Synthesis')}</div>
-      <div class="sside-foot">${found ? 'Using' : 'No folder yet:'}<code>${esc(configDir())}/</code></div>
     </div>
     <div class="spane">${pane}${footer()}</div>
   </div></div>`;
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret && el.setSelectionRange) el.setSelectionRange(caret[0], caret[1]); } }
   const body = holder.querySelector('.sbody');
   if (body) body.scrollTop = scroll;
+  if (settings.justAdded) { // Bring the new reviewer into view, open, with its name ready to type.
+    settings.justAdded = false;
+    const row = holder.querySelector(`.srow[data-index="${settings.editing}"]`);
+    if (row) {
+      row.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      row.classList.add('flash');
+      const name = document.getElementById('cfg-name');
+      if (name) { name.focus({ preventScroll: true }); name.select(); }
+    }
+  }
 }
 function openSettings(open) {
   settings.open = open;
@@ -1498,14 +1560,15 @@ function openSettings(open) {
   if (open) { const first = document.querySelector('#settings [aria-current="page"]'); if (first) first.focus(); }
   else document.querySelector('[data-act="settings"]').focus();
 }
-async function saveSettings() {
-  const { files, remove } = pendingChanges();
+async function saveSettings(extra) {
+  const pending = pendingChanges();
+  const files = { ...(extra || {}), ...pending.files }, remove = pending.remove;
   settings.saving = true; settings.error = ''; renderSettings();
   try {
     const response = await fetch('settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files, remove }) });
     const reply = await response.json().catch(() => ({ error: `the runner answered ${response.status}` }));
     if (!response.ok || !reply.ok) throw new Error(reply.error || `the runner answered ${response.status}`);
-    state.roster = reply.roster; state.config = reply.config;
+    state.roster = reply.roster; state.config = reply.config; settings.mode = null;
     const written = Object.keys(files).length + remove.length;
     settings.cfg = null; store(cfgKey(), null); loadConfig();
     if (settings.editing !== null && settings.editing >= settings.cfg.reviewers.length) settings.editing = null;
@@ -1526,6 +1589,8 @@ document.getElementById('settings').addEventListener('click', async event => {
   if (t.closest('.mpop')) return;
   const sect = t.closest('[data-sect]');
   if (sect) { settings.section = sect.dataset.sect; settings.editing = null; renderSettings(); return; }
+  const mode = t.closest('[data-mode]');
+  if (mode) { settings.mode = mode.dataset.mode; settings.section = 'overview'; settings.editing = null; renderSettings(); return; }
   if (t.matches('.sscrim')) { openSettings(false); return; }
   const act = t.closest('[data-sact]:not(.sscrim)');
   const row = t.closest('.srow');
@@ -1544,6 +1609,7 @@ document.getElementById('settings').addEventListener('click', async event => {
       cfg.reviewers.push({ name: `check-custom-${n}`, builtin: false, file: null, source: 'new', isNew: true, ...blank, original: blank });
       settings.editing = cfg.reviewers.length - 1;
       settings.section = 'reviewers';
+      settings.justAdded = true;
       break;
     }
     case 'toggle-include': if (r) { if (r.isNew && r.included) { cfg.reviewers.splice(settings.editing, 1); settings.editing = null; } else r.included = !r.included; } break;
@@ -1555,6 +1621,8 @@ document.getElementById('settings').addEventListener('click', async event => {
     case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note')); return;
     case 'copy-prompt': await copy(setupPrompt(), document.getElementById('prompt-note')); return;
     case 'copy-command': await copy(state.config.command, document.getElementById('command-note')); return;
+    case 'copy-remove': await copy(`git rm -r ${configDir()}`, document.getElementById('remove-note')); return;
+    case 'create-folder': await saveSettings({ 'panel.yaml': panelFile() }); return;
   }
   saveConfig();
   renderSettings();
