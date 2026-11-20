@@ -4,26 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Review panel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: a header, a column of reviewer cards on the left, and the selected view on the right. */
+/* Layout, after PR 10K: a persistent top bar, a sidebar of the synthesis and reviewers, and the selected view filling the rest. */
 :root {
-  --bg: #f6f6f3; --panel: #ffffff; --ink: #1c1c1a; --muted: #6a6a64; --line: #e3e2dc; --hover: #f2f2ee;
-  --accent: #3656d3; --accent-bg: #e9edfc; --block: #c0362a; --block-bg: #fbebe9; --adv: #946500; --adv-bg: #fbf2dc;
-  --ok: #2c7a4c; --ok-bg: #e6f3eb; --code: #efeee9; --claude: #c96442;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  --bg: #f6f5f2; --panel: #ffffff; --side: #f3f2ee; --ink: #1f1e1b; --muted: #6f6b62; --faint: #9a958a; --line: #e6e3dc; --line-strong: #d6d2c8;
+  --hover: #efede7; --active: #e8e5dd; --accent: #2f5d50; --accent-fg: #ffffff; --accent-bg: #e3ece8;
+  --block: #b3392b; --block-bg: #f9e9e6; --adv: #8a6200; --adv-bg: #f7efd9; --ok: #2c6e4a; --ok-bg: #e4f0e8; --code: #efede7; --claude: #c96442;
+  --scrim: rgba(31,30,27,.28); --shadow: 0 24px 64px rgba(31,30,27,.18), 0 2px 6px rgba(31,30,27,.08);
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #151514; --panel: #1e1e1c; --ink: #ecebe6; --muted: #a09f98; --line: #34332f; --hover: #262624;
-    --accent: #8ea6ff; --accent-bg: #232c47; --block: #ff8b7f; --block-bg: #3a2220; --adv: #e8b94e; --adv-bg: #393020;
-    --ok: #74c995; --ok-bg: #1e3327; --code: #2a2a27; --claude: #e08a6a; color-scheme: dark;
+    --bg: #171715; --panel: #1f1f1c; --side: #1a1a18; --ink: #ecebe6; --muted: #a29e94; --faint: #7a766d; --line: #2f2e2a; --line-strong: #3d3b36;
+    --hover: #2a2926; --active: #33322e; --accent: #7fb8a5; --accent-fg: #10201b; --accent-bg: #22332d;
+    --block: #ef8b7d; --block-bg: #3a2220; --adv: #e2b555; --adv-bg: #393020; --ok: #7fc79c; --ok-bg: #1e3327; --code: #2a2926; --claude: #e08a6a;
+    --scrim: rgba(0,0,0,.5); --shadow: 0 24px 64px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #151514; --panel: #1e1e1c; --ink: #ecebe6; --muted: #a09f98; --line: #34332f; --hover: #262624;
-  --accent: #8ea6ff; --accent-bg: #232c47; --block: #ff8b7f; --block-bg: #3a2220; --adv: #e8b94e; --adv-bg: #393020;
-  --ok: #74c995; --ok-bg: #1e3327; --code: #2a2a27; --claude: #e08a6a; color-scheme: dark;
+  --bg: #171715; --panel: #1f1f1c; --side: #1a1a18; --ink: #ecebe6; --muted: #a29e94; --faint: #7a766d; --line: #2f2e2a; --line-strong: #3d3b36;
+  --hover: #2a2926; --active: #33322e; --accent: #7fb8a5; --accent-fg: #10201b; --accent-bg: #22332d;
+  --block: #ef8b7d; --block-bg: #3a2220; --adv: #e2b555; --adv-bg: #393020; --ok: #7fc79c; --ok-bg: #1e3327; --code: #2a2926; --claude: #e08a6a;
+  --scrim: rgba(0,0,0,.5); --shadow: 0 24px 64px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3); color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -31,28 +35,50 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(-
 button, input, select { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 code, .mono { font-family: var(--mono); font-size: 12.5px; }
-header { padding: 18px max(16px, env(safe-area-inset-left, 0px)) 14px; border-bottom: 1px solid var(--line); background: var(--panel); }
-.head-inner { max-width: 1440px; margin: 0 auto; }
-h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; text-wrap: balance; }
-.sub { color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; }
+html, body { height: 100%; }
+body { -webkit-font-smoothing: antialiased; }
+.app { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.topbar { position: relative; display: flex; align-items: center; gap: 18px; padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); min-width: 0; }
+.brand { font-family: var(--mono); font-weight: 600; font-size: 12.5px; letter-spacing: .04em; color: var(--muted); white-space: nowrap; }
+.tb-title { min-width: 0; flex: 1; }
+h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub { color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; font-size: 12.5px; margin-top: 1px; }
 .sub a { color: var(--accent); }
-.progress { height: 4px; background: var(--code); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+.tb-stats { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.tb-actions { display: flex; align-items: center; gap: 4px; }
+.icon-btn { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; padding: 0; }
+.icon-btn:hover { background: var(--hover); color: var(--ink); }
+.icon-btn svg { width: 17px; height: 17px; }
+.progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; }
 .progress div { height: 100%; background: var(--accent); transition: width .4s; }
-main { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 20px; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 96px max(16px, env(safe-area-inset-left, 0px)); max-width: 1440px; margin: 0 auto; }
-@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
-nav { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.section-title { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
-nav .section-title { margin: 10px 0 0; }
+.shell { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 0; }
+nav#nav { background: var(--side); border-right: 1px solid var(--line); overflow-y: auto; padding: 12px 10px 24px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+main { overflow-y: auto; min-width: 0; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 110px 28px; }
+@media (max-width: 860px) {
+  .app { height: auto; display: block; }
+  .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; flex-wrap: wrap; gap: 8px 12px; }
+  .tb-title { flex-basis: calc(100% - 120px); order: 1; }
+  .brand { order: 0; }
+  .tb-actions { order: 2; margin-left: auto; }
+  .tb-stats { order: 3; justify-content: flex-start; flex-basis: 100%; }
+  .shell { display: block; }
+  nav#nav { border-right: 0; border-bottom: 1px solid var(--line); padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
+  main { padding: 18px max(16px, env(safe-area-inset-right, 0px)) 110px max(16px, env(safe-area-inset-left, 0px)); }
+  nav#nav .card .desc, nav#nav .card .stats { display: none; }
+}
+.section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 18px 0 8px; font-weight: 500; }
+nav .section-title { margin: 14px 10px 4px; }
 
 /* Cards */
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; text-align: left; width: 100%; display: flex; flex-direction: column; gap: 4px; }
-.card:hover { border-color: var(--muted); }
-.card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.card { background: none; border: 0; border-radius: 8px; padding: 9px 10px; cursor: pointer; text-align: left; width: 100%; display: flex; flex-direction: column; gap: 3px; color: var(--ink); }
+.card:hover { background: var(--hover); }
+.card.sel { background: var(--active); box-shadow: inset 3px 0 0 var(--accent); }
 .card .top { display: flex; align-items: center; gap: 8px; }
-.card .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .name { font-weight: 600; font-size: 13.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .desc { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
 .card .act { color: var(--muted); font-family: var(--mono); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card .err { color: var(--block); font-size: 12px; overflow-wrap: anywhere; }
+.card .src { font-size: 11.5px; color: var(--accent); }
 .counts { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Model and stats */
@@ -80,19 +106,30 @@ nav .section-title { margin: 10px 0 0; }
 @media (prefers-reduced-motion: reduce) { .s-running .dot { animation: none; } .progress div { transition: none; } }
 
 /* Main pane */
-.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; min-width: 0; }
+.pane { min-width: 0; max-width: 1280px; }
 .pane-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
-.pane-head h2 { font-size: 18px; margin: 0; }
+.pane-head h2 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
 .pane-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 6px; }
 .pane-desc { color: var(--muted); margin: 4px 0 0; }
-.conclusions { margin: 14px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.conclusions li { padding: 10px 14px; background: var(--hover); border-radius: 8px; font-size: 14.5px; line-height: 1.45; }
-.conclusions li::before { content: "\2192"; color: var(--accent); margin-right: 8px; font-weight: 600; }
+.syn-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; margin-top: 18px; align-items: start; }
+.syn-grid .canvas { min-width: 0; }
+.syn-grid .rail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+@media (max-width: 1180px) { .syn-grid { grid-template-columns: minmax(0, 1fr); } .syn-grid .rail { position: static; order: -1; } }
+.canvas-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.canvas-head .section-title { margin: 0; }
+.canvas .toolbar { margin-top: 10px; }
+.rail-block { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px 14px 14px; }
+.rail-block .section-title { margin: 12px 0 8px; }
+.rail-block .section-title .n { color: var(--faint); margin-left: 4px; }
+.conclusions { margin: 0; padding: 0; list-style: none; counter-reset: c; display: flex; flex-direction: column; gap: 10px; }
+.conclusions li { counter-increment: c; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; font-size: 13.5px; line-height: 1.45; }
+.conclusions li::before { content: counter(c); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
 .summary-line { margin: 12px 0 0; font-size: 14.5px; }
 .questions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.questions li { border-left: 3px solid var(--adv); padding: 2px 0 2px 12px; }
+.questions li { border-left: 3px solid var(--adv); padding: 2px 0 2px 10px; font-size: 13.5px; }
+.questions details.why summary { cursor: pointer; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .questions .q { font-weight: 600; }
-.questions .why { color: var(--muted); font-size: 13px; }
+.questions .why { color: var(--muted); font-size: 12.5px; }
 .banner { margin: 12px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--block-bg); color: var(--block); font-size: 13px; }
 .empty { color: var(--muted); padding: 28px 0; text-align: center; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 16px 0 0; overflow-x: auto; }
@@ -170,7 +207,8 @@ details.dupes li { padding: 8px 10px; border: 1px solid var(--line); border-radi
 .prompt { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--hover); border: 1px solid var(--line); border-radius: 10px; padding: 14px; max-height: 70vh; overflow: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; margin-top: 10px; }
 .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 500; }
 .btn:hover { background: var(--hover); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn:disabled, .btn.primary:disabled { opacity: .45; cursor: default; filter: none; }
 .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
 .rowline { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .note { color: var(--muted); font-size: 12.5px; }
@@ -179,7 +217,7 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 /* Handoff */
 .handoff-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; background: var(--ink); color: var(--bg); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); max-width: calc(100% - 32px); flex-wrap: wrap; }
 .handoff-bar .btn { background: transparent; color: var(--bg); border-color: rgba(127,127,127,.5); }
-.handoff-bar .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.handoff-bar .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 .overlay { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .dialog { background: var(--panel); border-radius: 12px; width: min(820px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; gap: 10px; padding: 18px; }
 .dialog h3 { margin: 0; font-size: 16px; }
@@ -187,9 +225,7 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 .dialog .rowline { margin: 0; }
 
 /* Guide: a drawer from the top-right button that explains the page's labels, section by section. */
-.head-inner { position: relative; }
-.head-inner h1 { padding-right: 96px; }
-.guide-btn { position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 8px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--ink); }
+.guide-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 8px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--ink); }
 .guide-btn:hover { border-color: var(--muted); }
 .guide-btn .q { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: 12px; font-weight: 700; }
 .guide-shade { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.25); }
@@ -210,19 +246,98 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 .guide-body dd { margin: 0; font-size: 13px; line-height: 1.45; }
 .guide-body dd .eg { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .guide-body p { font-size: 13px; line-height: 1.5; margin: 0 0 8px; }
+
+/* Settings: the PR 10K settings window, with sections on the left and one pane on the right. */
+.sscrim { position: fixed; inset: 0; z-index: 50; background: var(--scrim); display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
+.swin { width: min(1000px, 100%); height: min(720px, calc(100vh - 48px)); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); display: grid; grid-template-columns: 220px minmax(0, 1fr); overflow: hidden; }
+.sside { background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 14px 10px; min-height: 0; }
+.sside-title { font-weight: 600; font-size: 13px; padding: 6px 10px 12px; }
+.sgroup { font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 10px 10px 4px; }
+.snav { display: flex; flex-direction: column; gap: 1px; }
+.snav button { all: unset; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px; color: var(--muted); cursor: pointer; font-size: 13.5px; }
+.snav button:hover { background: var(--hover); color: var(--ink); }
+.snav button[aria-current="page"] { background: var(--active); color: var(--ink); font-weight: 500; }
+.snav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.snav .count { margin-left: auto; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.sside-foot { margin-top: auto; padding: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--faint); }
+.sside-foot code { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); word-break: break-all; }
+.spane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.spane-head { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px 16px; border-bottom: 1px solid var(--line); }
+.spane-head > div { flex: 1; min-width: 0; }
+.spane-head h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.spane-head p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+.sbody { flex: 1; overflow: auto; padding: 14px 24px 24px; min-height: 0; }
+.group-head { display: flex; align-items: center; gap: 8px; padding: 4px 2px 8px; }
+.group-head h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.group-head .n { font-size: 12px; color: var(--faint); }
+.group-head .add { margin-left: auto; text-decoration: none; font-weight: 500; }
+.slist { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.srow { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--line); cursor: pointer; }
+.slist > .srow:first-child { border-top: 0; }
+.srow:hover { background: var(--hover); }
+.srow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.srow.out .who, .srow.out .av { opacity: .5; }
+.av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--code); }
+.av svg { width: 16px; height: 16px; }
+.av .claude { color: var(--claude); }
+.who { min-width: 0; } .who b { font-weight: 500; display: block; font-family: var(--mono); font-size: 13px; }
+.who span { color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.srow .meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.srow .model { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.chip.ok { background: var(--accent-bg); color: var(--accent); }
+.chip.edited { background: var(--adv-bg); color: var(--adv); }
+.edit { padding: 16px 14px 14px 58px; border-top: 1px solid var(--line); background: var(--side); display: grid; gap: 12px; }
+.field { display: grid; gap: 5px; min-width: 0; } .field label { font-size: 12px; font-weight: 500; color: var(--muted); }
+.fields-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.swin input, .swin select, .swin textarea { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 7px; padding: 7px 10px; width: 100%; }
+.swin textarea { resize: vertical; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; min-height: 180px; }
+.swin input:focus, .swin select:focus, .swin textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.hint { font-size: 12px; color: var(--faint); }
+.edit-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.edit-actions .spacer { flex: 1; }
+.linkish.danger { color: var(--block); text-decoration: none; }
+.sfoot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+.sfoot > .note:first-child { flex: 1; min-width: 200px; }
+.dot-warn { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--adv); margin-right: 8px; vertical-align: 1px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.small { padding: 2px 9px; font-size: 12px; }
+.prose h3 { font-size: 14px; margin: 20px 0 4px; }
+.prose p, .prose li { font-size: 13.5px; line-height: 1.55; color: var(--ink); max-width: 72ch; }
+.prose ul { padding-left: 18px; }
+.prose code { background: var(--code); border-radius: 4px; padding: 0 4px; }
+.status-line { padding: 8px 12px; border-radius: 8px; background: var(--code); color: var(--muted); font-size: 13px; }
+.status-line.on { background: var(--accent-bg); color: var(--accent); }
+pre.tree, .code-block pre { font-family: var(--mono); font-size: 12px; line-height: 1.6; background: var(--side); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 10px 0 0; }
+.code-block { position: relative; }
+.code-block .btn { position: absolute; top: 8px; right: 8px; }
+@media (max-width: 720px) {
+  .swin { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: calc(100vh - 32px); }
+  .sside { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .sside-title, .sgroup, .sside-foot { display: none; }
+  .snav { flex-direction: row; }
+  .fields-3 { grid-template-columns: minmax(0, 1fr); }
+  .edit { padding-left: 14px; }
+  .srow { grid-template-columns: 32px minmax(0, 1fr); } .srow .meta { grid-column: 2; justify-content: flex-start; }
+}
 </style>
 </head>
 <body>
-<header><div class="head-inner">
-  <h1 id="title">Review panel</h1>
-  <button type="button" class="guide-btn" data-act="guide" aria-haspopup="dialog" aria-controls="guide"><span class="q">?</span>Guide</button>
-  <div class="sub" id="sub"></div>
+<div class="app">
+<header class="topbar">
+  <span class="brand">REVIEW PANEL</span>
+  <div class="tb-title"><h1 id="title">Review panel</h1><div class="sub" id="sub"></div></div>
+  <div class="tb-stats" id="tb-stats"></div>
+  <div class="tb-actions">
+    <button type="button" class="guide-btn" data-act="guide" aria-haspopup="dialog" aria-controls="guide"><span class="q">?</span>Guide</button>
+    <button type="button" class="icon-btn" data-act="settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  </div>
   <div class="progress"><div id="bar" style="width:0"></div></div>
-</div></header>
-<main>
-  <nav id="nav"></nav>
-  <section class="pane" id="pane"></section>
-</main>
+</header>
+<div class="shell">
+  <nav id="nav" aria-label="Synthesis and reviewers"></nav>
+  <main><section class="pane" id="pane"></section></main>
+</div>
+</div>
 <div class="guide-shade" data-act="guide-close" hidden></div>
 <aside class="guide" id="guide" role="dialog" aria-modal="true" aria-labelledby="guide-title" hidden>
   <div class="guide-top">
@@ -304,6 +419,7 @@ a.raw { color: var(--accent); font-size: 12.5px; }
   </div>
   <div class="guide-foot"><button type="button" class="btn" id="guide-prev">← Previous</button><span class="note" id="guide-count"></span><button type="button" class="btn primary" id="guide-next">Next →</button></div>
 </aside>
+<div id="settings"></div>
 <div id="detail"></div>
 <div id="handoff"></div>
 <script id="inline-state" type="application/json"></script>
@@ -538,15 +654,23 @@ function synthesisView() {
   const missing = Object.entries(state.reviewers).filter(([, v]) => v.status !== 'done').map(([k]) => k);
   const rows = ui.raw ? rawRows() : synthesisRows();
   const rawCount = rawRows().length;
-  return head + `
-    ${(r.conclusions || []).length ? `<ul class="conclusions">${r.conclusions.map(c => `<li>${inlineMd(c)}</li>`).join('')}</ul><details class="more"><summary>Full summary</summary><p class="summary-line">${inlineMd(r.summary)}</p></details>` : `<p class="summary-line">${inlineMd(r.summary)}</p>`}
-    ${droppedLine(r)}
-    ${missing.length ? `<div class="banner">Not covered: ${missing.map(esc).join(', ')} did not report.</div>` : ''}
-    ${(r.questions || []).length ? `<div class="section-title">Questions for you</div><ul class="questions">${r.questions.map(q => `<li><div class="q">${q.blocking ? '<span class="pill sev-blocking">blocks merge</span> ' : ''}${inlineMd(q.question)}</div>${q.why ? `<div class="why">${inlineMd(q.why)}</div>` : ''}</li>`).join('')}</ul>` : ''}
-    <div class="section-title">Findings</div>
-    <label class="toggle"><input type="checkbox" id="raw" ${ui.raw ? 'checked' : ''}> Show every reviewer finding before merging (${rawCount})</label>
-    ${toolbar(rows, true)}
-    <div id="table">${tableHtml(rows, { reviewerCol: true, outcomeCol: ui.raw })}</div>`;
+  // The findings table is the canvas; conclusions and questions sit in a rail beside it (above it when narrow).
+  const rail = `
+    <div class="rail-block"><div class="section-title">Key conclusions</div>
+      ${(r.conclusions || []).length ? `<ol class="conclusions">${r.conclusions.map(c => `<li>${inlineMd(c)}</li>`).join('')}</ol>` : ''}
+      <details class="more"><summary>Full summary</summary><p class="summary-line">${inlineMd(r.summary)}</p></details>
+      ${droppedLine(r)}
+      ${missing.length ? `<div class="banner">Not covered: ${missing.map(esc).join(', ')} did not report.</div>` : ''}
+    </div>
+    ${(r.questions || []).length ? `<div class="rail-block"><div class="section-title">Questions for you <span class="n">${r.questions.length}</span></div><ul class="questions">${r.questions.map(q => `<li><div class="q">${q.blocking ? '<span class="pill sev-blocking">blocks merge</span> ' : ''}${inlineMd(q.question)}</div>${q.why ? `<details class="why"><summary>Why it matters</summary>${inlineMd(q.why)}</details>` : ''}</li>`).join('')}</ul></div>` : ''}`;
+  return head + `<div class="syn-grid">
+    <div class="canvas">
+      <div class="canvas-head"><div class="section-title">Findings</div><label class="toggle"><input type="checkbox" id="raw" ${ui.raw ? 'checked' : ''}> Show every reviewer finding before merging (${rawCount})</label></div>
+      ${toolbar(rows, true)}
+      <div id="table">${tableHtml(rows, { reviewerCol: true, outcomeCol: ui.raw })}</div>
+    </div>
+    <aside class="rail">${rail}</aside>
+  </div>`;
 }
 function droppedLine(r) {
   const dropped = r.dropped || [];
@@ -585,6 +709,7 @@ function card(key, name, entry, desc) {
     <div class="desc">${esc(desc)}</div>
     ${agentChip(entry)}${statsLine(entry)}
     ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
+    ${entry.source && entry.source !== 'built-in' ? `<div class="src" title="${esc(entry.source)}">Customized by this repository</div>` : ''}
     ${entry.status === 'running' && entry.activity ? `<div class="act">${esc(entry.activity)}</div>` : ''}
     ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="err">${esc(entry.error)}</div>` : ''}
     ${result ? `<div class="counts">${severityCounts(result.findings)}</div>` : ''}
@@ -604,7 +729,13 @@ function renderChrome() {
     `<span>${secs(state.started_at, state.ended_at)}</span>`,
     ui.lostConnection ? `<span class="pill s-failed">Can’t reach the panel process. If it finished, open report.html in ${esc(state.run_dir)}</span>` : '',
   ].filter(Boolean).join('');
-  document.getElementById('bar').style.width = `${Math.round(100 * (done + (state.synthesis.status === 'done' ? 1 : 0)) / (total + 1))}%`;
+  const result = state.synthesis.result;
+  document.getElementById('tb-stats').innerHTML = result
+    ? `<span class="pill v-${esc(result.verdict)}" title="The panel's verdict">${esc(result.verdict)}</span>${severityCounts(result.findings)}`
+    : '';
+  const bar = document.getElementById('bar');
+  bar.style.width = `${Math.round(100 * (done + (state.synthesis.status === 'done' ? 1 : 0)) / (total + 1))}%`;
+  bar.hidden = terminal(state.status);
   document.getElementById('nav').innerHTML = card('__synthesis', 'Synthesis', state.synthesis, 'Verifies, merges, and ranks the reviewers’ findings')
     + '<div class="section-title">Reviewers</div>'
     + Object.entries(state.reviewers).map(([name, entry]) => card(name, name, entry, entry.focus)).join('');
@@ -714,6 +845,7 @@ document.addEventListener('click', async event => {
     if (a === 'detail-prev') { stepDetail(-1); return; }
     if (a === 'detail-next') { stepDetail(1); return; }
     if (a === 'detail-copy') { await copy(handoffText([findRow(ui.detail)]), document.getElementById('fw-note')); return; }
+    if (a === 'settings') { openSettings(true); return; }
     if (a === 'guide') { openGuide(true); return; }
     if (a === 'guide-close') { openGuide(false); return; }
     if (a === 'handoff') { ui.dialog = true; ui.draft = handoffText(); }
@@ -746,8 +878,239 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Enter' && event.target.matches('tr.row')) { openDetail(event.target.dataset.key); return; }
   if (!document.getElementById('guide').hidden && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) { showGuide(guideAt + (event.key === 'ArrowRight' ? 1 : -1)); return; }
   if (!closeKey) return;
+  if (settings.open) { event.preventDefault(); if (settings.editing !== null && event.key === 'Escape' && !event.target.matches('textarea, input, select')) { settings.editing = null; renderSettings(); } else openSettings(false); return; }
   if (!document.getElementById('guide').hidden) { openGuide(false); return; }
   if (ui.dialog) { ui.dialog = false; renderHandoff(); }
+});
+
+/* ---------- settings ---------- */
+// The settings window can't write to the repository. It keeps edits in this browser and turns them into the
+// files a repository adds under .fabrica/review-panel/, which the next run reads (see apply_repo_config).
+const EFFORTS = ['default', 'low', 'medium', 'high', 'max'];
+const settings = { open: false, section: 'reviewers', editing: null, cfg: null };
+const cfgKey = () => 'review-panel:settings:' + state.repo;
+function baseConfig() {
+  return {
+    reviewers: Object.entries(state.reviewers).map(([name, e]) => {
+      const agent = e.planned || e.agent;
+      const builtin = !String(e.source || 'built-in').startsWith('added by');
+      const original = { summary: e.focus || '', harness: agent.harness, model: agent.model, effort: agent.effort || 'default', prompt: e.focus_text || '', mode: 'replace' };
+      return { name, builtin, source: e.source || 'built-in', included: true, isNew: false, ...original, original };
+    }),
+    synthesis: { harness: state.synthesis.agent.harness, model: state.synthesis.agent.model, effort: state.synthesis.agent.effort || 'default' },
+    originalSynthesis: { harness: state.synthesis.agent.harness, model: state.synthesis.agent.model, effort: state.synthesis.agent.effort || 'default' },
+  };
+}
+function loadConfig() {
+  const saved = recall(cfgKey());
+  settings.cfg = saved && Array.isArray(saved.reviewers) ? saved : baseConfig();
+}
+function saveConfig() { store(cfgKey(), settings.cfg); }
+const FIELDS = ['summary', 'harness', 'model', 'effort', 'prompt', 'mode'];
+const changed = r => r.isNew || FIELDS.some(f => r[f] !== r.original[f]);
+const synthesisChanged = () => ['harness', 'model', 'effort'].some(f => settings.cfg.synthesis[f] !== settings.cfg.originalSynthesis[f]);
+const yamlString = text => `"${String(text).replace(/"/g, "'").replace(/\n/g, ' ')}"`;
+const configDir = () => (state.config && state.config.dir) || '.fabrica/review-panel';
+function reviewerFile(r) {
+  const lines = ['---', `summary: ${yamlString(r.summary)}`, `harness: ${r.harness}`, `model: ${r.model}`, `effort: ${r.effort}`];
+  if (r.builtin && r.mode === 'append') lines.push('mode: append');
+  return lines.concat('---', '', r.prompt.trim(), '').join('\n');
+}
+function panelFile() {
+  const cfg = settings.cfg;
+  const lines = ['# Review panel settings for this repository. See the review-panel skill README.'];
+  if (cfg.reviewers.some(r => !r.included)) {
+    lines.push('', '# Run only these reviewers, in this order.', 'reviewers:', ...cfg.reviewers.filter(r => r.included).map(r => `  - ${r.name}`));
+  } else {
+    lines.push('', '# Without a reviewers list, the panel runs every built-in reviewer plus each file in reviewers/.');
+  }
+  if (synthesisChanged()) lines.push('', 'synthesis:', `  harness: ${cfg.synthesis.harness}`, `  model: ${cfg.synthesis.model}`, `  effort: ${cfg.synthesis.effort}`);
+  return lines.join('\n') + '\n';
+}
+function pendingFiles() {
+  const cfg = settings.cfg;
+  const files = cfg.reviewers.filter(r => r.included && changed(r)).map(r => ({ path: `${configDir()}/reviewers/${r.name}.md`, text: reviewerFile(r) }));
+  if (cfg.reviewers.some(r => !r.included) || synthesisChanged()) files.unshift({ path: `${configDir()}/panel.yaml`, text: panelFile() });
+  return files;
+}
+function setupScript() {
+  const files = pendingFiles();
+  const lines = ['# Run from the repository root, then commit the folder.', `mkdir -p ${configDir()}/reviewers`];
+  for (const f of files) lines.push('', `cat > ${f.path} <<'REVIEW_PANEL_EOF'`, f.text.replace(/\n$/, ''), 'REVIEW_PANEL_EOF');
+  return lines.join('\n') + '\n';
+}
+const sourceChip = r => r.isNew ? '<span class="chip ok">new</span>' : changed(r) ? '<span class="chip edited">edited here</span>'
+  : r.source !== 'built-in' ? `<span class="chip ok" title="${esc(r.source)}">from this repository</span>` : '<span class="chip">built-in</span>';
+function reviewerEditor(r, index) {
+  const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
+  return `<div class="edit" data-index="${index}">
+    ${r.isNew ? `<div class="field"><label for="cfg-name">Name</label><input id="cfg-name" data-cfg="name" value="${esc(r.name)}" spellcheck="false" pattern="[a-z0-9-]+"><span class="hint">Lowercase letters, digits, and hyphens. The file is reviewers/${esc(r.name)}.md.</span></div>` : ''}
+    <div class="field"><label for="cfg-summary">Summary</label><input id="cfg-summary" data-cfg="summary" value="${esc(r.summary)}" placeholder="Checks … in one line"></div>
+    <div class="fields-3">
+      <div class="field"><label for="cfg-harness">Runs on</label><select id="cfg-harness" data-cfg="harness">${option('claude-code', 'Claude Code', r.harness)}${option('codex', 'Codex', r.harness)}</select></div>
+      <div class="field"><label for="cfg-model">Model</label><input id="cfg-model" data-cfg="model" value="${esc(r.model)}" spellcheck="false"></div>
+      <div class="field"><label for="cfg-effort">Effort</label><select id="cfg-effort" data-cfg="effort">${EFFORTS.map(e => option(e, e, r.effort)).join('')}</select></div>
+    </div>
+    ${r.builtin ? `<div class="field"><label for="cfg-mode">Prompt</label><select id="cfg-mode" data-cfg="mode">${option('replace', 'Replace the built-in prompt with the text below', r.mode)}${option('append', 'Keep the built-in prompt and add the text below', r.mode)}</select></div>` : ''}
+    <div class="field"><label for="cfg-prompt">${r.builtin && r.mode === 'append' ? 'Text to add' : 'Focus prompt'}</label><textarea id="cfg-prompt" data-cfg="prompt" spellcheck="false" rows="12">${esc(r.prompt)}</textarea>
+      <span class="hint">Every reviewer also gets the shared instructions and output format, then the change. This is the part that makes it this reviewer.</span></div>
+    <div class="edit-actions">
+      <button type="button" class="linkish danger" data-sact="toggle-include">${r.included ? 'Leave out of the panel' : 'Put back in the panel'}</button>
+      ${changed(r) && !r.isNew ? '<button type="button" class="linkish" data-sact="reset">Undo my edits</button>' : ''}
+      <span class="spacer"></span>
+      <span class="note" id="cfg-note"></span>
+      <button type="button" class="btn" data-sact="copy-file">Copy ${esc(r.name)}.md</button>
+      <button type="button" class="btn" data-sact="done">Done</button>
+    </div>
+  </div>`;
+}
+function reviewersPane() {
+  const cfg = settings.cfg;
+  const rows = cfg.reviewers.map((r, i) => `
+    <div class="srow ${r.included ? '' : 'out'}" data-index="${i}" tabindex="0" role="button" aria-expanded="${settings.editing === i}">
+      <span class="av">${LOGOS[r.harness] || ''}</span>
+      <span class="who"><b>${esc(r.name)}</b><span>${esc(r.summary || 'No summary yet')}</span></span>
+      <span class="meta">${r.included ? '' : '<span class="chip">left out</span>'}${sourceChip(r)}<span class="model">${esc(modelName(r.model))}${r.effort !== 'default' ? ` · ${esc(r.effort)}` : ''}</span></span>
+    </div>${settings.editing === i ? reviewerEditor(r, i) : ''}`).join('');
+  return `<div class="spane-head"><div><h2>Reviewers</h2><p>The experts on this run’s panel. Open one to read its prompt, or to change it for this repository.</p></div>${closeBtn()}</div>
+    <div class="sbody">
+      <div class="group-head"><h3>On this run</h3><span class="n">${cfg.reviewers.length}</span><button type="button" class="linkish add" data-sact="add">+ Add reviewer</button></div>
+      <div class="slist">${rows}</div>
+      <p class="hint" style="margin-top:12px">This run ${state.config && state.config.found ? `read <code>${esc(configDir())}/</code>` : 'used the built-in panel'}. A run with <code>--only</code> shows only the reviewers it asked for.</p>
+    </div>`;
+}
+function synthesisPane() {
+  const s = settings.cfg.synthesis;
+  const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
+  return `<div class="spane-head"><div><h2>Synthesis</h2><p>The last step: checks every reviewer finding against the code, merges duplicates, drops false positives, and gives the verdict.</p></div>${closeBtn()}</div>
+    <div class="sbody"><div class="slist"><div class="edit" style="border-top:0">
+      <div class="fields-3">
+        <div class="field"><label for="syn-harness">Runs on</label><select id="syn-harness" data-syn="harness">${option('claude-code', 'Claude Code', s.harness)}${option('codex', 'Codex', s.harness)}</select></div>
+        <div class="field"><label for="syn-model">Model</label><input id="syn-model" data-syn="model" value="${esc(s.model)}" spellcheck="false"></div>
+        <div class="field"><label for="syn-effort">Effort</label><select id="syn-effort" data-syn="effort">${EFFORTS.map(e => option(e, e, s.effort)).join('')}</select></div>
+      </div>
+      <span class="hint">These go in <code>panel.yaml</code> under <code>synthesis:</code>. The synthesis prompt itself lives in the skill, at <code>prompts/synthesize.md</code>.</span>
+    </div></div></div>`;
+}
+function repoPane() {
+  const dir = configDir();
+  const example = `# ${dir}/panel.yaml\n# Run only these reviewers, in this order. Leave the list out to run all of them.\nreviewers:\n  - check-acceptance-criteria\n  - check-correctness\n  - check-security\n  - check-payments\n\nsynthesis:\n  model: opus\n  effort: high`;
+  const reviewer = `# ${dir}/reviewers/check-payments.md\n---\nsummary: "Checks payment flows for double charges and refund gaps"\nharness: claude-code\nmodel: opus\neffort: high\n---\n\nYou find ways a change can charge a customer twice, ...`;
+  return `<div class="spane-head"><div><h2>Customize for a repository</h2><p>A repository can change its panel with a folder of plain files. Everyone who runs the panel there gets the same experts.</p></div>${closeBtn()}</div>
+    <div class="sbody prose">
+      <div class="status-line ${state.config && state.config.found ? 'on' : ''}">${state.config && state.config.found ? `This run read <code>${esc(dir)}/</code>.` : `This run found no <code>${esc(dir)}/</code> folder, so it used the built-in panel.`}</div>
+      <pre class="tree">${esc(dir)}/
+├── panel.yaml              which reviewers run, and the synthesis model
+└── reviewers/
+    ├── check-security.md   replaces or extends a built-in reviewer
+    └── check-payments.md   adds a new reviewer</pre>
+      <h3>One file per reviewer</h3>
+      <p>Each file is that reviewer’s focus prompt in Markdown, with its settings in front matter. A file named after a built-in reviewer replaces its prompt; add <code>mode: append</code> to keep the built-in prompt and add yours after it. Any other name adds a new reviewer, which needs a <code>summary</code>.</p>
+      <div class="code-block"><button type="button" class="btn small" data-sact="copy-example" data-which="reviewer">Copy</button><pre>${esc(reviewer)}</pre></div>
+      <h3>panel.yaml</h3>
+      <p>Optional. It picks which reviewers run and in what order, and sets the synthesis model. Without it, every built-in reviewer runs, plus every file in <code>reviewers/</code>.</p>
+      <div class="code-block"><button type="button" class="btn small" data-sact="copy-example" data-which="panel">Copy</button><pre>${esc(example)}</pre></div>
+      <h3>Good to know</h3>
+      <ul>
+        <li>The panel reads this folder from the checkout you run it in, never from the pull request under review, so a change can’t rewrite the panel that judges it.</li>
+        <li><code>--panel DIR</code> reads another folder for one run, to try changes before you commit them.</li>
+        <li>The easiest start: open a reviewer under <strong>Reviewers</strong>, edit it, then choose <strong>Copy setup commands</strong>.</li>
+      </ul>
+    </div>`;
+  // Examples are rebuilt by copyExample, so they stay in step with this text.
+}
+const closeBtn = () => '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+function renderSettings() {
+  const holder = document.getElementById('settings');
+  if (!settings.open) { holder.innerHTML = ''; return; }
+  const cfg = settings.cfg;
+  const files = pendingFiles();
+  const nav = (id, label, count) => `<button type="button" data-sect="${id}" ${settings.section === id ? 'aria-current="page"' : ''}>${label}${count !== undefined ? `<span class="count">${count}</span>` : ''}</button>`;
+  const pane = settings.section === 'synthesis' ? synthesisPane() : settings.section === 'repo' ? repoPane() : reviewersPane();
+  const active = document.activeElement;
+  const focusId = active && holder.contains(active) ? active.id : null;
+  const caret = focusId && 'selectionStart' in active ? [active.selectionStart, active.selectionEnd] : null;
+  const scroll = holder.querySelector('.sbody') ? holder.querySelector('.sbody').scrollTop : 0;
+  holder.innerHTML = `<div class="sscrim" data-sact="close-scrim"><div class="swin" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="sside">
+      <div class="sside-title">Settings</div>
+      <div class="sgroup">This run</div>
+      <div class="snav">${nav('reviewers', 'Reviewers', cfg.reviewers.filter(r => r.included).length)}${nav('synthesis', 'Synthesis')}</div>
+      <div class="sgroup">Customize</div>
+      <div class="snav">${nav('repo', 'For a repository')}</div>
+      <div class="sside-foot">Reads from<code>${esc(configDir())}/</code></div>
+    </div>
+    <div class="spane">${pane}
+      <div class="sfoot"><span class="note"><span class="dot-warn"></span>${files.length ? `${plural(files.length, 'file')} to add. Edits stay in this browser until you add the files to the repository.` : 'No changes yet. Edits stay in this browser until you add the files to the repository.'}</span>
+        <span class="note" id="setup-note"></span>
+        <button type="button" class="btn primary" data-sact="copy-setup" ${files.length ? '' : 'disabled'}>Copy setup commands</button></div>
+    </div>
+  </div></div>`;
+  if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret && el.setSelectionRange) el.setSelectionRange(caret[0], caret[1]); } }
+  const body = holder.querySelector('.sbody');
+  if (body) body.scrollTop = scroll;
+}
+function openSettings(open) {
+  settings.open = open;
+  if (open && !settings.cfg) loadConfig();
+  renderSettings();
+  if (open) { const first = document.querySelector('#settings [aria-current="page"]'); if (first) first.focus(); }
+  else document.querySelector('[data-act="settings"]').focus();
+}
+document.getElementById('settings').addEventListener('click', async event => {
+  const t = event.target;
+  const sect = t.closest('[data-sect]');
+  if (sect) { settings.section = sect.dataset.sect; settings.editing = null; renderSettings(); return; }
+  if (t.matches('.sscrim')) { openSettings(false); return; }
+  const act = t.closest('[data-sact]:not(.sscrim)');
+  const row = t.closest('.srow');
+  if (!act && row) { const i = Number(row.dataset.index); settings.editing = settings.editing === i ? null : i; renderSettings(); return; }
+  if (!act) return;
+  const cfg = settings.cfg;
+  const r = settings.editing !== null ? cfg.reviewers[settings.editing] : null;
+  switch (act.dataset.sact) {
+    case 'close': openSettings(false); return;
+    case 'done': settings.editing = null; break;
+    case 'add': {
+      let n = 1; while (cfg.reviewers.some(x => x.name === `check-custom-${n}`)) n += 1;
+      const blank = { summary: '', harness: 'claude-code', model: 'opus', effort: 'high', prompt: '', mode: 'replace' };
+      cfg.reviewers.push({ name: `check-custom-${n}`, builtin: false, source: 'new', included: true, isNew: true, ...blank, original: blank });
+      settings.editing = cfg.reviewers.length - 1;
+      break;
+    }
+    case 'toggle-include': if (r) r.included = !r.included; break;
+    case 'reset': if (r) Object.assign(r, r.original); break;
+    case 'copy-file': if (r) await copy(reviewerFile(r), document.getElementById('cfg-note')); return;
+    case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note')); return;
+    case 'copy-example': await copy(act.nextElementSibling.textContent.replace(/^# .*\n/, ''), null); act.textContent = 'Copied'; return;
+  }
+  saveConfig();
+  renderSettings();
+});
+document.getElementById('settings').addEventListener('input', event => {
+  const t = event.target;
+  if (t.dataset.cfg && settings.editing !== null) {
+    const value = t.dataset.cfg === 'name' ? t.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : t.value;
+    settings.cfg.reviewers[settings.editing][t.dataset.cfg] = value;
+    saveConfig();
+    if (t.tagName === 'SELECT') renderSettings();
+    else { // Typing redraws only the footer and the row summary, so the field keeps its caret.
+      const foot = document.querySelector('#settings .sfoot .note');
+      const n = pendingFiles().length;
+      if (foot) foot.innerHTML = `<span class="dot-warn"></span>${n ? `${plural(n, 'file')} to add. Edits stay in this browser until you add the files to the repository.` : 'No changes yet. Edits stay in this browser until you add the files to the repository.'}`;
+      const setup = document.querySelector('#settings [data-sact="copy-setup"]');
+      if (setup) setup.disabled = !n;
+      // Keep the open reviewer's row in step without redrawing the field being typed in.
+      const r = settings.cfg.reviewers[settings.editing];
+      const row = document.querySelector(`#settings .srow[data-index="${settings.editing}"]`);
+      if (row) { row.querySelector('.who b').textContent = r.name; row.querySelector('.who span').textContent = r.summary || 'No summary yet'; }
+    }
+  }
+  if (t.dataset.syn) { settings.cfg.synthesis[t.dataset.syn] = t.value; saveConfig(); if (t.tagName === 'SELECT') renderSettings(); }
+});
+document.getElementById('settings').addEventListener('keydown', event => {
+  const row = event.target.closest && event.target.closest('.srow');
+  if (row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); row.click(); }
 });
 
 /* ---------- guide ---------- */

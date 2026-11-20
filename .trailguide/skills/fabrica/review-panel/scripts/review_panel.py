@@ -27,6 +27,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 SKILL = Path(__file__).resolve().parent.parent
 PAGE = SKILL / 'assets' / 'panel.html'
 ROSTER = SKILL / 'panel.json'
+# A repository customizes its panel here: panel.yaml picks and orders the reviewers, and reviewers/<name>.md
+# replaces, extends, or adds a reviewer's focus prompt. Read from the checkout the command runs in, never from
+# a pull request under review, so a change can't rewrite the panel that judges it.
+CONFIG_DIR = Path('.fabrica') / 'review-panel'
+HARNESSES = ('claude-code', 'codex')
+NEW_REVIEWER_AGENT = {'harness': 'claude-code', 'model': 'opus', 'effort': 'high'}
 SEVERITIES = ('blocking', 'advisory')
 CATEGORIES = ('defect', 'policy', 'negligible-likelihood')
 CHECK_RESULTS = ('met', 'not-met', 'partly', 'unverified')
@@ -657,8 +663,160 @@ class Panel:
 # ---------------------------------------------------------------------------------------------
 # The panel.
 
-def load_roster(only, claude_only):
+def _scalar(text):
+    text = text.strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in '"\'':
+        return text[1:-1]
+    return {'true': True, 'false': False}.get(text, text)
+
+
+def _strip_comment(line):
+    quote = None
+    for index, char in enumerate(line):
+        if quote:
+            quote = None if char == quote else quote
+        elif char in '"\'':
+            quote = char
+        elif char == '#' and (index == 0 or line[index - 1] in ' \t'):
+            return line[:index]
+    return line
+
+
+def parse_yaml(text, where):
+    """Parse the small YAML subset panel files use: `key: value`, and a key holding a list or a flat map.
+
+    The skill runs on the Python standard library alone, so it reads this subset rather than full YAML,
+    and names the line it can't read instead of guessing.
+    """
+    data, current = {}, None
+    for number, raw in enumerate(text.splitlines(), 1):
+        line = _strip_comment(raw).rstrip()
+        if not line.strip():
+            continue
+        indented = line[0] in ' \t'
+        stripped = line.strip()
+        if not indented:
+            key, sep, value = stripped.partition(':')
+            if not sep or not re.fullmatch(r'[A-Za-z0-9_-]+', key.strip()):
+                raise PanelError(f'{where}:{number}: expected "key: value"')
+            key = key.strip()
+            if value.strip():
+                data[key], current = _scalar(value), None
+            else:
+                data[key], current = None, key
+            continue
+        if current is None:
+            raise PanelError(f'{where}:{number}: indented line with no key above it')
+        if stripped.startswith('- '):
+            if data[current] is None:
+                data[current] = []
+            if not isinstance(data[current], list):
+                raise PanelError(f'{where}:{number}: {current} mixes a list and a map')
+            data[current].append(_scalar(stripped[2:]))
+        else:
+            key, sep, value = stripped.partition(':')
+            if not sep or not value.strip():
+                raise PanelError(f'{where}:{number}: expected "- item" or "key: value" under {current}')
+            if data[current] is None:
+                data[current] = {}
+            if not isinstance(data[current], dict):
+                raise PanelError(f'{where}:{number}: {current} mixes a list and a map')
+            data[current][key.strip()] = _scalar(value)
+    return data
+
+
+def read_prompt_file(path):
+    """Split a reviewer file into its front matter (settings) and its Markdown body (the focus prompt)."""
+    text = path.read_text()
+    match = re.match(r'---\n(.*?)\n---\n?(.*)', text, re.S)
+    if not match:
+        return {}, text.strip()
+    return parse_yaml(match.group(1), str(path)), match.group(2).strip()
+
+
+def _agent_with(agent, settings, where):
+    agent = dict(agent)
+    for key in ('harness', 'model', 'effort'):
+        if settings.get(key) is not None:
+            agent[key] = str(settings[key])
+    if agent['harness'] not in HARNESSES:
+        raise PanelError(f"{where}: harness must be one of {', '.join(HARNESSES)}")
+    return agent
+
+
+def apply_repo_config(roster, folder, label):
+    """Merge a repository's .fabrica/review-panel folder over the built-in roster, in place."""
+    reviewers = roster['reviewers']
+    config_path = folder / 'panel.yaml'
+    config = parse_yaml(config_path.read_text(), str(config_path)) if config_path.exists() else {}
+    unknown = sorted(set(config) - {'reviewers', 'synthesis', 'codex_fallback'})
+    if unknown:
+        raise PanelError(f"{config_path}: unknown setting {', '.join(unknown)}; use reviewers, synthesis, or codex_fallback")
+    for key, target in (('synthesis', roster['synthesize']), ('codex_fallback', None)):
+        settings = config.get(key)
+        if settings is None:
+            continue
+        if not isinstance(settings, dict):
+            raise PanelError(f'{config_path}: {key} must be a map of harness, model, and effort')
+        if target is None:
+            roster['codex_fallback'] = _agent_with(roster['codex_fallback'], settings, f'{config_path} {key}')
+        else:
+            target['agent'] = _agent_with(target['agent'], settings, f'{config_path} {key}')
+    added = []
+    for path in sorted((folder / 'reviewers').glob('*.md')):
+        name = path.stem
+        if not re.fullmatch(r'[a-z0-9-]+', name):
+            raise PanelError(f'{path}: reviewer file names use lowercase letters, digits, and hyphens')
+        settings, body = read_prompt_file(path)
+        extra = sorted(set(settings) - {'summary', 'harness', 'model', 'effort', 'mode'})
+        if extra:
+            raise PanelError(f"{path}: unknown setting {', '.join(extra)}")
+        mode = settings.get('mode', 'replace')
+        if mode not in ('replace', 'append'):
+            raise PanelError(f'{path}: mode must be replace or append')
+        relative = f'{label}/reviewers/{path.name}'
+        if name in reviewers:
+            spec = reviewers[name]
+            if mode == 'append':
+                spec['focus_text'] += '\n\n## Added by this repository\n\n' + body
+                spec['source'] = f'built-in, extended by {relative}'
+            else:
+                spec['focus_text'] = body
+                spec['source'] = f'replaced by {relative}'
+        else:
+            if mode == 'append':
+                raise PanelError(f'{path}: mode append needs a built-in reviewer named {name}; this one is new')
+            if not settings.get('summary'):
+                raise PanelError(f'{path}: a new reviewer needs a summary in its front matter')
+            spec = reviewers[name] = {'agent': dict(NEW_REVIEWER_AGENT), 'focus_text': body, 'source': f'added by {relative}'}
+            added.append(name)
+        if not body:
+            raise PanelError(f'{path}: the prompt below the front matter is empty')
+        if settings.get('summary'):
+            spec['summary'] = str(settings['summary'])
+        spec['agent'] = _agent_with(spec['agent'], settings, str(path))
+    chosen = config.get('reviewers')
+    if chosen is not None:
+        if not isinstance(chosen, list) or not chosen or not all(isinstance(n, str) for n in chosen):
+            raise PanelError(f'{config_path}: reviewers must be a list of reviewer names')
+        missing = [n for n in chosen if n not in reviewers]
+        if missing:
+            raise PanelError(f"{config_path}: no reviewer named {', '.join(missing)}; add reviewers/{missing[0]}.md "
+                             f"or choose from {', '.join(reviewers)}")
+        roster['reviewers'] = {n: reviewers[n] for n in chosen}
+
+
+def load_roster(only, claude_only, repo=None, panel=None):
     roster = json.loads(ROSTER.read_text())
+    for spec in roster['reviewers'].values():
+        spec['focus_text'] = (SKILL / spec.pop('focus')).read_text().strip()
+        spec['source'] = 'built-in'
+    folder = Path(panel) if panel else (repo / CONFIG_DIR if repo else None)
+    if panel and not folder.is_dir():
+        raise PanelError(f'--panel {panel} is not a folder')
+    roster['config'] = {'dir': str(CONFIG_DIR) if not panel else str(folder), 'found': bool(folder and folder.is_dir())}
+    if roster['config']['found']:
+        apply_repo_config(roster, folder, roster['config']['dir'])
     reviewers = roster['reviewers']
     if only:
         unknown = [name for name in only if name not in reviewers]
@@ -678,7 +836,7 @@ def load_roster(only, claude_only):
 
 def reviewer_prompt(name, spec, context, files):
     base = (SKILL / 'prompts' / 'reviewer.md').read_text()
-    focus = (SKILL / spec['focus']).read_text()
+    focus = spec['focus_text']
     return (base.replace('{{REVIEWER}}', name).replace('{{CONTEXT_FILE}}', files['context'])
             + '\n\n---\n\n# Your focus\n\n' + focus + '\n\n---\n\n' + context)
 
@@ -821,8 +979,10 @@ def initial_state(repo, run_dir, target, stat, roster, reviewers):
     return {
         'status': 'running', 'started_at': now(), 'updated_at': now(), 'ended_at': None,
         'repo': str(repo), 'run_dir': str(run_dir), 'target': target, 'diff_stat': stat,
-        'reviewers': {name: entry(spec['agent'], focus=spec['summary'], planned=spec['planned'], note=spec.get('note'))
+        'reviewers': {name: entry(spec['agent'], focus=spec['summary'], planned=spec['planned'], note=spec.get('note'),
+                                  focus_text=spec['focus_text'], source=spec['source'])
                       for name, spec in reviewers.items()},
+        'config': roster.get('config'),
         'synthesis': entry(roster['synthesize']['agent'], status='waiting'),
     }
 
@@ -840,7 +1000,7 @@ def run(args):
     repo = Path(git(['rev-parse', '--show-toplevel'], Path.cwd()))
     common = Path(git(['rev-parse', '--git-common-dir'], repo))
     common = common if common.is_absolute() else repo / common
-    roster, reviewers = load_roster(args.only, args.claude_only)
+    roster, reviewers = load_roster(args.only, args.claude_only, repo, args.panel)
     try:
         extra = Path(args.context).read_text() if args.context else ''
     except OSError as error:
@@ -967,6 +1127,7 @@ def main(argv=None):
     start.add_argument('--context', help='a file with the spec, acceptance criteria, or decisions to judge against')
     start.add_argument('--note', help='a short note every reviewer reads, such as what to focus on')
     start.add_argument('--claude-only', action='store_true', help='run every reviewer on Claude Code')
+    start.add_argument('--panel', metavar='DIR', help=f'read panel settings from DIR instead of {CONFIG_DIR} in the repository')
     start.add_argument('--concurrency', type=positive, default=8, help='reviewers running at once (default 8)')
     start.add_argument('--timeout', type=positive, default=20 * 60, metavar='SECONDS', help='limit per session (default 1200)')
     start.add_argument('--retries', type=int, choices=range(0, 6), default=2, metavar='N',

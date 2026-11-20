@@ -44,6 +44,22 @@ python3 PATH_TO_SKILL/scripts/review_panel.py run
 
 This reviews the current branch, including uncommitted changes, against `origin/HEAD`, and opens the live page. `--pr 123` reviews a GitHub pull request in a temporary worktree instead; `--context spec.md` gives reviewers acceptance criteria to judge against; `--only check-correctness,check-security` runs part of the panel. Run it with `--help` for every option.
 
+## Customize the panel for a repository
+
+A repository changes its panel with a folder of plain files, `.fabrica/review-panel/`, so everyone who runs the panel there gets the same reviewers:
+
+```text
+.fabrica/review-panel/
+├── panel.yaml              which reviewers run, in what order, and the synthesis model
+└── reviewers/
+    ├── check-security.md   replaces or extends a built-in reviewer
+    └── check-payments.md   adds a new reviewer
+```
+
+Each reviewer file is that reviewer's focus prompt in Markdown, with `summary`, `harness` (`claude-code` or `codex`), `model`, and `effort` in its front matter. A file named after a built-in reviewer replaces its prompt, or adds to it with `mode: append`. Any other name adds a reviewer, which needs a `summary`. `panel.yaml` is optional: its `reviewers` list picks and orders the panel, and its `synthesis` map sets the synthesis model. Without a list, every built-in reviewer runs, plus every file in `reviewers/`.
+
+The panel reads this folder from the checkout it runs in, never from a pull request under review, so a change can't rewrite the panel that judges it. `--panel DIR` reads another folder for one run. The page's settings window shows each reviewer's prompt, lets you edit them, and copies the commands that write the files.
+
 ## Requirements and cost
 
 - macOS or Linux, Python 3.10+, and Git. No packages to install.

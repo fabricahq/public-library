@@ -192,6 +192,64 @@ class PureHelpers(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
 
+    def test_parse_yaml_reads_scalars_lists_and_maps(self):
+        text = 'reviewers:   # in order\n  - check-security\n  - "check-payments"\nsynthesis:\n  model: opus\n  effort: high\nflag: true\nsummary: "Checks #1: payments"\n'
+        self.assertEqual(review_panel.parse_yaml(text, 'panel.yaml'),
+                         {'reviewers': ['check-security', 'check-payments'], 'synthesis': {'model': 'opus', 'effort': 'high'}, 'flag': True,
+                          'summary': 'Checks #1: payments'})
+
+    def test_parse_yaml_names_the_line_it_cannot_read(self):
+        with self.assertRaisesRegex(review_panel.PanelError, 'panel.yaml:2'):
+            review_panel.parse_yaml('reviewers:\n  just text\n', 'panel.yaml')
+
+    def roster(self):
+        return {'reviewers': {'check-docs': {'summary': 'Docs', 'agent': {'harness': 'codex', 'model': 'm', 'effort': 'high'},
+                                             'focus_text': 'Built-in docs focus.', 'source': 'built-in'},
+                              'check-rules': {'summary': 'Rules', 'agent': {'harness': 'claude-code', 'model': 'opus', 'effort': 'default'},
+                                              'focus_text': 'Built-in rules focus.', 'source': 'built-in'}},
+                'synthesize': {'agent': {'harness': 'claude-code', 'model': 'opus', 'effort': 'high'}},
+                'codex_fallback': {'harness': 'claude-code', 'model': 'opus', 'effort': 'high'}}
+
+    def config_folder(self, files):
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: subprocess.run(['rm', '-rf', str(folder)]))
+        for name, text in files.items():
+            (folder / name).parent.mkdir(parents=True, exist_ok=True)
+            (folder / name).write_text(text)
+        return folder
+
+    def test_repo_config_replaces_extends_adds_and_orders_reviewers(self):
+        roster = self.roster()
+        folder = self.config_folder({
+            'panel.yaml': 'reviewers:\n  - check-payments\n  - check-docs\n  - check-rules\nsynthesis:\n  effort: max\n',
+            'reviewers/check-docs.md': '---\nmodel: gpt-x\n---\nOur docs focus.\n',
+            'reviewers/check-rules.md': '---\nmode: append\n---\nAlso check our ADRs.\n',
+            'reviewers/check-payments.md': '---\nsummary: Checks payment flows\n---\nLook for double charges.\n',
+        })
+        review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        reviewers = roster['reviewers']
+        self.assertEqual(list(reviewers), ['check-payments', 'check-docs', 'check-rules'])
+        self.assertEqual(reviewers['check-docs']['focus_text'], 'Our docs focus.')
+        self.assertEqual(reviewers['check-docs']['agent'], {'harness': 'codex', 'model': 'gpt-x', 'effort': 'high'})
+        self.assertEqual(reviewers['check-docs']['source'], 'replaced by .fabrica/review-panel/reviewers/check-docs.md')
+        self.assertIn('Built-in rules focus.', reviewers['check-rules']['focus_text'])
+        self.assertIn('Also check our ADRs.', reviewers['check-rules']['focus_text'])
+        self.assertEqual(reviewers['check-payments']['summary'], 'Checks payment flows')
+        self.assertEqual(reviewers['check-payments']['agent']['harness'], 'claude-code')
+        self.assertEqual(roster['synthesize']['agent']['effort'], 'max')
+
+    def test_repo_config_errors_name_the_problem(self):
+        cases = {
+            'no reviewer named check-nope': {'panel.yaml': 'reviewers:\n  - check-nope\n'},
+            'a new reviewer needs a summary': {'reviewers/check-new.md': 'Prompt only.\n'},
+            'harness must be one of': {'reviewers/check-docs.md': '---\nharness: gemini\n---\nX\n'},
+            'unknown setting colour': {'panel.yaml': 'colour: blue\n'},
+            'mode append needs a built-in': {'reviewers/check-new.md': '---\nsummary: S\nmode: append\n---\nX\n'},
+        }
+        for message, files in cases.items():
+            with self.subTest(message), self.assertRaisesRegex(review_panel.PanelError, message):
+                review_panel.apply_repo_config(self.roster(), self.config_folder(files), '.fabrica/review-panel')
+
     def test_validate_synthesis_requires_short_conclusions(self):
         problems = review_panel.validate_synthesis(self.synthesis(conclusions=['x' * 201]), {'check-docs': REVIEW, 'check-rules': REVIEW})
         self.assertIn('conclusions[0] must be a statement under 200 characters', problems)
@@ -290,6 +348,21 @@ class PanelRun(unittest.TestCase):
         self.assertEqual((run_dir / 'base' / 'app.py').read_text(), 'items = [1, 2, 3]\n')
         codex_call = next(c for c in self.calls() if c[0] == 'codex')
         self.assertIn('read-only', codex_call)
+
+    def test_repo_panel_folder_customizes_the_run(self):
+        self.install('claude', FAKE_CLAUDE)
+        folder = self.repo / '.fabrica' / 'review-panel' / 'reviewers'
+        folder.mkdir(parents=True)
+        (folder.parent / 'panel.yaml').write_text('reviewers:\n  - check-team\n')
+        (folder / 'check-team.md').write_text('---\nsummary: Checks our team conventions\n---\nUse snake_case everywhere.\n')
+        result, state, run_dir = self.run_panel()
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(list(state['reviewers']), ['check-team'])
+        entry = state['reviewers']['check-team']
+        self.assertEqual(entry['source'], 'added by .fabrica/review-panel/reviewers/check-team.md')
+        self.assertEqual(entry['focus'], 'Checks our team conventions')
+        self.assertTrue(state['config']['found'])
+        self.assertIn('Use snake_case everywhere.', (run_dir / 'reviewers' / 'check-team' / 'prompt-1.md').read_text())
 
     def test_claude_reviewers_get_read_only_tools(self):
         self.install('claude', FAKE_CLAUDE)
