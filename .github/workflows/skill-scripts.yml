@@ -11,7 +11,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  5k-grill-me:
+  grill-me:
+    name: 5k-grill-me
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     timeout-minutes: 10
     env:
