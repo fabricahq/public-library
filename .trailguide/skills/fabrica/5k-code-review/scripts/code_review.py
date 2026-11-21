@@ -32,13 +32,13 @@ ROSTER = SKILL / 'panel.json'
 # A repository customizes its panel here: panel.yaml picks and orders the reviewers, and reviewers/<name>.md
 # replaces, extends, or adds a reviewer's focus prompt. Read from the checkout the command runs in, never from
 # a pull request under review, so a change can't rewrite the panel that judges it.
-CONFIG_DIR = Path('.fabrica') / 'review-panel'
-# An organization's shared settings: the same folder layout, at review-panel/ in the organization's settings
+CONFIG_DIR = Path('.fabrica') / '5k-code-review'
+# An organization's shared settings: the same folder layout, at 5k-code-review/ in the organization's settings
 # repository, <owner>/.fabrica unless the person picked another one (or none) in Settings.
-ORG_CONFIG_PATH = 'review-panel'
+ORG_CONFIG_PATH = '5k-code-review'
 ORG_REPO_NAME = '.fabrica'
-USER_SETTINGS = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'review-panel' / 'settings.json'
-ORG_CACHE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'review-panel' / 'org'
+USER_SETTINGS = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / '5k-code-review' / 'settings.json'
+ORG_CACHE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / '5k-code-review' / 'org'
 HARNESSES = ('claude-code', 'codex')
 NEW_REVIEWER_AGENT = {'harness': 'claude-code', 'model': 'opus', 'effort': 'high'}
 # A finding's severity follows from its impact and likelihood (prompts/severity.md has the same table), so the
@@ -521,12 +521,12 @@ def snapshot_commit(repo):
     """
     with tempfile.TemporaryDirectory() as temp:
         env = {**os.environ, 'GIT_INDEX_FILE': str(Path(temp) / 'index'),
-               'GIT_AUTHOR_NAME': 'review-panel', 'GIT_AUTHOR_EMAIL': 'review-panel@localhost',
-               'GIT_COMMITTER_NAME': 'review-panel', 'GIT_COMMITTER_EMAIL': 'review-panel@localhost'}
+               'GIT_AUTHOR_NAME': '5k-code-review', 'GIT_AUTHOR_EMAIL': '5k-code-review@localhost',
+               'GIT_COMMITTER_NAME': '5k-code-review', 'GIT_COMMITTER_EMAIL': '5k-code-review@localhost'}
         git(['read-tree', 'HEAD'], repo, env=env)
         git(['add', '--all'], repo, env=env)
         tree = git(['write-tree'], repo, env=env)
-        return git(['commit-tree', tree, '-p', 'HEAD', '-m', 'review-panel snapshot'], repo, env=env)
+        return git(['commit-tree', tree, '-p', 'HEAD', '-m', '5k-code-review snapshot'], repo, env=env)
 
 
 def github_repo(repo):
@@ -1077,10 +1077,10 @@ def gh_api(path):
 
 
 def fetch_org_folder(name):
-    """Download review-panel/ from the head of name's default branch into a cache keyed by commit.
+    """Download 5k-code-review/ from the head of name's default branch into a cache keyed by commit.
 
     Returns (folder or None, commit or None, status, note). Status is found, missing (no such repository you can
-    read, or no review-panel/ folder in it), cached (GitHub couldn't be reached, so the last copy is used), or
+    read, or no 5k-code-review/ folder in it), cached (GitHub couldn't be reached, so the last copy is used), or
     unreachable (no copy either). Only this one configured repository is read, never anything the reviewed code names."""
     cache = ORG_CACHE / name.replace('/', '__')
     def last_copy(reason):
@@ -1299,7 +1299,7 @@ def report_markdown(state):
     synthesis = state['synthesis'].get('result')
     if synthesis is None:
         return unsynthesized_markdown(state)
-    lines = [f"# Review panel: {state['target']['label']}", '', f"Verdict: **{synthesis['verdict']}**", '']
+    lines = [f"# 5K Code Review: {state['target']['label']}", '', f"Verdict: **{synthesis['verdict']}**", '']
     lines += [conclusion_line(item) for item in synthesis.get('conclusions', [])] + ['', synthesis['summary'], '']
     for finding in synthesis['findings']:
         where = finding.get('file') or ''
@@ -1339,7 +1339,7 @@ def report_markdown(state):
 def unsynthesized_markdown(state):
     """The report when synthesis didn't finish: say why, then each reviewer's own findings, unverified."""
     synthesis = state['synthesis']
-    lines = [f"# Review panel: {state['target']['label']}", '',
+    lines = [f"# 5K Code Review: {state['target']['label']}", '',
              f"Synthesis {synthesis['status']}: {synthesis.get('error') or 'no reason recorded'}. "
              'The findings below are each reviewer\'s own, not checked or merged.', '']
     for name, reviewer in state['reviewers'].items():
@@ -1380,7 +1380,7 @@ def save_settings(repo, panel, files, remove, org=None):
     if not all(isinstance(text, str) for text in files.values()):
         raise PanelError('each file needs its text')
     with tempfile.TemporaryDirectory() as scratch:
-        trial = Path(scratch) / 'review-panel'
+        trial = Path(scratch) / '5k-code-review'
         if folder.is_dir():
             shutil.copytree(folder, trial)
         (trial / 'reviewers').mkdir(parents=True, exist_ok=True)
@@ -1730,7 +1730,7 @@ def prune_runs(repo, days, dry_run=False, keep=None):
     """Delete finished runs whose review is over: the PR merged or closed, the branch merged or gone, or too old.
 
     Returns [(run_dir, reason, bytes)]. A run whose PR state GitHub can't report is kept, not guessed about."""
-    root = git_common(repo) / 'review-panel'
+    root = git_common(repo) / '5k-code-review'
     if not root.is_dir():
         return []
     states = {}
@@ -1783,13 +1783,13 @@ def run(args):
     if org.get('status') in ('found', 'cached'):
         print(f"Organization settings: {org['repo']}/{ORG_CONFIG_PATH} at {org['commit'][:7]}", flush=True)
     if org.get('status') in ('cached', 'unreachable'):
-        print(f"review-panel: organization settings: {org['note']}", file=sys.stderr, flush=True)
+        print(f"5k-code-review: organization settings: {org['note']}", file=sys.stderr, flush=True)
     if not args.keep_runs:
         try:
             removed = prune_runs(repo, roster.get('retention', {}).get('days', 14))
         except (OSError, subprocess.SubprocessError) as error:  # Cleanup never stops a review.
             removed = []
-            print(f'review-panel: skipped cleaning up old runs: {error}', file=sys.stderr)
+            print(f'5k-code-review: skipped cleaning up old runs: {error}', file=sys.stderr)
         if removed:
             print(f"Deleted {len(removed)} finished run{'s' if len(removed) != 1 else ''} whose review is over "
                   f"({megabytes(sum(size for _, _, size in removed))}).", flush=True)
@@ -1798,7 +1798,7 @@ def run(args):
     except OSError as error:
         raise PanelError(f'cannot read --context: {error}') from error
     stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    run_dir = common / 'review-panel' / f"{stamp}-{f'pr{args.pr}' if args.pr else 'local'}"
+    run_dir = common / '5k-code-review' / f"{stamp}-{f'pr{args.pr}' if args.pr else 'local'}"
     (run_dir / 'reviewers').mkdir(parents=True)
     try:
         target, code_dir, diff = prepare_target(args, repo, run_dir)
@@ -1924,7 +1924,7 @@ def attach_command(args):
     run_dir = Path(args.run_dir).resolve()
     state_path = run_dir / 'state.json'
     if not state_path.exists():
-        raise PanelError(f'{run_dir} is not a review panel run (no state.json)')
+        raise PanelError(f'{run_dir} is not a 5k-code-review run (no state.json)')
     data = json.loads(state_path.read_text())
     ids = [f['id'] for f in ((data.get('synthesis') or {}).get('result') or {}).get('findings', [])]
     if args.finding not in ids:
@@ -1957,9 +1957,9 @@ def settings_command(args):
     repo = Path(git(['rev-parse', '--show-toplevel'], Path.cwd()))
     common = Path(git(['rev-parse', '--git-common-dir'], repo))
     common = common if common.is_absolute() else repo / common
-    runs = sorted((common / 'review-panel').glob('*/state.json'))
+    runs = sorted((common / '5k-code-review').glob('*/state.json'))
     if not runs:
-        raise PanelError('no review has run in this repository yet; run `review_panel.py run` once first')
+        raise PanelError('no review has run in this repository yet; run `code_review.py run` once first')
     data = json.loads(runs[-1].read_text())
     roster, _ = load_roster(None, False, repo, args.panel, settings_only=True)
     refresh_settings(data, roster)
@@ -2032,7 +2032,7 @@ def main(argv=None):
     try:
         return {'run': run, 'open': reopen, 'attach': attach_command, 'prune': prune_command, 'settings': settings_command}[args.command](args)
     except PanelError as error:
-        print(f'review-panel: {error}', file=sys.stderr)
+        print(f'5k-code-review: {error}', file=sys.stderr)
         return 2
 
 

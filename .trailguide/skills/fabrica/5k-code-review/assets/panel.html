@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Review panel</title>
+<title>5K Code Review</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22%234d638b%22%3E%3Ccircle%20cx=%223%22%20cy=%2212%22%20r=%221.6%22/%3E%3Ccircle%20cx=%226%22%20cy=%2215%22%20r=%221.6%22/%3E%3Ccircle%20cx=%229%22%20cy=%2218%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2212%22%20cy=%2215%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2212%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2218%22%20cy=%229%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2221%22%20cy=%226%22%20r=%221.6%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
@@ -650,9 +650,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
 <body>
 <div class="app">
 <header class="topbar">
-  <span class="brand"><svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="3" cy="12" r="1.6"/><circle cx="6" cy="15" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="12" cy="15" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="18" cy="9" r="1.6"/><circle cx="21" cy="6" r="1.6"/></svg>Review Panel</span>
+  <span class="brand"><svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="3" cy="12" r="1.6"/><circle cx="6" cy="15" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="12" cy="15" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="18" cy="9" r="1.6"/><circle cx="21" cy="6" r="1.6"/></svg>5K Code Review</span>
   <span class="tb-div" aria-hidden="true"></span>
-  <div class="tb-title"><span class="tb-chip" id="chip"></span><h1 id="title">Review panel</h1></div>
+  <div class="tb-title"><span class="tb-chip" id="chip"></span><h1 id="title">5K Code Review</h1></div>
   <div class="sub" id="sub"></div>
   <div class="tb-stats" id="tb-stats"></div>
   <div class="tb-actions">
@@ -956,7 +956,7 @@ function allRows() { return [...synthesisRows(), ...rawRows()]; }
 // Archived findings are ones the person chose to leave as they are. The live page saves the choice in the run's
 // state through the panel's server; a saved report.html, which has no server, keeps it in this browser.
 function archived() {
-  const local = state && !LIVE ? recall('review-panel-archived:' + state.run_dir) || {} : {};
+  const local = state && !LIVE ? recall('5k-code-review-archived:' + state.run_dir) || {} : {};
   return { ...((state && state.archived) || {}), ...local };
 }
 const isArchived = key => !!archived()[key];
@@ -975,9 +975,9 @@ async function setArchived(keys, on) {
       state.archived = reply.archived;
     } catch (e) { state.archived = before; toast(`Couldn’t save that: ${e.message || 'the panel isn’t running'}.`); renderAfterArchive(); return; }
   } else {
-    const local = recall('review-panel-archived:' + state.run_dir) || {};
+    const local = recall('5k-code-review-archived:' + state.run_dir) || {};
     keys.forEach(k => on ? (local[k] = local[k] || new Date().toISOString()) : delete local[k]);
-    store('review-panel-archived:' + state.run_dir, local);
+    store('5k-code-review-archived:' + state.run_dir, local);
   }
   toast(`${on ? 'Archived' : 'Unarchived'} ${plural(keys.length, 'finding')}.`, () => setArchived(keys, !on));
   renderAfterArchive();
@@ -1431,7 +1431,7 @@ function retentionLine() {
   const t = state.target || {}, days = state.retention_days;
   if (!days) return '';
   const over = t.kind === 'pr' ? `PR #${t.number} merges or closes` : `${t.branch ? `<code>${esc(t.branch)}</code>` : 'the branch'} merges or is deleted`;
-  return `<p class="retention note" title="Runs live in .git/review-panel/ and are never committed. The panel deletes finished runs when it next starts.">This run’s files${Object.keys((state.walkthroughs || {}).items || {}).length ? ', videos included,' : ''} are deleted after ${over}, or after ${days} days.</p>`;
+  return `<p class="retention note" title="Runs live in .git/5k-code-review/ and are never committed. The panel deletes finished runs when it next starts.">This run’s files${Object.keys((state.walkthroughs || {}).items || {}).length ? ', videos included,' : ''} are deleted after ${over}, or after ${days} days.</p>`;
 }
 function synthesisView() {
   const syn = state.synthesis;
@@ -1532,7 +1532,7 @@ function reviewerView(name) {
     <p class="pane-desc">${esc(entry.focus)}</p>
     <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${live && tab !== 'activity' ? `<button type="button" class="linkish watch" data-tab="activity"><span class="live-dot"></span>Watch live</button>` : ''}${sessionLink(entry)}${logLink}</div>
     ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
-    ${entry.source && entry.source !== 'built-in' ? `<div class="src-note" title="${esc(entry.source)}">Customized by ${/(^|\s)\.fabrica\/review-panel\//.test(entry.source) ? 'this repository' : 'your organization'}</div>` : ''}
+    ${entry.source && entry.source !== 'built-in' ? `<div class="src-note" title="${esc(entry.source)}">Customized by ${/(^|\s)\.fabrica\/5k-code-review\//.test(entry.source) ? 'this repository' : 'your organization'}</div>` : ''}
     ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="banner">${esc(entry.error)}</div>` : ''}
     ${r ? `<p class="summary-line">${inlineMd(r.summary)}</p>` : live && tab !== 'activity' ? `<p class="note mono">${esc(entry.activity || 'Reading the change…')}</p>` : ''}`;
   const tabBtn = (id, label, n) => `<button type="button" class="tab ${tab === id ? 'on' : ''}" data-tab="${id}">${label}${n !== undefined ? `<span class="n">${n}</span>` : ''}</button>`;
@@ -1559,7 +1559,7 @@ const STEP_WORDS = { read: 'Read', search: 'Searched', run: 'Ran', other: '' };
 function clock(t) { const s = Math.max(0, Number(t) || 0); return `+${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
 function stepText(text) {
   const kind = stepKind(text);
-  const rest = (kind === 'other' ? text : String(text).replace(/^(Read|Grep|Glob|Bash|\$)\s*/, '')).replace(/(^|[\s{,])\.git\/review-panel\/[^/\s]+\/worktree\//g, '$1');
+  const rest = (kind === 'other' ? text : String(text).replace(/^(Read|Grep|Glob|Bash|\$)\s*/, '')).replace(/(^|[\s{,])\.git\/5k-code-review\/[^/\s]+\/worktree\//g, '$1');
   return { kind, verb: STEP_WORDS[kind], rest };
 }
 function activityHtml(entry, steps, live) {
@@ -1672,7 +1672,7 @@ function openMenu(open) {
 }
 function renderChrome() {
   const t = state.target;
-  document.title = `Review panel: ${t.label}`;
+  document.title = `5K Code Review: ${t.label}`;
   const title = t.title || (t.kind === 'pr' ? t.label : `${t.branch || 'Local changes'} against ${t.base}`);
   document.getElementById('title').textContent = title;
   document.getElementById('title').title = title;
@@ -1772,7 +1772,7 @@ function handoffText(chosen) {
     if (r.fix) lines.push('Suggested fix:', '', ...fence(r.fix), '');
   }
   lines.push('When you are done, run the review panel again on the reviewers that raised these:', '',
-    '```sh', `python3 <review-panel skill>/scripts/review_panel.py run --only ${[...new Set([...reviewers, 'check-correctness'])].join(',')}`, '```');
+    '```sh', `python3 <5k-code-review skill>/scripts/code_review.py run --only ${[...new Set([...reviewers, 'check-correctness'])].join(',')}`, '```');
   return lines.join('\n') + '\n';
 }
 function renderHandoff() {
@@ -1788,7 +1788,7 @@ function renderHandoff() {
     </div></div>`;
   holder.innerHTML = html;
 }
-function savePicks() { if (state) store('review-panel:' + state.run_dir, [...ui.picked]); }
+function savePicks() { if (state) store('5k-code-review:' + state.run_dir, [...ui.picked]); }
 // Copies, then shows it on the button: a check mark for 1.5 seconds, or a note to copy by hand.
 async function copy(text, note, button) {
   try {
@@ -1884,7 +1884,7 @@ document.addEventListener('click', async event => {
     if (a === 'cancel-ask') { ui.confirmCancel = !ui.confirmCancel; renderChrome(); if (ui.confirmCancel) document.getElementById('cancel-run')?.focus(); return; }
     if (a === 'cancel-keep') { ui.confirmCancel = false; renderChrome(); document.querySelector('[data-act="cancel-ask"]')?.focus(); return; }
     if (a === 'cancel-run') { await cancelRun(); return; }
-    if (a === 'wrap-code') { ui.wrapCode = !ui.wrapCode; store('review-panel:wrap-code', ui.wrapCode); renderDetail(); document.querySelector('[data-act="wrap-code"]')?.focus(); return; }
+    if (a === 'wrap-code') { ui.wrapCode = !ui.wrapCode; store('5k-code-review:wrap-code', ui.wrapCode); renderDetail(); document.querySelector('[data-act="wrap-code"]')?.focus(); return; }
     if (a === 'settings') { openSettings(true); return; }
     if (a === 'copy-session') { await copy(act.dataset.command, null, act); return; }
     if (a === 'cost') { ui.costOpen = true; renderCost(); document.querySelector('#cost .btn[data-act="cost-close"]')?.focus(); return; }
@@ -1949,9 +1949,9 @@ document.addEventListener('keydown', event => {
 });
 
 /* ---------- settings ---------- */
-// Settings come in layers: the skill's built-in roster; the organization's review-panel/ folder in its settings
+// Settings come in layers: the skill's built-in roster; the organization's 5k-code-review/ folder in its settings
 // repository (<owner>/.fabrica unless the person picked another), which every repository in the organization
-// inherits; and a repository's .fabrica/review-panel/ folder, which overrides both for each reviewer it has a file
+// inherits; and a repository's .fabrica/5k-code-review/ folder, which overrides both for each reviewer it has a file
 // for. When the runner serves this page, Save writes the repository's files into the working tree. The
 // organization's files go through a pull request in its settings repository, so the page copies them instead.
 const EFFORTS = ['default', 'low', 'medium', 'high', 'max'];
@@ -1964,8 +1964,8 @@ const FALLBACK_MODELS = [
   { id: 'gpt-6.2-sol', name: 'GPT-6.2 Sol', harness: 'codex' },
 ];
 const models = () => (state && state.models && state.models.length ? state.models : FALLBACK_MODELS);
-const settings = { max: !!recall('review-panel:settings-max'), open: false, section: 'overview', editing: null, cfg: null, picker: null, saving: false, flash: '', error: '' };
-const cfgKey = () => 'review-panel:settings:' + state.repo + (editingOrg() ? ':org' : '');
+const settings = { max: !!recall('5k-code-review:settings-max'), open: false, section: 'overview', editing: null, cfg: null, picker: null, saving: false, flash: '', error: '' };
+const cfgKey = () => '5k-code-review:settings:' + state.repo + (editingOrg() ? ':org' : '');
 const orgInfo = () => (state.config && state.config.org) || { status: 'none' };
 const orgFound = () => ['found', 'cached'].includes(orgInfo().status);
 // The organization's settings can be edited when there is an organization repository to write them to.
@@ -2037,7 +2037,7 @@ const walkGuideChanged = () => settings.cfg.walkthroughs.instructions.trim() !==
 const retentionChanged = () => Number(settings.cfg.retention) !== Number(settings.cfg.originalRetention);
 const panelChanged = () => settings.cfg.reviewers.some(r => r.builtin && r.included !== r.original.included) || synthesisChanged() || walkChanged() || retentionChanged();
 const yamlString = text => `"${String(text).replace(/"/g, "'").replace(/\n/g, ' ')}"`;
-const configDir = () => editingOrg() ? (orgInfo().path || 'review-panel') : (state.config && state.config.dir) || '.fabrica/review-panel';
+const configDir = () => editingOrg() ? (orgInfo().path || '5k-code-review') : (state.config && state.config.dir) || '.fabrica/5k-code-review';
 const layerWord = () => editingOrg() ? 'organization' : 'repository';
 function reviewerFile(r) {
   const lines = ['---', `summary: ${yamlString(r.summary)}`, ...(r.icon && r.icon !== r.builtinIcon ? [`icon: ${r.icon}`] : []), `harness: ${r.harness}`, `model: ${r.model}`, `effort: ${r.effort}`];
@@ -2049,8 +2049,8 @@ function reviewerFile(r) {
 const sameAgent = (a, b) => b && a.harness === b.harness && a.model === b.model && (a.effort || 'default') === (b.effort || 'default');
 function panelFile() {
   const cfg = settings.cfg;
-  const lines = [editingOrg() ? `# Review panel settings for every repository in ${orgInfo().owner}. See the review-panel skill README.`
-    : '# Review panel settings for this repository. See the review-panel skill README.'];
+  const lines = [editingOrg() ? `# 5K Code Review settings for every repository in ${orgInfo().owner}. See the 5k-code-review skill README.`
+    : '# 5K Code Review settings for this repository. See the 5k-code-review skill README.'];
   if (cfg.reviewers.some(r => !r.included && r.builtin)) {
     lines.push('', '# Run only these reviewers, in this order.', 'reviewers:', ...cfg.reviewers.filter(r => r.included).map(r => `  - ${r.name}`));
   } else {
@@ -2086,7 +2086,7 @@ function setupScript() {
   const dir = configDir();
   const lines = [editingOrg() ? `# Run from the root of a checkout of ${orgInfo().repo}, then commit and open a pull request.` : '# Run from the repository root, then commit the folder.', `mkdir -p ${dir}/reviewers`];
   for (const path of remove) lines.push(`rm ${dir}/${path}`);
-  for (const [path, text] of Object.entries(files)) lines.push('', `cat > ${dir}/${path} <<'REVIEW_PANEL_EOF'`, text.replace(/\n$/, ''), 'REVIEW_PANEL_EOF');
+  for (const [path, text] of Object.entries(files)) lines.push('', `cat > ${dir}/${path} <<'CODE_REVIEW_EOF'`, text.replace(/\n$/, ''), 'CODE_REVIEW_EOF');
   return lines.join('\n') + '\n';
 }
 // Where a reviewer's settings come from, in plain words.
@@ -2317,7 +2317,7 @@ Record with Playwright: write a spec under test/e2e/, run \`bunx playwright test
 Stop the stack with \`bun run e2e:stack:down\` when you are done.`;
 function walkSetupPrompt() {
   const dir = configDir();
-  return `Set up this repository so the review-panel skill can record video walkthroughs of review findings.
+  return `Set up this repository so the 5k-code-review skill can record video walkthroughs of review findings.
 
 The panel reads ${dir}/walkthroughs.md and gives it to an agent that runs the change in a temporary checkout, drives the app in a browser with video on, and saves the video. Make that possible, then write the file:
 
@@ -2334,20 +2334,20 @@ Commit the changes and summarize what you set up.`;
 }
 function cleanupPane() {
   const cfg = settings.cfg;
-  return `<div class="spane-head"><div><h2>Cleanup</h2><p>Each run keeps its files, including any videos, under <code>.git/review-panel/</code>, which is never committed or pushed. They’re review artifacts, so the panel deletes them once the review is over.</p></div>${closeBtn()}</div>
+  return `<div class="spane-head"><div><h2>Cleanup</h2><p>Each run keeps its files, including any videos, under <code>.git/5k-code-review/</code>, which is never committed or pushed. They’re review artifacts, so the panel deletes them once the review is over.</p></div>${closeBtn()}</div>
     <div class="sbody">${canEdit() ? '' : builtinNotice()}<div class="slist"><div class="edit" style="border-top:0;padding-left:14px">
       <p class="lead-p">Every time the panel starts, it deletes finished runs whose pull request merged or closed, and local runs whose branch merged into its base or no longer exists. When GitHub can’t be reached, a run is kept rather than guessed about.</p>
       <fieldset ${canEdit() ? '' : 'disabled'}><div class="field narrow"><label for="cfg-retention">Also delete runs older than</label>
         <span class="with-unit"><input id="cfg-retention" type="number" min="1" step="1" data-ret value="${esc(cfg.retention)}"> days</span></div></fieldset>
-      <span class="hint">To clean up now, run <code>review_panel.py prune</code>; add <code>--dry-run</code> to see what it would delete. <code>--keep-runs</code> skips the cleanup for one run.</span>
+      <span class="hint">To clean up now, run <code>code_review.py prune</code>; add <code>--dry-run</code> to see what it would delete. <code>--keep-runs</code> skips the cleanup for one run.</span>
     </div></div></div>`;
 }
 function setupPrompt() {
   const dir = configDir();
   const list = Object.entries(roster().reviewers).map(([name, e]) => `- ${name}: ${e.summary}`).join('\n');
   const intro = editingOrg()
-    ? `Set up the review panel's organization settings in this repository, ${orgInfo().repo}.\n\nThe review-panel skill reads ${dir}/ from the head of this repository's default branch, for every repository in ${orgInfo().owner}; each repository's own .fabrica/review-panel/ can override it. The folder holds:`
-    : `Set up the review panel's settings for this repository.\n\nThe review-panel skill reads ${dir}/ from the repository it runs in:`;
+    ? `Set up the review panel's organization settings in this repository, ${orgInfo().repo}.\n\nThe 5k-code-review skill reads ${dir}/ from the head of this repository's default branch, for every repository in ${orgInfo().owner}; each repository's own .fabrica/5k-code-review/ can override it. The folder holds:`
+    : `Set up the review panel's settings for this repository.\n\nThe 5k-code-review skill reads ${dir}/ from the repository it runs in:`;
   return `${intro}
 
 - ${dir}/panel.yaml (optional): a \`reviewers:\` list of reviewer names, in the order they should run, and a \`synthesis:\` map with \`harness\`, \`model\`, and \`effort\`. Without a list, every built-in reviewer runs, plus every file in reviewers/.
@@ -2380,7 +2380,7 @@ function overviewPane() {
   const dir = configDir();
   const found = folderFound();
   const cfg = settings.cfg;
-  const command = (state.config && state.config.command) || 'python3 <skill>/scripts/review_panel.py settings';
+  const command = (state.config && state.config.command) || 'python3 <skill>/scripts/code_review.py settings';
   let detail;
   if (viewMode() === 'org') {
     detail = orgDetail();
@@ -2416,7 +2416,7 @@ function overviewPane() {
       <div class="modes" role="radiogroup" aria-label="Settings mode">
         ${modeCard('builtin', 'Built-in settings', 'The skill’s reviewers, as shipped.')}
         ${modeCard('org', 'Organization', orgInfo().owner ? `<code>${esc(orgInfo().repo || orgInfo().default)}</code> sets them for every repository in ${esc(orgInfo().owner)}.` : 'An organization’s <code>.fabrica</code> repository sets them for all its repositories.')}
-        ${modeCard('config', 'Repository', `This repository’s <code>${esc(state.config && state.config.dir || '.fabrica/review-panel')}/</code> overrides both.`)}
+        ${modeCard('config', 'Repository', `This repository’s <code>${esc(state.config && state.config.dir || '.fabrica/5k-code-review')}/</code> overrides both.`)}
       </div>
       <div class="mode-detail">${detail}</div>
     </div>`;
@@ -2441,7 +2441,7 @@ function orgDetail() {
         <p>Copy this prompt into your agent in a checkout of <code>${esc(org.repo)}</code>. It asks what you want, then writes the files.</p>
         <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn small" data-sact="copy-prompt">Copy setup prompt</button></div>
         <pre class="setup-prompt">${esc(setupPrompt())}</pre></details>`;
-  else body = `<p>Every repository in ${esc(org.owner)} starts from ${where} in ${repoLink} (commit <code>${esc((org.commit || '').slice(0, 7))}</code> on its default branch), and a repository’s own <code>.fabrica/review-panel/</code> overrides it.</p>
+  else body = `<p>Every repository in ${esc(org.owner)} starts from ${where} in ${repoLink} (commit <code>${esc((org.commit || '').slice(0, 7))}</code> on its default branch), and a repository’s own <code>.fabrica/5k-code-review/</code> overrides it.</p>
       ${org.status === 'cached' ? `<p class="warn-line">${esc(org.note)}.</p>` : ''}
       <p>Change reviewers here, then press <b>Copy setup commands</b> and run them in a checkout of <code>${esc(org.repo)}</code>. Settings that reach every repository go through a pull request there, so someone reviews them.</p>`;
   return picker + body;
@@ -2623,7 +2623,7 @@ document.getElementById('settings').addEventListener('click', async event => {
     case 'copy-walk-prompt': await copy(walkSetupPrompt(), null, act); return;
     case 'copy-command': await copy(state.config.command, document.getElementById('command-note'), act); return;
     case 'copy-remove': await copy(`git rm -r ${configDir()}`, document.getElementById('remove-note'), act); return;
-    case 'maximize': settings.max = !settings.max; store('review-panel:settings-max', settings.max); break;
+    case 'maximize': settings.max = !settings.max; store('5k-code-review:settings-max', settings.max); break;
     case 'create-folder': await saveSettings({ 'panel.yaml': panelFile() }); return;
     case 'org-change': settings.orgEditing = true; renderSettings(); { const i = document.getElementById('org-repo'); if (i) { i.focus(); i.select(); } } return;
     case 'org-cancel': settings.orgEditing = false; break;
@@ -2734,7 +2734,7 @@ function adopt(next) {
   const first = !state;
   upgradeSeverities(next);
   state = next;
-  if (first) { ui.wrapCode = !!recall('review-panel:wrap-code'); const saved = recall('review-panel:' + state.run_dir); if (Array.isArray(saved)) saved.forEach(k => ui.picked.add(k)); }
+  if (first) { ui.wrapCode = !!recall('5k-code-review:wrap-code'); const saved = recall('5k-code-review:' + state.run_dir); if (Array.isArray(saved)) saved.forEach(k => ui.picked.add(k)); }
 }
 let failedPolls = 0;
 async function poll() {

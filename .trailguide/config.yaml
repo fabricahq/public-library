@@ -45,7 +45,7 @@ library:
       - skills/maintain-verification-skill
       - skills/ratchet-files
     offered:
-      - skills/review-panel
+      - skills/5k-code-review
     dependencies:
       - pstack:pstack/skills/principle-attack-the-premise
       - pstack:pstack/skills/principle-build-the-lever

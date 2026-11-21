@@ -187,6 +187,6 @@ Fabrica's `grill-me-ui` skill provides a canvas and local reply transport for Ma
 
 The canvas embeds JetBrains Mono under the [SIL Open Font License 1.1](.trailguide/skills/fabrica/grill-me-ui/references/JetBrainsMono-OFL.txt), and Font Awesome Free 7.2.0 brand icon paths under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/grill-me-ui/references/icon-attribution.md). These assets retain their own licenses; the library's MIT license does not replace them.
 
-## Review Panel
+## 5K Code Review
 
-Fabrica's `review-panel` skill embeds Font Awesome Free 7.2.0 brand icon paths for Claude and OpenAI under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/review-panel/references/icon-attribution.md). These marks keep their own license; the library's MIT license does not replace it. The architecture reviewer's focus draws on John Ousterhout's *A Philosophy of Software Design*.
+Fabrica's `5k-code-review` skill embeds Font Awesome Free 7.2.0 brand icon paths for Claude and OpenAI under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/5k-code-review/references/icon-attribution.md). These marks keep their own license; the library's MIT license does not replace it. The architecture reviewer's focus draws on John Ousterhout's *A Philosophy of Software Design*.

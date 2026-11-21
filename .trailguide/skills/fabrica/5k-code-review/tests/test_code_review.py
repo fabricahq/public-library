@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for review_panel.py, with fake `claude` and `codex` commands standing in for real sessions."""
+"""Tests for code_review.py, with fake `claude` and `codex` commands standing in for real sessions."""
 import base64
 import copy
 import json
@@ -16,9 +16,9 @@ import urllib.error
 import urllib.request
 
 SKILL = Path(__file__).resolve().parent.parent
-SCRIPT = SKILL / 'scripts' / 'review_panel.py'
+SCRIPT = SKILL / 'scripts' / 'code_review.py'
 sys.path.insert(0, str(SCRIPT.parent))
-import review_panel  # noqa: E402  (imported after the path is set)
+import code_review  # noqa: E402  (imported after the path is set)
 
 REVIEW = {
     'verdict': 'blocking', 'summary': 'Checked the parser.',
@@ -100,28 +100,28 @@ FAKE_CODEX = textwrap.dedent('''\
 class PureHelpers(unittest.TestCase):
     def test_extract_json_takes_the_last_fenced_object(self):
         text = 'first\n```json\n{"a": 1}\n```\nthen\n```json\n{"b": 2}\n```'
-        self.assertEqual(review_panel.extract_json(text), {'b': 2})
+        self.assertEqual(code_review.extract_json(text), {'b': 2})
 
     def test_extract_json_falls_back_to_a_bare_object(self):
-        self.assertEqual(review_panel.extract_json('Here: {"verdict": "pass"} done'), {'verdict': 'pass'})
+        self.assertEqual(code_review.extract_json('Here: {"verdict": "pass"} done'), {'verdict': 'pass'})
 
     def test_extract_json_rejects_a_reply_without_an_object(self):
         with self.assertRaises(ValueError):
-            review_panel.extract_json('looks fine to me')
+            code_review.extract_json('looks fine to me')
 
     def test_validate_review_accepts_the_contract_example(self):
-        self.assertEqual(review_panel.validate_review(REVIEW), [])
+        self.assertEqual(code_review.validate_review(REVIEW), [])
 
     def test_validate_review_rejects_a_long_summary_and_an_unknown_check_result(self):
         bad = dict(REVIEW, summary='x' * 401, checks=[{'check': 'AC1', 'result': 'mostly'}])
-        problems = review_panel.validate_review(bad)
+        problems = code_review.validate_review(bad)
         self.assertIn('summary must be under 400 characters; put the detail in checks and findings', problems)
         self.assertIn('checks[0].result must be one of met, not-met, partly, unverified', problems)
 
     def test_validate_review_reports_an_unknown_severity(self):
         bad = json.loads(json.dumps(REVIEW))
         bad['findings'][0]['impact'] = 'blocking'
-        self.assertIn('findings[0].impact must be one of severe, significant, minor, cosmetic', review_panel.validate_review(bad))
+        self.assertIn('findings[0].impact must be one of severe, significant, minor, cosmetic', code_review.validate_review(bad))
 
     def synthesis(self, **changes):
         value = {'verdict': 'fix-first', 'summary': 's', 'conclusions': [{'kind': 'fix', 'headline': 'Off by one', 'detail': 'Use <=.', 'findings': ['S1']}], 'findings': [
@@ -131,35 +131,35 @@ class PureHelpers(unittest.TestCase):
         return value
 
     def test_validate_synthesis_accepts_merged_duplicates(self):
-        self.assertEqual(review_panel.validate_synthesis(self.synthesis(), {'check-docs': REVIEW, 'check-rules': REVIEW}), [])
+        self.assertEqual(code_review.validate_synthesis(self.synthesis(), {'check-docs': REVIEW, 'check-rules': REVIEW}), [])
 
     def test_validate_synthesis_rejects_a_merge_of_a_finding_no_reviewer_raised(self):
         value = self.synthesis()
         value['findings'][0]['merges'] = ['check-made-up:F1', 'check-docs:F1']
-        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW})
+        problems = code_review.validate_synthesis(value, {'check-docs': REVIEW})
         self.assertTrue(any('check-made-up:F1' in p for p in problems), problems)
 
     def test_validate_synthesis_rejects_a_reviewer_finding_left_unaccounted(self):
         value = self.synthesis()
         value['findings'][0]['merges'] = ['check-docs:F1']
-        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
+        problems = code_review.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
         self.assertTrue(any('missing: check-rules:F1' in p for p in problems), problems)
         value['dropped'] = [{'reviewer': 'check-rules', 'finding': 'F1', 'reason': 'Already handled.'}]
-        self.assertEqual(review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW}), [])
+        self.assertEqual(code_review.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW}), [])
 
     def test_validate_review_rejects_repeated_finding_ids(self):
         bad = json.loads(json.dumps(REVIEW))
         bad['findings'].append(dict(bad['findings'][0]))
-        self.assertIn('finding ids must be unique; repeated: F1', review_panel.validate_review(bad))
+        self.assertIn('finding ids must be unique; repeated: F1', code_review.validate_review(bad))
 
     def test_validate_synthesis_rejects_a_finding_both_merged_and_dropped(self):
         value = self.synthesis(dropped=[{'reviewer': 'check-docs', 'finding': 'F1', 'reason': 'Duplicate.'}])
-        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
+        problems = code_review.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
         self.assertTrue(any('listed more than once: check-docs:F1' in p for p in problems), problems)
 
     def test_validate_synthesis_rejects_a_drop_of_a_finding_no_reviewer_raised(self):
         value = self.synthesis(dropped=[{'reviewer': 'check-docs', 'finding': 'F9', 'reason': 'Wrong.'}])
-        problems = review_panel.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
+        problems = code_review.validate_synthesis(value, {'check-docs': REVIEW, 'check-rules': REVIEW})
         self.assertTrue(any("dropped names 'check-docs:F9'" in p for p in problems), problems)
 
     def test_validate_synthesis_ties_the_verdict_to_blocking_questions(self):
@@ -167,11 +167,11 @@ class PureHelpers(unittest.TestCase):
         merged = self.synthesis()['findings'][0]
         advisory = dict(merged, impact='minor', likelihood='rare')
         ready = self.synthesis(verdict='ready', findings=[advisory], questions=[{'question': 'Q?', 'blocking': True}])
-        self.assertIn("verdict can't be 'ready' while a question is blocking", review_panel.validate_synthesis(ready, reviews))
+        self.assertIn("verdict can't be 'ready' while a question is blocking", code_review.validate_synthesis(ready, reviews))
         decide = self.synthesis(verdict='needs-decision', findings=[advisory], questions=[{'question': 'Q?', 'blocking': False}])
-        self.assertIn("verdict 'needs-decision' needs at least one blocking question", review_panel.validate_synthesis(decide, reviews))
+        self.assertIn("verdict 'needs-decision' needs at least one blocking question", code_review.validate_synthesis(decide, reviews))
         missing = self.synthesis(verdict='ready', findings=[advisory], questions=[{'question': 'Q?'}])
-        self.assertIn('questions[0].blocking must be true or false', review_panel.validate_synthesis(missing, reviews))
+        self.assertIn('questions[0].blocking must be true or false', code_review.validate_synthesis(missing, reviews))
 
     def test_report_lists_dropped_findings_blocking_first(self):
         advisory = dict(REVIEW['findings'][0], id='F2', severity='low', title='Minor')
@@ -180,7 +180,7 @@ class PureHelpers(unittest.TestCase):
                  'synthesis': {'result': {'verdict': 'ready', 'summary': 's', 'conclusions': ['c'], 'findings': [], 'questions': [],
                                           'dropped': [{'reviewer': 'check-docs', 'finding': 'F2', 'reason': 'Style only.'},
                                                       {'reviewer': 'check-docs', 'finding': 'F1', 'reason': 'Handled in tests.'}]}}}
-        report = review_panel.report_markdown(state)
+        report = code_review.report_markdown(state)
         self.assertIn('## Dropped by the synthesis', report)
         self.assertLess(report.index('check-docs:F1 [high] Major: Handled in tests.'), report.index('check-docs:F2 [low] Minor'))
 
@@ -190,8 +190,8 @@ class PureHelpers(unittest.TestCase):
             (run_dir / 'reviewers' / 'check-docs' / 'fallback').mkdir(parents=True)
             (run_dir / 'reviewers' / 'check-docs' / 'events.jsonl').write_text('codex failed')
             (run_dir / 'reviewers' / 'check-docs' / 'fallback' / 'events.jsonl').write_text('claude ran')
-            state = review_panel.State(run_dir / 'state.json', {'status': 'running'})
-            server = review_panel.serve(state, run_dir, 0, 'tok')
+            state = code_review.State(run_dir / 'state.json', {'status': 'running'})
+            server = code_review.serve(state, run_dir, 0, 'tok')
             try:
                 base = f'http://127.0.0.1:{server.server_address[1]}'
                 get = lambda path: urllib.request.urlopen(base + path, timeout=5)
@@ -208,8 +208,8 @@ class PureHelpers(unittest.TestCase):
 
     def test_the_page_can_stop_a_running_review(self):
         with tempfile.TemporaryDirectory() as tmp:
-            state = review_panel.State(Path(tmp) / 'state.json', {'status': 'running'})
-            server = review_panel.serve(state, Path(tmp), 0, 'tok')
+            state = code_review.State(Path(tmp) / 'state.json', {'status': 'running'})
+            server = code_review.serve(state, Path(tmp), 0, 'tok')
             try:
                 def post(path):
                     request = urllib.request.Request(f'http://127.0.0.1:{server.server_address[1]}{path}', data=b'{}',
@@ -234,10 +234,10 @@ class PureHelpers(unittest.TestCase):
                 server.server_close()
 
     def test_line_ranges_reads_the_shapes_reviewers_write(self):
-        self.assertEqual(review_panel.line_ranges('42'), [(42, 42)])
-        self.assertEqual(review_panel.line_ranges('472-484, 528'), [(472, 484), (528, 528)])
-        self.assertEqual(review_panel.line_ranges(None), [])
-        self.assertEqual(review_panel.line_ranges('1-500'), [(1, review_panel.SNIPPET_MAX_LINES)])
+        self.assertEqual(code_review.line_ranges('42'), [(42, 42)])
+        self.assertEqual(code_review.line_ranges('472-484, 528'), [(472, 484), (528, 528)])
+        self.assertEqual(code_review.line_ranges(None), [])
+        self.assertEqual(code_review.line_ranges('1-500'), [(1, code_review.SNIPPET_MAX_LINES)])
 
     def test_code_snippets_stay_inside_the_checkout(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -245,20 +245,20 @@ class PureHelpers(unittest.TestCase):
             root.mkdir()
             (root / 'a.py').write_text(''.join(f'line {n}\n' for n in range(1, 11)))
             (Path(folder) / 'secret.txt').write_text('no')
-            found = review_panel.code_snippets(root, [{'file': 'a.py', 'line': '5'}, {'file': '../secret.txt', 'line': '1'},
+            found = code_review.code_snippets(root, [{'file': 'a.py', 'line': '5'}, {'file': '../secret.txt', 'line': '1'},
                                                       {'file': 'missing.py', 'line': '1'}])
         self.assertEqual(list(found), ['a.py:5'])
         self.assertEqual(found['a.py:5'][0]['lines'], ['line 3', 'line 4', 'line 5', 'line 6', 'line 7'])
 
     def test_parse_yaml_reads_scalars_lists_and_maps(self):
         text = 'reviewers:   # in order\n  - check-security\n  - "check-payments"\nsynthesis:\n  model: opus\n  effort: high\nflag: true\nsummary: "Checks #1: payments"\n'
-        self.assertEqual(review_panel.parse_yaml(text, 'panel.yaml'),
+        self.assertEqual(code_review.parse_yaml(text, 'panel.yaml'),
                          {'reviewers': ['check-security', 'check-payments'], 'synthesis': {'model': 'opus', 'effort': 'high'}, 'flag': True,
                           'summary': 'Checks #1: payments'})
 
     def test_parse_yaml_names_the_line_it_cannot_read(self):
-        with self.assertRaisesRegex(review_panel.PanelError, 'panel.yaml:2'):
-            review_panel.parse_yaml('reviewers:\n  just text\n', 'panel.yaml')
+        with self.assertRaisesRegex(code_review.PanelError, 'panel.yaml:2'):
+            code_review.parse_yaml('reviewers:\n  just text\n', 'panel.yaml')
 
     def roster(self):
         return {'reviewers': {'check-docs': {'summary': 'Docs', 'agent': {'harness': 'codex', 'model': 'm', 'effort': 'high'},
@@ -284,13 +284,13 @@ class PureHelpers(unittest.TestCase):
             'reviewers/check-rules.md': '---\nmode: append\n---\nAlso check our ADRs.\n',
             'reviewers/check-payments.md': '---\nsummary: Checks payment flows\n---\nLook for double charges.\n',
         })
-        chosen, added = review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        chosen, added = code_review.apply_repo_config(roster, folder, '.fabrica/5k-code-review')
         reviewers = roster['reviewers']
         self.assertEqual(chosen, ['check-payments', 'check-docs', 'check-rules'])
         self.assertEqual(added, ['check-payments'])
         self.assertEqual(reviewers['check-docs']['focus_text'], 'Our docs focus.')
         self.assertEqual(reviewers['check-docs']['agent'], {'harness': 'codex', 'model': 'gpt-x', 'effort': 'high'})
-        self.assertEqual(reviewers['check-docs']['source'], 'replaced by .fabrica/review-panel/reviewers/check-docs.md')
+        self.assertEqual(reviewers['check-docs']['source'], 'replaced by .fabrica/5k-code-review/reviewers/check-docs.md')
         self.assertIn('Built-in rules focus.', reviewers['check-rules']['focus_text'])
         self.assertIn('Also check our ADRs.', reviewers['check-rules']['focus_text'])
         self.assertEqual(reviewers['check-payments']['summary'], 'Checks payment flows')
@@ -304,22 +304,22 @@ class PureHelpers(unittest.TestCase):
             'reviewers/check-payments.md': '---\nsummary: Checks payment flows\n---\nLook for double charges.\n',
         })
         repo = self.config_folder({
-            '.fabrica/review-panel/reviewers/check-docs.md': '---\nmode: append\n---\nAlso our ADRs.\n',
-            '.fabrica/review-panel/reviewers/check-local.md': '---\nsummary: Local\n---\nOnly here.\n',
+            '.fabrica/5k-code-review/reviewers/check-docs.md': '---\nmode: append\n---\nAlso our ADRs.\n',
+            '.fabrica/5k-code-review/reviewers/check-local.md': '---\nsummary: Local\n---\nOnly here.\n',
         })
         where = {'status': 'found', 'repo': 'acme/.fabrica', 'commit': 'a' * 40, 'folder': str(org)}
-        roster, reviewers = review_panel.load_roster(None, False, repo, settings_only=True, org=where)
+        roster, reviewers = code_review.load_roster(None, False, repo, settings_only=True, org=where)
         # The organization's list, plus what the repository adds without a list of its own.
         self.assertEqual(list(reviewers), ['check-security', 'check-docs', 'check-payments', 'check-local'])
         docs = reviewers['check-docs']
         self.assertEqual(docs['focus_text'], 'Org docs focus.\n\n## Added by this repository\n\nAlso our ADRs.')
         self.assertEqual(docs['agent']['model'], 'sonnet')
-        self.assertEqual(docs['source'], 'organization, extended by .fabrica/review-panel/reviewers/check-docs.md')
+        self.assertEqual(docs['source'], 'organization, extended by .fabrica/5k-code-review/reviewers/check-docs.md')
         self.assertEqual(roster['synthesize']['agent']['effort'], 'max')
         # The settings window sees the organization's settings as inherited, and the repository's as its own.
         summary = roster['all']
         self.assertTrue(summary['reviewers']['check-payments']['builtin'])
-        self.assertEqual(summary['reviewers']['check-payments']['org_file'], 'acme/.fabrica/review-panel/reviewers/check-payments.md')
+        self.assertEqual(summary['reviewers']['check-payments']['org_file'], 'acme/.fabrica/5k-code-review/reviewers/check-payments.md')
         self.assertIsNone(summary['reviewers']['check-payments']['file'])
         self.assertEqual(summary['reviewers']['check-docs']['builtin_text'], 'Org docs focus.')
         self.assertEqual(summary['builtin_synthesis']['effort'], 'max')
@@ -334,9 +334,9 @@ class PureHelpers(unittest.TestCase):
         replies = {
             'repos/acme/.fabrica/commits/HEAD': {'sha': commit},
             f'repos/acme/.fabrica/git/trees/{commit}?recursive=1': {'tree': [
-                {'type': 'blob', 'path': 'review-panel/panel.yaml', 'sha': 'p1'},
-                {'type': 'blob', 'path': 'review-panel/reviewers/check-docs.md', 'sha': 'd1'},
-                {'type': 'blob', 'path': 'review-panel/notes.txt', 'sha': 'n1'},
+                {'type': 'blob', 'path': '5k-code-review/panel.yaml', 'sha': 'p1'},
+                {'type': 'blob', 'path': '5k-code-review/reviewers/check-docs.md', 'sha': 'd1'},
+                {'type': 'blob', 'path': '5k-code-review/notes.txt', 'sha': 'n1'},
                 {'type': 'blob', 'path': 'README.md', 'sha': 'r1'}]},
             'repos/acme/.fabrica/git/blobs/p1': {'content': base64.b64encode(b'synthesis:\n  effort: max\n').decode()},
             'repos/acme/.fabrica/git/blobs/d1': {'content': base64.b64encode(b'Docs.\n').decode()},
@@ -345,59 +345,59 @@ class PureHelpers(unittest.TestCase):
         def fake(path):
             calls.append(path)
             return (replies[path], None) if path in replies else (None, 'missing')
-        with mock.patch.object(review_panel, 'ORG_CACHE', cache), mock.patch.object(review_panel, 'gh_api', fake):
-            folder, got, status, note = review_panel.fetch_org_folder('acme/.fabrica')
+        with mock.patch.object(code_review, 'ORG_CACHE', cache), mock.patch.object(code_review, 'gh_api', fake):
+            folder, got, status, note = code_review.fetch_org_folder('acme/.fabrica')
             self.assertEqual((got, status, note), (commit, 'found', None))
             self.assertEqual(sorted(str(p.relative_to(folder)) for p in folder.rglob('*') if p.is_file() and p.name != '.complete'),
                              ['panel.yaml', 'reviewers/check-docs.md'])
             calls.clear()
-            review_panel.fetch_org_folder('acme/.fabrica')
+            code_review.fetch_org_folder('acme/.fabrica')
             self.assertEqual(len(calls), 1)  # Same head commit: nothing downloaded again.
-            with mock.patch.object(review_panel, 'gh_api', lambda path: (None, 'network down')):
-                again, got, status, note = review_panel.fetch_org_folder('acme/.fabrica')
+            with mock.patch.object(code_review, 'gh_api', lambda path: (None, 'network down')):
+                again, got, status, note = code_review.fetch_org_folder('acme/.fabrica')
                 self.assertEqual((again, status), (folder, 'cached'))
                 self.assertIn('network down', note)
-            self.assertEqual(review_panel.fetch_org_folder('acme/other')[2], 'missing')
+            self.assertEqual(code_review.fetch_org_folder('acme/other')[2], 'missing')
 
     def test_the_organization_repository_is_a_per_person_choice(self):
         home = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: subprocess.run(['rm', '-rf', str(home)]))
-        with mock.patch.object(review_panel, 'USER_SETTINGS', home / 'settings.json'):
-            self.assertEqual(review_panel.org_repo_choice('acme'), ('acme/.fabrica', False))
-            review_panel.set_org_repo('acme', 'acme/settings')
-            self.assertEqual(review_panel.org_repo_choice('acme'), ('acme/settings', True))
-            review_panel.set_org_repo('acme', '')
-            self.assertEqual(review_panel.org_repo_choice('acme'), (None, True))
-            review_panel.set_org_repo('acme', None)
-            self.assertEqual(review_panel.org_repo_choice('acme'), ('acme/.fabrica', False))
-            with self.assertRaisesRegex(review_panel.PanelError, 'owner/name'):
-                review_panel.set_org_repo('acme', 'https://example.com/x')
+        with mock.patch.object(code_review, 'USER_SETTINGS', home / 'settings.json'):
+            self.assertEqual(code_review.org_repo_choice('acme'), ('acme/.fabrica', False))
+            code_review.set_org_repo('acme', 'acme/settings')
+            self.assertEqual(code_review.org_repo_choice('acme'), ('acme/settings', True))
+            code_review.set_org_repo('acme', '')
+            self.assertEqual(code_review.org_repo_choice('acme'), (None, True))
+            code_review.set_org_repo('acme', None)
+            self.assertEqual(code_review.org_repo_choice('acme'), ('acme/.fabrica', False))
+            with self.assertRaisesRegex(code_review.PanelError, 'owner/name'):
+                code_review.set_org_repo('acme', 'https://example.com/x')
 
     def test_walkthroughs_need_instructions_and_a_known_record_setting(self):
         roster = self.roster()
         folder = self.config_folder({'panel.yaml': 'walkthroughs:\n  record: blocking\n'})
-        with self.assertRaisesRegex(review_panel.PanelError, 'needs .fabrica/review-panel/walkthroughs.md'):
-            review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        with self.assertRaisesRegex(code_review.PanelError, 'needs .fabrica/5k-code-review/walkthroughs.md'):
+            code_review.apply_repo_config(roster, folder, '.fabrica/5k-code-review')
         roster = self.roster()
         folder = self.config_folder({'panel.yaml': 'walkthroughs:\n  record: all\n  effort: high\n', 'walkthroughs.md': 'Run bun dev.\n'})
-        review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        code_review.apply_repo_config(roster, folder, '.fabrica/5k-code-review')
         self.assertEqual(roster['walkthroughs']['record'], 'all')
         self.assertEqual(roster['walkthroughs']['instructions'], 'Run bun dev.')
         self.assertEqual(roster['walkthroughs']['agent']['effort'], 'high')
         roster = self.roster()
         folder = self.config_folder({'panel.yaml': 'walkthroughs:\n  record: sometimes\n', 'walkthroughs.md': 'x\n'})
-        with self.assertRaisesRegex(review_panel.PanelError, 'record must be one of'):
-            review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        with self.assertRaisesRegex(code_review.PanelError, 'record must be one of'):
+            code_review.apply_repo_config(roster, folder, '.fabrica/5k-code-review')
 
     def test_a_walkthrough_must_save_the_video_it_names(self):
         with tempfile.TemporaryDirectory() as folder:
             value = {'outcome': 'reproduced', 'summary': 'Shown.', 'steps': [], 'video': 'walkthrough.webm'}
-            self.assertIn('video walkthrough.webm is not in the output folder', ' '.join(review_panel.validate_walkthrough(value, Path(folder))))
+            self.assertIn('video walkthrough.webm is not in the output folder', ' '.join(code_review.validate_walkthrough(value, Path(folder))))
             Path(folder, 'walkthrough.webm').write_bytes(b'x')
-            self.assertEqual(review_panel.validate_walkthrough(value, Path(folder)), [])
+            self.assertEqual(code_review.validate_walkthrough(value, Path(folder)), [])
             self.assertIn('a reproduced finding needs its video',
-                          review_panel.validate_walkthrough({**value, 'video': None}, Path(folder)))
-            self.assertEqual(review_panel.validate_walkthrough({**value, 'outcome': 'not-reachable', 'video': None}, Path(folder)), [])
+                          code_review.validate_walkthrough({**value, 'video': None}, Path(folder)))
+            self.assertEqual(code_review.validate_walkthrough({**value, 'outcome': 'not-reachable', 'video': None}, Path(folder)), [])
 
     def test_repo_config_errors_name_the_problem(self):
         cases = {
@@ -408,37 +408,37 @@ class PureHelpers(unittest.TestCase):
             'mode append needs a built-in': {'reviewers/check-new.md': '---\nsummary: S\nmode: append\n---\nX\n'},
         }
         for message, files in cases.items():
-            with self.subTest(message), self.assertRaisesRegex(review_panel.PanelError, message):
-                review_panel.apply_repo_config(self.roster(), self.config_folder(files), '.fabrica/review-panel')
+            with self.subTest(message), self.assertRaisesRegex(code_review.PanelError, message):
+                code_review.apply_repo_config(self.roster(), self.config_folder(files), '.fabrica/5k-code-review')
 
     def test_save_settings_writes_only_a_folder_the_next_run_accepts(self):
         repo = Path(tempfile.mkdtemp())
-        folder = repo / '.fabrica' / 'review-panel'
-        roster = review_panel.save_settings(repo, None, {'reviewers/check-docs.md': '---\nmodel: sonnet\n---\nOur docs.\n'}, [])
+        folder = repo / '.fabrica' / '5k-code-review'
+        roster = code_review.save_settings(repo, None, {'reviewers/check-docs.md': '---\nmodel: sonnet\n---\nOur docs.\n'}, [])
         self.assertTrue((folder / 'reviewers' / 'check-docs.md').exists())
         docs = roster['all']['reviewers']['check-docs']
-        self.assertEqual((docs['file'], docs['agent']['model'], docs['file_body']), ('.fabrica/review-panel/reviewers/check-docs.md', 'sonnet', 'Our docs.'))
+        self.assertEqual((docs['file'], docs['agent']['model'], docs['file_body']), ('.fabrica/5k-code-review/reviewers/check-docs.md', 'sonnet', 'Our docs.'))
         self.assertTrue(docs['builtin'])
-        with self.assertRaisesRegex(review_panel.PanelError, 'a new reviewer needs a summary'):
-            review_panel.save_settings(repo, None, {'reviewers/check-new.md': 'Prompt only.\n'}, [])
+        with self.assertRaisesRegex(code_review.PanelError, 'a new reviewer needs a summary'):
+            code_review.save_settings(repo, None, {'reviewers/check-new.md': 'Prompt only.\n'}, [])
         self.assertFalse((folder / 'reviewers' / 'check-new.md').exists())
-        with self.assertRaisesRegex(review_panel.PanelError, 'can only write'):
-            review_panel.save_settings(repo, None, {'../escape.md': 'x'}, [])
-        roster = review_panel.save_settings(repo, None, {}, ['reviewers/check-docs.md'])
+        with self.assertRaisesRegex(code_review.PanelError, 'can only write'):
+            code_review.save_settings(repo, None, {'../escape.md': 'x'}, [])
+        roster = code_review.save_settings(repo, None, {}, ['reviewers/check-docs.md'])
         self.assertFalse((folder / 'reviewers' / 'check-docs.md').exists())
         self.assertEqual(roster['all']['reviewers']['check-docs']['source'], 'built-in')
 
     def test_front_matter_only_keeps_the_built_in_prompt(self):
         roster = self.roster()
-        review_panel.apply_repo_config(roster, self.config_folder({'reviewers/check-docs.md': '---\nmodel: sonnet\n---\n'}), '.fabrica/review-panel')
+        code_review.apply_repo_config(roster, self.config_folder({'reviewers/check-docs.md': '---\nmodel: sonnet\n---\n'}), '.fabrica/5k-code-review')
         self.assertEqual(roster['reviewers']['check-docs']['agent']['model'], 'sonnet')
         self.assertIn('Built-in docs focus.', roster['reviewers']['check-docs']['focus_text'])
-        with self.assertRaisesRegex(review_panel.PanelError, 'a new reviewer needs a prompt'):
-            review_panel.apply_repo_config(self.roster(), self.config_folder({'reviewers/check-new.md': '---\nsummary: S\n---\n'}), '.fabrica/review-panel')
+        with self.assertRaisesRegex(code_review.PanelError, 'a new reviewer needs a prompt'):
+            code_review.apply_repo_config(self.roster(), self.config_folder({'reviewers/check-new.md': '---\nsummary: S\n---\n'}), '.fabrica/5k-code-review')
 
     def test_roster_summary_keeps_reviewers_panel_yaml_leaves_out(self):
         repo = Path(tempfile.mkdtemp())
-        roster = review_panel.save_settings(repo, None, {'panel.yaml': 'reviewers:\n  - check-docs\n'}, [])
+        roster = code_review.save_settings(repo, None, {'panel.yaml': 'reviewers:\n  - check-docs\n'}, [])
         everyone = roster['all']['reviewers']
         self.assertEqual(list(everyone)[0], 'check-docs')
         self.assertTrue(everyone['check-docs']['included'])
@@ -447,8 +447,8 @@ class PureHelpers(unittest.TestCase):
 
     def test_settings_endpoint_needs_its_token_and_a_json_body(self):
         repo = Path(tempfile.mkdtemp())
-        state = review_panel.State(repo / 'state.json', {'roster': None, 'config': None})
-        server = review_panel.serve(state, repo, 0, 'tok', repo, None)
+        state = code_review.State(repo / 'state.json', {'roster': None, 'config': None})
+        server = code_review.serve(state, repo, 0, 'tok', repo, None)
         self.addCleanup(server.shutdown)
         base = f'http://127.0.0.1:{server.server_address[1]}'
         def post(path, body, kind='application/json'):
@@ -464,12 +464,12 @@ class PureHelpers(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(reply['roster']['reviewers']['check-docs']['agent']['effort'], 'max')
         self.assertTrue(reply['config']['found'])
-        self.assertTrue((repo / '.fabrica' / 'review-panel' / 'reviewers' / 'check-docs.md').exists())
+        self.assertTrue((repo / '.fabrica' / '5k-code-review' / 'reviewers' / 'check-docs.md').exists())
 
     def test_validate_synthesis_requires_scannable_conclusions(self):
         reviews = {'check-docs': REVIEW, 'check-rules': REVIEW}
         bad = [{'kind': 'maybe', 'headline': 'x' * 61, 'detail': 'y' * 201, 'findings': ['S9']}, 'A plain string']
-        problems = review_panel.validate_synthesis(self.synthesis(conclusions=bad), reviews)
+        problems = code_review.validate_synthesis(self.synthesis(conclusions=bad), reviews)
         for message in ('conclusions[0].kind must be one of fix, decide, check, note',
                         'conclusions[0].headline must be a few words under 60 characters',
                         'conclusions[0].detail must be one sentence under 200 characters, or null',
@@ -478,86 +478,86 @@ class PureHelpers(unittest.TestCase):
             self.assertIn(message, problems)
 
     def test_report_writes_conclusions_old_and_new(self):
-        self.assertEqual(review_panel.conclusion_line('Old style.'), '- Old style.')
+        self.assertEqual(code_review.conclusion_line('Old style.'), '- Old style.')
         item = {'kind': 'decide', 'headline': 'Who owns retries', 'detail': 'Both layers retry today.', 'findings': ['S2', 'S3']}
-        self.assertEqual(review_panel.conclusion_line(item), '- **Decide:** Who owns retries. Both layers retry today. (S2, S3)')
+        self.assertEqual(code_review.conclusion_line(item), '- **Decide:** Who owns retries. Both layers retry today. (S2, S3)')
 
     def test_normalize_synthesis_derives_raised_by_from_merges(self):
-        value = review_panel.normalize_synthesis(self.synthesis())
+        value = code_review.normalize_synthesis(self.synthesis())
         self.assertEqual(value['findings'][0]['raised_by'], ['check-docs', 'check-rules'])
 
     def test_normalize_derives_a_reviewers_verdict_from_its_findings(self):
-        self.assertEqual(review_panel.normalize(dict(REVIEW, verdict='pass'))['verdict'], 'blocking')
-        self.assertEqual(review_panel.normalize(dict(REVIEW, verdict='blocking', findings=[]))['verdict'], 'pass')
+        self.assertEqual(code_review.normalize(dict(REVIEW, verdict='pass'))['verdict'], 'blocking')
+        self.assertEqual(code_review.normalize(dict(REVIEW, verdict='blocking', findings=[]))['verdict'], 'pass')
 
     def test_extract_json_skips_an_example_before_another_language_block(self):
         text = 'Example:\n```json\n{"example": true}\n```\nCode:\n```python\nx = 1\n```\nResult:\n```json\n{"final": 1}\n```'
-        self.assertEqual(review_panel.extract_json(text), {'final': 1})
+        self.assertEqual(code_review.extract_json(text), {'final': 1})
 
     def test_validate_synthesis_rejects_a_merge_entry_that_is_not_a_name(self):
         value = self.synthesis()
         value['findings'][0]['merges'] = [{'reviewer': 'check-docs'}]
-        self.assertTrue(review_panel.validate_synthesis(value, {'check-docs': REVIEW}))
+        self.assertTrue(code_review.validate_synthesis(value, {'check-docs': REVIEW}))
 
     def test_validate_synthesis_rejects_fix_first_without_a_blocking_finding(self):
         value = self.synthesis(findings=[])
-        self.assertIn("verdict 'fix-first' needs a critical or high finding", review_panel.validate_synthesis(value, {}))
+        self.assertIn("verdict 'fix-first' needs a critical or high finding", code_review.validate_synthesis(value, {}))
 
     def test_validate_synthesis_rejects_questions_that_are_not_objects(self):
         value = self.synthesis(verdict='needs-decision', findings=[], questions=['Keep it?'])
-        self.assertIn('questions[0].question must be a non-empty string', review_panel.validate_synthesis(value, {}))
+        self.assertIn('questions[0].question must be a non-empty string', code_review.validate_synthesis(value, {}))
 
     def test_validate_synthesis_rejects_ready_with_a_blocking_finding(self):
-        problems = review_panel.validate_synthesis(self.synthesis(verdict='ready'), {'check-docs': REVIEW, 'check-rules': REVIEW})
+        problems = code_review.validate_synthesis(self.synthesis(verdict='ready'), {'check-docs': REVIEW, 'check-rules': REVIEW})
         self.assertIn("verdict can't be 'ready' while a finding is critical or high", problems)
 
     def test_severity_follows_impact_and_likelihood_not_the_sessions_label(self):
         cases = {('severe', 'common'): 'critical', ('severe', 'rare'): 'medium', ('significant', 'common'): 'high',
                  ('minor', 'uncommon'): 'low', ('cosmetic', 'common'): 'low'}
         for (impact, likelihood), want in cases.items():
-            self.assertEqual(review_panel.severity_of({'impact': impact, 'likelihood': likelihood}), want)
+            self.assertEqual(code_review.severity_of({'impact': impact, 'likelihood': likelihood}), want)
         claimed = dict(REVIEW, findings=[dict(REVIEW['findings'][0], severity='critical', impact='minor', likelihood='rare')])
-        value = review_panel.normalize(copy.deepcopy(claimed))
+        value = code_review.normalize(copy.deepcopy(claimed))
         self.assertEqual(value['findings'][0]['severity'], 'low')
         self.assertEqual(value['verdict'], 'concerns')
 
     def test_validate_review_requires_a_severity_reason(self):
         bad = copy.deepcopy(REVIEW)
         del bad['findings'][0]['severity_reason']
-        self.assertIn('findings[0].severity_reason must be a non-empty string', review_panel.validate_review(bad))
+        self.assertIn('findings[0].severity_reason must be a non-empty string', code_review.validate_review(bad))
 
     def test_set_archived_adds_and_removes_findings(self):
         data = {}
-        review_panel.set_archived(data, ['S:S1', 'R:check-docs:F2'], True)
+        code_review.set_archived(data, ['S:S1', 'R:check-docs:F2'], True)
         self.assertEqual(sorted(data['archived']), ['R:check-docs:F2', 'S:S1'])
-        review_panel.set_archived(data, ['S:S1'], False)
+        code_review.set_archived(data, ['S:S1'], False)
         self.assertEqual(list(data['archived']), ['R:check-docs:F2'])
         with self.assertRaises(ValueError):
-            review_panel.set_archived(data, ['../state.json'], True)
+            code_review.set_archived(data, ['../state.json'], True)
 
     def test_normalize_turns_a_whole_number_line_into_a_string(self):
-        value = review_panel.normalize({'findings': [{'line': 42}]})
+        value = code_review.normalize({'findings': [{'line': 42}]})
         self.assertEqual(value['findings'][0]['line'], '42')
 
     def test_codex_failure_event_raises_with_its_message(self):
         with self.assertRaisesRegex(RuntimeError, 'quota'):
-            review_panel.codex_event(json.dumps({'type': 'turn.failed', 'error': {'message': 'quota'}}), {})
+            code_review.codex_event(json.dumps({'type': 'turn.failed', 'error': {'message': 'quota'}}), {})
 
     def test_a_finding_may_name_the_rule_it_breaks(self):
         rule = {'id': 'local:techs/ts/extract-logic', 'file': '.trailguide/rules/techs/ts/extract-logic.md', 'quote': 'Keep logic in plain modules.'}
         review = {**REVIEW, 'findings': [{**REVIEW['findings'][0], 'rule': rule}]}
-        self.assertEqual(review_panel.validate_review(review), [])
+        self.assertEqual(code_review.validate_review(review), [])
         bad = {**REVIEW, 'findings': [{**REVIEW['findings'][0], 'rule': {'id': 'x'}}]}
-        self.assertTrue(any('rule must be' in p for p in review_panel.validate_review(bad)))
+        self.assertTrue(any('rule must be' in p for p in code_review.validate_review(bad)))
 
     def test_signed_out_claude_result_says_to_sign_in(self):
         event = {'type': 'result', 'subtype': 'success', 'is_error': True,
                  'result': 'Failed to authenticate. API Error: 401 OAuth session expired'}
         with self.assertRaisesRegex(RuntimeError, r'not signed in; run `claude auth login`'):
-            review_panel.claude_event(json.dumps(event), {})
+            code_review.claude_event(json.dumps(event), {})
 
     def test_other_claude_failures_keep_their_detail(self):
-        message = review_panel.claude_failure({'subtype': 'error_max_turns', 'result': ''})
+        message = code_review.claude_failure({'subtype': 'error_max_turns', 'result': ''})
         self.assertEqual(message, 'claude ended with error max turns')
 
 
@@ -594,7 +594,7 @@ class PanelRun(unittest.TestCase):
                        'FAKE_LOG': str(self.log), 'FAKE_REVIEW': json.dumps(REVIEW), **env}
         result = subprocess.run([sys.executable, str(SCRIPT), 'run', '--base', 'main', '--no-serve', *args],
                                 cwd=self.repo, env=environment, capture_output=True, text=True, timeout=120)
-        runs = sorted((self.repo / '.git' / 'review-panel').iterdir())
+        runs = sorted((self.repo / '.git' / '5k-code-review').iterdir())
         state = json.loads((runs[-1] / 'state.json').read_text())
         return result, state, runs[-1]
 
@@ -629,7 +629,7 @@ class PanelRun(unittest.TestCase):
         self.assertIn('Start the app with python3 app.py.', prompt)
 
     def test_prune_deletes_runs_whose_review_is_over(self):
-        root = self.repo / '.git' / 'review-panel'
+        root = self.repo / '.git' / '5k-code-review'
         head = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=self.repo, capture_output=True, text=True).stdout.strip()
         def make(name, target, age_days=0):
             folder = root / name
@@ -646,10 +646,10 @@ class PanelRun(unittest.TestCase):
         subprocess.run(['git', 'branch', '-q', 'merged-one', 'main'], cwd=self.repo, check=True)
         main_head = subprocess.run(['git', 'rev-parse', 'main'], cwd=self.repo, capture_output=True, text=True).stdout.strip()
         merged = make('d-merged', {'kind': 'local', 'branch': 'merged-one', 'head': main_head, 'base': 'feature'})
-        dry = review_panel.prune_runs(self.repo, 14, dry_run=True)
+        dry = code_review.prune_runs(self.repo, 14, dry_run=True)
         self.assertEqual({p.name for p, _, _ in dry}, {'b-gone', 'c-old', 'd-merged'})
         self.assertTrue(gone.exists())
-        removed = dict((p.name, reason) for p, reason, _ in review_panel.prune_runs(self.repo, 14))
+        removed = dict((p.name, reason) for p, reason, _ in code_review.prune_runs(self.repo, 14))
         self.assertEqual(removed['b-gone'], 'branch deleted-branch no longer exists')
         self.assertEqual(removed['c-old'], 'older than 14 days')
         self.assertEqual(removed['d-merged'], 'branch merged-one is merged into feature')
@@ -692,11 +692,11 @@ class PanelRun(unittest.TestCase):
         self.assertIn('range(len(items) - 1)', excerpt['lines'][1])
         self.assertEqual(state['target']['repo_name'], 'repo')
         self.assertIsNone(state['target']['github'])
-        self.assertIn('review_panel.py run --base main', state['target']['rerun'])
+        self.assertIn('code_review.py run --base main', state['target']['rerun'])
         # Claude Code reports its own cost; a Codex session is priced from its tokens with panel.json's list prices.
         self.assertEqual(state['reviewers']['check-docs']['usage']['cost'], 0.25)
         codex = state['reviewers']['check-correctness']
-        price = review_panel.model_prices()[codex['agent']['model']]
+        price = code_review.model_prices()[codex['agent']['model']]
         want = (400 * price['input'] + 100 * price['cached_input'] + 50 * price['output']) / 1_000_000
         self.assertAlmostEqual(codex['usage']['cost'], want)
         self.assertEqual(codex['session'], {'harness': 'codex', 'id': 't-1', 'cwd': str(run_dir / 'worktree')})
@@ -704,7 +704,7 @@ class PanelRun(unittest.TestCase):
 
     def test_repo_panel_folder_customizes_the_run(self):
         self.install('claude', FAKE_CLAUDE)
-        folder = self.repo / '.fabrica' / 'review-panel' / 'reviewers'
+        folder = self.repo / '.fabrica' / '5k-code-review' / 'reviewers'
         folder.mkdir(parents=True)
         (folder.parent / 'panel.yaml').write_text('reviewers:\n  - check-team\n')
         (folder / 'check-team.md').write_text('---\nsummary: Checks our team conventions\n---\nUse snake_case everywhere.\n')
@@ -712,7 +712,7 @@ class PanelRun(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertEqual(list(state['reviewers']), ['check-team'])
         entry = state['reviewers']['check-team']
-        self.assertEqual(entry['source'], 'added by .fabrica/review-panel/reviewers/check-team.md')
+        self.assertEqual(entry['source'], 'added by .fabrica/5k-code-review/reviewers/check-team.md')
         self.assertEqual(entry['focus'], 'Checks our team conventions')
         self.assertTrue(state['config']['found'])
         self.assertIn('Use snake_case everywhere.', (run_dir / 'reviewers' / 'check-team' / 'prompt-1.md').read_text())
@@ -835,7 +835,7 @@ class PanelRun(unittest.TestCase):
                                 cwd=self.repo, env=environment, capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertIn('nothing to review', result.stderr)
-        self.assertEqual(list((self.repo / '.git' / 'review-panel').iterdir()), [])
+        self.assertEqual(list((self.repo / '.git' / '5k-code-review').iterdir()), [])
 
 
 if __name__ == '__main__':
