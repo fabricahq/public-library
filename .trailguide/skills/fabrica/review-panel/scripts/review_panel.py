@@ -1505,7 +1505,8 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
             # from another site needs a CORS preflight, which this server never answers.
             archive = self.path == f'/{token}/archive'
             pick_org = self.path == f'/{token}/org' and repo is not None
-            if not archive and not pick_org and (self.path != f'/{token}/settings' or repo is None):
+            cancel = self.path == f'/{token}/cancel'
+            if not archive and not pick_org and not cancel and (self.path != f'/{token}/settings' or repo is None):
                 self.send_error(404)
                 return
             if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
@@ -1517,6 +1518,14 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
                 return
             try:
                 request = json.loads(self.rfile.read(min(int(self.headers.get('Content-Length', 0)), 2_000_000)))
+                if cancel:
+                    stop = getattr(self.server, 'cancel_run', None)
+                    if stop is None or state.data.get('status') != 'running':
+                        raise PanelError('this review is not running here, so there is nothing to stop')
+                    self.server.cancel_requested = True
+                    stop()  # Running sessions stop; the run finishes as cancelled and writes its report.
+                    self.reply(200, {'ok': True})
+                    return
                 if archive:
                     state.update(lambda data: set_archived(data, request.get('keys'), request.get('archived')))
                     (run_dir / 'report.html').write_text(standalone_html(state.snapshot()))
@@ -1839,6 +1848,8 @@ def review(args, repo, run_dir, target, code_dir, diff, extra, roster, reviewers
 
 def run_panel(args, run_dir, code_dir, state, server, context, files, roster, reviewers):
     panel = Panel(run_dir, code_dir, state, args.timeout, args.retries)
+    if server:
+        server.cancel_run = panel.cancel  # The page's Cancel button.
     signal.signal(signal.SIGINT, lambda signum, frame: panel.cancel())
     signal.signal(signal.SIGTERM, lambda signum, frame: panel.cancel())
 
@@ -1888,7 +1899,9 @@ def run_panel(args, run_dir, code_dir, state, server, context, files, roster, re
     (run_dir / 'report.html').write_text(standalone_html(final_json))
     (run_dir / 'report.md').write_text(report_markdown(json.loads(final_json)))
     if server:
-        wait_for_page(state, server, limit=0 if panel.cancelled.is_set() else 20)
+        # Stopped from the keyboard: don't keep the person waiting, but give an open page a moment to see the end.
+        stopped_here = panel.cancelled.is_set() and not getattr(server, 'cancel_requested', False)
+        wait_for_page(state, server, limit=3 if stopped_here else 20)
     print(f"Report: {run_dir / 'report.md'}")
     print(f"Standalone page: {run_dir / 'report.html'}")
     print(f'Status: {final_status}')

@@ -206,6 +206,33 @@ class PureHelpers(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
 
+    def test_the_page_can_stop_a_running_review(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = review_panel.State(Path(tmp) / 'state.json', {'status': 'running'})
+            server = review_panel.serve(state, Path(tmp), 0, 'tok')
+            try:
+                def post(path):
+                    request = urllib.request.Request(f'http://127.0.0.1:{server.server_address[1]}{path}', data=b'{}',
+                                                     headers={'Content-Type': 'application/json'}, method='POST')
+                    return urllib.request.urlopen(request, timeout=5)
+                with self.assertRaises(urllib.error.HTTPError) as caught:  # No run attached to this server.
+                    post('/tok/cancel')
+                self.assertEqual(caught.exception.code, 400)
+                stopped = []
+                server.cancel_run = lambda: stopped.append(True)
+                with self.assertRaises(urllib.error.HTTPError) as caught:
+                    post('/wrong/cancel')
+                self.assertEqual(caught.exception.code, 404)
+                self.assertEqual(json.loads(post('/tok/cancel').read()), {'ok': True})
+                self.assertEqual(stopped, [True])
+                state.update(lambda data: data.update(status='cancelled'))
+                with self.assertRaises(urllib.error.HTTPError):  # Already over.
+                    post('/tok/cancel')
+                self.assertEqual(stopped, [True])
+            finally:
+                server.shutdown()
+                server.server_close()
+
     def test_line_ranges_reads_the_shapes_reviewers_write(self):
         self.assertEqual(review_panel.line_ranges('42'), [(42, 42)])
         self.assertEqual(review_panel.line_ranges('472-484, 528'), [(472, 484), (528, 528)])

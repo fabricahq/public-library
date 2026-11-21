@@ -51,6 +51,17 @@ h1 { font-size: 14px; margin: 0; font-weight: 600; overflow: hidden; text-overfl
 #tb-links { display: inline-flex; align-items: center; gap: 4px; }
 .tb-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 4px 10px; font: 400 13px/1.5 var(--sans); color: var(--ink); cursor: pointer; white-space: nowrap; text-decoration: none; }
 .tb-btn:hover { background: var(--hover); }
+.tb-btn.quiet { color: var(--muted); cursor: default; }
+.tb-btn.quiet:hover { background: var(--panel); }
+.tb-menu-wrap, .tb-cancel-wrap { position: relative; }
+.tb-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 180px; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); }
+.tb-menu [role="menuitem"] { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 10px; border: 0; border-radius: 6px; background: none; font: 400 13.5px/1.4 var(--sans); color: var(--ink); cursor: pointer; text-align: left; }
+.tb-menu [role="menuitem"]:hover, .tb-menu [role="menuitem"]:focus-visible { background: var(--hover); outline: none; }
+.tb-menu svg.mi { width: 16px; height: 16px; flex: none; color: var(--muted); }
+.tb-confirm { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 300px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); font-size: 13px; white-space: normal; }
+.tb-confirm p { margin: 6px 0 10px; color: var(--muted); line-height: 1.45; }
+.tb-confirm .row-end { display: flex; justify-content: flex-end; gap: 8px; }
+.btn.danger { background: var(--block); border-color: var(--block); color: #fff; }
 .tb-btn svg { width: 14px; height: 14px; flex: none; }
 .tb-btn svg.gh { width: 15px; height: 15px; }
 .tb-actions { gap: 12px !important; }
@@ -640,8 +651,13 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
   <div class="tb-stats" id="tb-stats"></div>
   <div class="tb-actions">
     <span id="tb-links"></span>
-    <button type="button" class="tb-btn guide-btn" data-act="guide" aria-haspopup="dialog" aria-controls="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17.2h.01"/></svg><span class="lbl">Guide</span></button>
-    <button type="button" class="icon-btn round" data-act="settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <div class="tb-menu-wrap">
+      <button type="button" class="icon-btn round" id="tb-menu-btn" data-act="menu" aria-haspopup="menu" aria-expanded="false" aria-controls="tb-menu" aria-label="More" title="More"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      <div class="tb-menu" id="tb-menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-act="settings"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
+        <button type="button" role="menuitem" data-act="guide"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17.2h.01"/></svg>Guide</button>
+      </div>
+    </div>
   </div>
   <div class="progress"><div id="bar" style="width:0"></div></div>
 </header>
@@ -1618,6 +1634,33 @@ function renderCost() {
     <p class="note" style="margin:0">Claude Code works out its own sessions’ cost. Codex sessions are priced from their tokens with the skill’s panel.json${asOf}; a model it has no price for is left out of the total.</p>
   </div></div>`;
 }
+// Stopping a live run asks first, in the page (the viewer's frame refuses confirm()): every session still going
+// stops, and what finished is kept in the report.
+const STOP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>';
+function cancelControl() {
+  if (ui.cancelling) return `<span class="tb-btn quiet" aria-live="polite">${STOP_SVG}<span class="lbl">Stopping…</span></span>`;
+  const running = Object.values(state.reviewers).filter(r => ['queued', 'running'].includes(r.status)).length;
+  return `<span class="tb-cancel-wrap"><button type="button" class="tb-btn" data-act="cancel-ask" aria-haspopup="dialog" aria-expanded="${!!ui.confirmCancel}" title="Stop this review">${STOP_SVG}<span class="lbl">Cancel</span></button>
+    ${ui.confirmCancel ? `<div class="tb-confirm" role="dialog" aria-label="Stop the review?"><b>Stop the review?</b><p>${running ? `${plural(running, 'reviewer')} still working ${running === 1 ? 'stops' : 'stop'} now, and the synthesis won’t run.` : 'The synthesis stops now.'} Findings that already came in stay in the report.</p>
+      <div class="row-end"><button type="button" class="btn small" data-act="cancel-keep">Keep running</button><button type="button" class="btn small danger" data-act="cancel-run" id="cancel-run">Stop review</button></div></div>` : ''}</span>`;
+}
+async function cancelRun() {
+  ui.confirmCancel = false; ui.cancelling = true; renderChrome();
+  try {
+    const response = await fetch('cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const reply = await response.json().catch(() => ({}));
+    if (!response.ok || !reply.ok) throw new Error(reply.error || `the runner answered ${response.status}`);
+    toast('Stopping the review. What finished stays in the report.');
+  } catch (error) {
+    ui.cancelling = false; renderChrome();
+    toast(`Couldn’t stop the review: ${error.message}`);
+  }
+}
+function openMenu(open) {
+  const menu = document.getElementById('tb-menu'), btn = document.getElementById('tb-menu-btn');
+  menu.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+  if (open) menu.querySelector('[role="menuitem"]').focus();
+}
 function renderChrome() {
   const t = state.target;
   document.title = `Review panel: ${t.label}`;
@@ -1638,7 +1681,7 @@ function renderChrome() {
   const links = [
     t.url ? `<a class="tb-btn" href="${esc(t.url)}" target="_blank" rel="noopener" title="Open the pull request on GitHub"><svg class="gh" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg><span class="lbl">Open on GitHub ↗</span></a>` : '',
     costButton(),
-    t.rerun ? `<button type="button" class="tb-btn" data-act="rerun" title="Copy the command that reviews this change again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span class="lbl">Rerun${t.number ? ' #' + t.number : ''}</span></button>` : '',
+    LIVE && !terminal(state.status) ? cancelControl() : t.rerun ? `<button type="button" class="tb-btn" data-act="rerun" title="Copy the command that reviews this change again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span class="lbl">Rerun${t.number ? ' #' + t.number : ''}</span></button>` : '',
   ].join('');
   const linksBox = document.getElementById('tb-links');
   if (linksBox.dataset.html !== links) { linksBox.innerHTML = links; linksBox.dataset.html = links; }
@@ -1812,6 +1855,8 @@ document.addEventListener('click', async event => {
   const copyBtn = t.closest('[data-copy]');
   if (copyBtn) { const ok = await copy(state.reviewers[ui.view].prompt, null, copyBtn); if (!ok) copyBtn.textContent = 'Select and copy below'; return; }
   const act = t.closest('[data-act]');
+  if (!t.closest('.tb-menu-wrap') && !document.getElementById('tb-menu').hidden) openMenu(false);
+  if (ui.confirmCancel && !t.closest('.tb-cancel-wrap')) { ui.confirmCancel = false; renderChrome(); }
   if (act) {
     const a = act.dataset.act;
     if (a === 'close' && t !== act && act.classList.contains('overlay')) return;
@@ -1825,6 +1870,11 @@ document.addEventListener('click', async event => {
     if (a === 'archived-view') { ui.archivedView = !ui.archivedView; renderPane(true); return; }
     if (a === 'archive-picked') { await setArchived([...ui.picked], true); return; }
     if (a === 'detail-copy') { await copy(handoffText([findRow(ui.detail)]), document.getElementById('fw-note'), act); return; }
+    if (a === 'menu') { openMenu(document.getElementById('tb-menu').hidden); return; }
+    if (act.closest('#tb-menu')) openMenu(false);
+    if (a === 'cancel-ask') { ui.confirmCancel = !ui.confirmCancel; renderChrome(); if (ui.confirmCancel) document.getElementById('cancel-run')?.focus(); return; }
+    if (a === 'cancel-keep') { ui.confirmCancel = false; renderChrome(); document.querySelector('[data-act="cancel-ask"]')?.focus(); return; }
+    if (a === 'cancel-run') { await cancelRun(); return; }
     if (a === 'settings') { openSettings(true); return; }
     if (a === 'copy-session') { await copy(act.dataset.command, null, act); return; }
     if (a === 'cost') { ui.costOpen = true; renderCost(); document.querySelector('#cost .btn[data-act="cost-close"]')?.focus(); return; }
@@ -1875,6 +1925,12 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Enter' && event.target.matches('tr.row')) { openDetail(event.target.dataset.key); return; }
   if (event.key === ' ' && event.target.matches('tr.row')) { event.preventDefault(); const key = event.target.dataset.key; togglePick(key); document.querySelector(`#pane tr.row[data-key="${CSS.escape(key)}"]`)?.focus(); return; }
   if (!document.getElementById('guide').hidden && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) { showGuide(guideAt + (event.key === 'ArrowRight' ? 1 : -1)); return; }
+  if (!document.getElementById('tb-menu').hidden && event.key === 'Escape') { openMenu(false); document.getElementById('tb-menu-btn').focus(); return; }
+  if (!document.getElementById('tb-menu').hidden && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+    const items = [...document.querySelectorAll('#tb-menu [role="menuitem"]')]; const at = items.indexOf(document.activeElement);
+    event.preventDefault(); items[(at + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); return;
+  }
+  if (ui.confirmCancel && event.key === 'Escape') { ui.confirmCancel = false; renderChrome(); document.querySelector('[data-act="cancel-ask"]')?.focus(); return; }
   if (!closeKey) return;
   if (ui.costOpen) { event.preventDefault(); ui.costOpen = false; renderCost(); return; }
   if (settings.open) { event.preventDefault(); if (settings.editing !== null && event.key === 'Escape' && !event.target.matches('textarea, input, select')) { settings.editing = null; renderSettings(); } else openSettings(false); return; }
@@ -2462,7 +2518,7 @@ function openSettings(open) {
   if (open) loadConfig();
   renderSettings();
   if (open) { const first = document.querySelector('#settings [aria-current="page"]'); if (first) first.focus(); }
-  else document.querySelector('[data-act="settings"]').focus();
+  else document.getElementById('tb-menu-btn').focus();
 }
 async function saveSettings(extra) {
   const pending = pendingChanges();
@@ -2638,7 +2694,7 @@ function openGuide(open) {
   guide.hidden = !open;
   document.querySelector('.guide-shade').hidden = !open;
   if (open) guide.querySelector('[data-act="guide-close"]').focus();
-  else document.querySelector('.guide-btn').focus();
+  else document.getElementById('tb-menu-btn').focus();
 }
 // The guide shows one section at a time: the chips jump to a section, Previous and Next step through them.
 let guideAt = 0;
