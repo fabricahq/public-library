@@ -149,7 +149,8 @@ code, .mono { font-family: var(--mono); font-size: 12px; }
 /* Copy a column's name: quiet until its row is pointed at or focused. */
 .copy-col { all: unset; box-sizing: border-box; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: var(--faint); cursor: pointer; opacity: 0; transition: opacity .12s, background .12s, color .12s; align-self: center; }
 .copy-col svg { width: 13px; height: 13px; }
-.col:hover .copy-col, .colrow:hover .copy-col, .copy-col:focus-visible, .copy-col.done { opacity: 1; }
+.col:hover .copy-col, .colrow:hover .copy-col, .win-bar:hover .copy-col, .copy-col:focus-visible, .copy-col.done { opacity: 1; }
+.win-bar .copy-col { opacity: .6; flex: none; }
 .copy-col:hover { background: var(--line); color: var(--ink); }
 .copy-col:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .copy-col.done { color: var(--new); }
@@ -518,7 +519,7 @@ body.chat-resizing { cursor: col-resize; user-select: none; }
 <div class="app">
   <header class="toolbar">
     <button class="tool-btn menu-toggle" id="menuToggle" aria-label="Sections">☰</button>
-    <h1 class="brand"><svg class="brand-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2 3"/><path d="M2.5 20 9 10l3.5 5 2.5-3.5 6.5 8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>PR5K</span></h1>
+    <h1 class="brand"><svg class="brand-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4.5h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2 3"/><path d="M2.5 20 9 10l3.5 5 2.5-3.5 6.5 8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>5K PR Review</span></h1>
     <span class="pr-num" id="prNum"></span>
     <span class="pr-title" id="prTitle"></span>
     <a class="tool-btn open-gh" id="prLink" target="_blank" rel="noopener noreferrer"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Open on GitHub ↗</a>
@@ -616,8 +617,8 @@ function applyTheme(v) {
 }
 function isDark() { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; }
 function previewSrc(url) { return url + (url.includes('?') ? '&' : '?') + 'theme=' + (isDark() ? 'dark' : 'light'); }
-function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('pr5k-theme', v); } catch (e) {} onThemeChange?.(); }
-try { const saved = localStorage.getItem('pr5k-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
+function setTheme(v) { theme = v; applyTheme(v); try { localStorage.setItem('5k-pr-review-theme', v); } catch (e) {} onThemeChange?.(); }
+try { const saved = localStorage.getItem('5k-pr-review-theme'); if (THEME_ICONS[saved]) { theme = saved; applyTheme(saved); } } catch (e) {}
 /* Which tab a detail window opens on, chosen per section and kept per browser. A window without that tab opens on its first. */
 const WINDOW_TABS = {
   database: { label: 'Database', tabs: [['summary', 'Summary'], ['columns', 'Columns or Changes'], ['examples', 'Examples'], ['migrated', 'Before and after'], ['rules', 'Rules and access'], ['migrations', 'Migrations']] },
@@ -627,18 +628,18 @@ const WINDOW_TABS = {
 const OPEN_TAB_DEFAULTS = { database: 'summary', backend: 'summary', frontend: 'preview' };
 let openTabs = { ...OPEN_TAB_DEFAULTS };
 try {
-  const saved = JSON.parse(localStorage.getItem('pr5k-open-tabs') || 'null');
+  const saved = JSON.parse(localStorage.getItem('5k-pr-review-open-tabs') || 'null');
   if (saved && typeof saved === 'object') {
     for (const k in WINDOW_TABS) if (WINDOW_TABS[k].tabs.some(([v]) => v === saved[k])) openTabs[k] = saved[k];
-  } else if (localStorage.getItem('pr5k-open-tab') === 'fields') openTabs = { database: 'columns', backend: 'props', frontend: 'props' };
+  } else if (localStorage.getItem('5k-pr-review-open-tab') === 'fields') openTabs = { database: 'columns', backend: 'props', frontend: 'props' };
 } catch (e) {}
-function setOpenTabs(next) { openTabs = { ...openTabs, ...next }; try { localStorage.setItem('pr5k-open-tabs', JSON.stringify(openTabs)); } catch (e) {} }
+function setOpenTabs(next) { openTabs = { ...openTabs, ...next }; try { localStorage.setItem('5k-pr-review-open-tabs', JSON.stringify(openTabs)); } catch (e) {} }
 
 /* Toolbar. */
 const pr = D.pr;
 
 /* Personas: who the product serves, from the project's settings file. Edits here stay in this browser until copied back into it. */
-const PERSONA_KEY = 'pr5k-personas:' + pr.repo;
+const PERSONA_KEY = '5k-pr-review-personas:' + pr.repo;
 const filePersonas = D.personas || [];
 let personas = filePersonas;
 try { const saved = JSON.parse(localStorage.getItem(PERSONA_KEY)); if (Array.isArray(saved)) personas = saved; } catch (e) {}
@@ -650,7 +651,7 @@ function redrawOverview() { if (currentSection() !== 'overview') return; const d
 function savePersonas() { try { localStorage.setItem(PERSONA_KEY, JSON.stringify(personas)); } catch (e) {} redrawOverview(); }
 /* Catalog: an optional component catalog the project keeps, which the skill shows instead of building its own previews.
    Off unless the settings file turns it on; edits here stay in this browser until copied back into it. */
-const CATALOG_KEY = 'pr5k-catalog:' + pr.repo;
+const CATALOG_KEY = '5k-pr-review-catalog:' + pr.repo;
 const fileCatalog = { enabled: false, path: '', url: '', about: '', ...(D.catalog || {}) };
 let catalog = fileCatalog;
 try { const saved = JSON.parse(localStorage.getItem(CATALOG_KEY)); if (saved && typeof saved === 'object') catalog = { ...fileCatalog, ...saved }; } catch (e) {}
@@ -658,12 +659,12 @@ function saveCatalog() { try { localStorage.setItem(CATALOG_KEY, JSON.stringify(
 const settingsEdited = () => { try { return !!(localStorage.getItem(PERSONA_KEY) || localStorage.getItem(CATALOG_KEY)); } catch (e) { return false; } };
 function settingsYaml() {
   const q = v => JSON.stringify(v ?? '');
-  return `# Settings for the pr5k skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`
+  return `# Settings for the 5k-pr-review skill.\n# personas: who the product serves. The canvas says which of them each change reaches.\npersonas:\n${personas.map(p => `  - id: ${q(p.id)}\n    name: ${q(p.name)}\n    group: ${q(p.group || '')}\n    about: ${q(p.about || '')}`).join('\n')}\n`
     + `# catalog: a component catalog the project keeps. When enabled, the canvas shows its components from it, live,\n# instead of building previews of its own. url may hold {pr} and {sha}, filled in for the PR under review.\ncatalog:\n  enabled: ${catalog.enabled ? 'true' : 'false'}\n  path: ${q(catalog.path)}\n  url: ${q(catalog.url)}\n  about: ${q(catalog.about)}\n`;
 }
 /* A prompt that sets up a catalog the skill can use, for an agent working in the repository. */
 function catalogSetupPrompt() {
-  return [`You are working in ${pr.repo}. Add a component catalog: one page that renders any of the app's components in each of its states, so people and the pr5k skill can look at and use components without running the whole app.`, '',
+  return [`You are working in ${pr.repo}. Add a component catalog: one page that renders any of the app's components in each of its states, so people and the 5k-pr-review skill can look at and use components without running the whole app.`, '',
     'What the catalog must do:',
     '- Render one component per URL: ?c=<ComponentName>&s=<state index>. &theme=light or dark picks the theme, and &shot=1 hides everything but the component, for screenshots. With no c, list every component and its states.',
     '- Keep each component\'s states next to it in the repository, in a file that follows one naming rule, so adding a component means adding one file. A state has a name and renders the component with sample data.',
@@ -671,7 +672,7 @@ function catalogSetupPrompt() {
     '- Build with the app\'s own build tool, styles and providers, so components look exactly as they do in the app.',
     '- Type-check the catalog with the rest of the code, and add a test that renders every state and fails on an error, so a change to a component that breaks its states fails CI.',
     '- Deploy it with each pull request\'s preview, at a URL that names the PR, so it always shows the PR\'s latest code.', '',
-    'Then turn it on for pr5k in .pr5k/settings.yaml at the repository root:',
+    'Then turn it on for 5k-pr-review in .5k/pr-review.yaml at the repository root:',
     'catalog:', '  enabled: true', '  path: "<folder that holds the catalog\'s entry and fake API>"', '  url: "<the deployed catalog for a PR, with {pr} where the PR number goes>"',
     '  about: "<a few sentences: how a component\'s states file is named and found, what a state holds, and anything a component needs to be catalogued>"', '',
     "Follow the repository's agent instructions (AGENTS.md or CLAUDE.md) and its engineering rules. Start with the components the open pull requests change, and say in your report which components have no states yet."].join('\n');
@@ -707,7 +708,7 @@ function openSettings(section = 'personas') {
       <p class="hint" style="margin-top:8px">A window without that tab opens on its first tab.</p>
       <button class="tool-btn" data-open-all="summary" style="margin-top:12px">Open all on Summary</button></section>`;
   };
-  const settingsFoot = () => { const edited = settingsEdited(); return `<footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.pr5k/settings.yaml</code> in the repository.'}</span>
+  const settingsFoot = () => { const edited = settingsEdited(); return `<footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.5k/pr-review.yaml</code> in the repository.'}</span>
         ${edited ? '<button class="link" data-reset>Undo my edits</button>' : ''}<button class="tool-btn" data-copy-settings>Copy settings file</button></footer>`; };
   let catalogEditing = false;
   const drawCatalog = () => {
@@ -766,8 +767,8 @@ function openSettings(section = 'personas') {
     else if (t.hasAttribute('data-reset')) { personas = filePersonas; catalog = fileCatalog; try { localStorage.removeItem(PERSONA_KEY); localStorage.removeItem(CATALOG_KEY); } catch (x) {} redrawOverview(); editing = null; catalogEditing = false; draw(); }
     else if (t.hasAttribute('data-copy-settings')) {
       const msg = $('[data-msg]', main);
-      try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.pr5k/settings.yaml</code> at the repository root and commit it.'; }
-      catch (x) { msg.innerHTML = `Copy this into <code>.pr5k/settings.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
+      try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.5k/pr-review.yaml</code> at the repository root and commit it.'; }
+      catch (x) { msg.innerHTML = `Copy this into <code>.5k/pr-review.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
     }
   });
 }
@@ -782,7 +783,7 @@ $('#prLink').href = pr.url;
   const btn = $('#rescanBtn'), label = $('span', btn), idle = `Rescan #${pr.number}`, idleTitle = 'Ask the agent that built this canvas to rescan the PR and republish it';
   const ICON_RESCAN = btn.querySelector('svg').outerHTML;
   const ICON_SPIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" /></svg>';
-  const pendingKey = `pr5k-rescan:${pr.repo}#${pr.number}`;
+  const pendingKey = `5k-pr-review-rescan:${pr.repo}#${pr.number}`;
   const readPending = () => { try { return JSON.parse(localStorage.getItem(pendingKey)); } catch (e) { return null; } };
   const setPending = v => { try { v ? localStorage.setItem(pendingKey, JSON.stringify(v)) : localStorage.removeItem(pendingKey); } catch (e) {} };
   const say = (text, title) => { label.textContent = text; btn.title = title; };
@@ -835,7 +836,7 @@ const WIN_ICONS = {
   close: '<svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
 };
 let lastSize = { w: 560 };
-try { const v = JSON.parse(localStorage.getItem('pr5k-window') || 'null'); if (v?.w) lastSize = v; } catch (e) {}
+try { const v = JSON.parse(localStorage.getItem('5k-pr-review-window') || 'null'); if (v?.w) lastSize = v; } catch (e) {}
 const host = () => $('#main');
 function hostBox() { const h = host(); return { w: h.clientWidth, h: h.clientHeight }; }
 function minW() { return Math.min(WIN_MIN_W, hostBox().w - 24); }
@@ -855,12 +856,12 @@ function place(el, g) {
   g.x = Math.min(Math.max(g.x, 8 - g.w + 120), b.w - 120); g.y = Math.min(Math.max(g.y, 8), b.h - 44);
   Object.assign(el.style, { left: g.x + 'px', top: g.y + 'px', width: g.w + 'px', height: g.h + 'px' });
 }
-function rememberSize(g) { lastSize = { w: Math.round(g.w) }; try { localStorage.setItem('pr5k-window', JSON.stringify(lastSize)); } catch (e) {} }
+function rememberSize(g) { lastSize = { w: Math.round(g.w) }; try { localStorage.setItem('5k-pr-review-window', JSON.stringify(lastSize)); } catch (e) {} }
 function toggleMax(w) {
   const on = !w.el.classList.contains('max'); w.el.classList.toggle('max', on);
   const b = $('[data-act="max"]', w.el); b.innerHTML = on ? WIN_ICONS.restore : WIN_ICONS.max; b.setAttribute('aria-label', on ? 'Restore window size' : 'Fill the canvas');
 }
-function openWindow({ id, title, status, statusWord, kind, file, body, tabs, wide, section }) {
+function openWindow({ id, title, status, statusWord, kind, file, body, tabs, wide, section, copy }) {
   id = id || selectedId || title;
   if (wins.has(id)) { focusWin(wins.get(id).el); return wins.get(id).el; }
   tabs = (tabs || [{ id: 'details', label: 'Details', html: body }]).filter(t => t.html);
@@ -869,7 +870,7 @@ function openWindow({ id, title, status, statusWord, kind, file, body, tabs, wid
   el.className = 'win'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
   const meta = [kind, file].filter(Boolean).join(' · ');
   el.innerHTML = `<header class="win-bar" tabindex="0" title="Drag to move. Double-click to fill the canvas. Arrow keys move it; Shift and arrow keys resize it.">
-      <span class="win-title">${esc(title)}</span>${pill(status, statusWord)}<span class="win-kind">${esc(meta)}</span>
+      <span class="win-title">${esc(title)}</span>${copy ? copyBtn(copy, 'Copy name') : ''}${pill(status, statusWord)}<span class="win-kind">${esc(meta)}</span>
       <div class="win-actions"><button data-act="max" aria-label="Fill the canvas">${WIN_ICONS.max}</button><button data-act="close" aria-label="Close" title="Close (Esc or Option+W)">${WIN_ICONS.close}</button></div></header>
     ${tabs.length > 1 ? `<div class="win-tabs" role="tablist">${tabs.map((t, i) => `<button role="tab" aria-selected="${i === first}" data-tab="${esc(t.id)}">${t.label}</button>`).join('')}</div>` : ''}
     ${tabs.map((t, i) => `<div class="win-body" data-pane="${esc(t.id)}" role="tabpanel"${i !== first ? ' hidden' : ''}><div class="insp-body">${t.html}</div></div>`).join('')}
@@ -1084,7 +1085,7 @@ function separateNodes(nodes, gap = 56) {
     n.style.top = y + 'px'; placed.push({ l, r: l + w, t: y, b: y + h });
   });
 }
-const layoutStoreKey = key => `pr5k-layout:${D.pr?.repo || ''}#${D.pr?.number || ''}:${key}`;
+const layoutStoreKey = key => `5k-pr-review-layout:${D.pr?.repo || ''}#${D.pr?.number || ''}:${key}`;
 function readLayout(key) { try { return JSON.parse(localStorage.getItem(layoutStoreKey(key))) || {}; } catch (e) { return {}; } }
 function applyLayout(key) {
   const saved = readLayout(key);
@@ -1100,10 +1101,11 @@ function resetLayout(key) {
   world.querySelectorAll('.node').forEach(n => { n.style.left = n.dataset.x0 + 'px'; n.style.top = n.dataset.y0 + 'px'; });
   sizeWorld(); drawEdges(boardEdges);
 }
-/* A button that copies a column's name, used on the board and in a table's window. */
+/* A button that copies a name: a column as table.column, on the board and in a table's window, or a window's own name. */
 const COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 3.5v-.5A1.5 1.5 0 0 0 9 1.5H3A1.5 1.5 0 0 0 1.5 3v6A1.5 1.5 0 0 0 3 10.5h.5" stroke="currentColor" stroke-width="1.4"/></svg>';
 const DONE_ICON = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const copyBtn = name => `<button type="button" class="copy-col" data-copy="${esc(name)}" aria-label="Copy ${esc(name)}" title="Copy column name">${COPY_ICON}</button>`;
+const copyBtn = (text, label = 'Copy column name') => `<button type="button" class="copy-col" data-copy="${esc(text)}" data-copy-label="${esc(label)}" aria-label="Copy ${esc(text)}" title="${esc(label)}">${COPY_ICON}</button>`;
+const columnRef = (table, col) => col.split(' / ').map(k => `${table}.${k}`).join(', ');
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch {}
   const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
@@ -1117,7 +1119,7 @@ document.addEventListener('click', async e => {
   const ok = await copyText(b.dataset.copy);
   b.innerHTML = ok ? DONE_ICON : COPY_ICON; b.classList.toggle('done', ok);
   b.setAttribute('aria-label', ok ? `Copied ${b.dataset.copy}` : `Couldn't copy ${b.dataset.copy}`); b.title = ok ? 'Copied' : "Couldn't copy";
-  clearTimeout(b._t); b._t = setTimeout(() => { b.innerHTML = COPY_ICON; b.classList.remove('done'); b.setAttribute('aria-label', `Copy ${b.dataset.copy}`); b.title = 'Copy column name'; }, 1400);
+  clearTimeout(b._t); b._t = setTimeout(() => { b.innerHTML = COPY_ICON; b.classList.remove('done'); b.setAttribute('aria-label', `Copy ${b.dataset.copy}`); b.title = b.dataset.copyLabel; }, 1400);
 }, true);
 document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-copy]')) e.stopPropagation(); }, true);
 function selectNode(id) {
@@ -1214,7 +1216,7 @@ const views = {
     mountBoard(() => {
       if (db.summary) { const el = placeText('board-intro', db.summary, 0, 0); el.style.width = '1180px'; }
       db.tables.forEach(t => {
-        const cols = t.columns.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span>${copyBtn(c.name)}</li>`).join('');
+        const cols = t.columns.map(c => `<li class="col ${esc(c.status)}" data-col="${esc(c.name)}"><span class="m">${MARK[c.status] || ''}</span><span class="n">${esc(c.name)}${c.from ? ` <span class="from">← ${esc(c.from)}</span>` : ''}${c.ref ? ` <span class="ref">→ ${esc(c.ref)}</span>` : ''}</span><span class="t">${esc(c.type)}</span>${copyBtn(columnRef(t.name, c.name))}</li>`).join('');
         const foot = [t.policies?.length ? `${t.policies.length} access ${t.policies.length > 1 ? 'policies' : 'policy'}` : '', t.constraints?.length ? `${t.constraints.length} ${t.constraints.length > 1 ? 'rules' : 'rule'}` : '', t.examples?.length ? `${t.examples.length} example rows` : '', t.migrations?.length ? `migr. ${t.migrations.join(', ')}` : ''].filter(Boolean);
         const html = `<div class="node-head"><span class="node-title">${esc(t.name)}</span>${pill(t.status)}</div><ul class="cols">${cols}</ul>${foot.length ? `<div class="node-foot">${foot.map(esc).join('<span>·</span>')}</div>` : ''}`;
         placeNode(html, t.x, t.y + 70, t.id, `table st-${t.status}`);
@@ -1536,7 +1538,7 @@ function inspectTable(t, db) {
   const changedCols = isNew ? shown : shown.filter(c => c.status !== 'same');
   const marks = {}; t.columns.forEach(c => { if (c.status !== 'same') c.name.split(' / ').forEach(n => { marks[n] = c.status; }); });
   const colKeys = c => c.name.split(' / ').filter(k => (t.examples || []).some(r => k in r));
-  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top"><span class="colname${c.status === 'removed' ? ' gone' : ''}">${esc(c.name)}</span>${copyBtn(c.name)}${c.status === 'removed' ? pill('removed') : ''}${c.from ? `<span class="was"><span class="arrow" aria-label="renamed from">←</span> <span class="colname old">${esc(c.from)}</span></span>` : ''}<span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
+  const colRow = c => `<div class="colrow"${colKeys(c).length ? ` role="button" tabindex="0" data-col="${esc(colKeys(c)[0])}" title="Show it in the examples"` : ''}><div class="colrow-top"><span class="colname${c.status === 'removed' ? ' gone' : ''}">${esc(c.name)}</span>${copyBtn(columnRef(t.name, c.name))}${c.status === 'removed' ? pill('removed') : ''}${c.from ? `<span class="was"><span class="arrow" aria-label="renamed from">←</span> <span class="colname old">${esc(c.from)}</span></span>` : ''}<span class="ty">${esc(c.type)}${c.ref ? ` → ${esc(c.ref)}` : ''}</span></div>${c.note ? `<div class="colrow-note">${md(c.note)}</div>` : ''}${colValues(c)}</div>`;
   const COL_GROUPS = [['New', ['new']], ['Renamed', ['renamed']], ['Changed', ['changed']], ['Removed', ['removed']], ['Unchanged', ['same']]];
   const cols = !shown.length ? '' : isNew ? `<div class="colgroup"><div class="collist">${shown.map(colRow).join('')}</div></div>`
     : COL_GROUPS.map(([label, sts]) => { const cs = shown.filter(c => sts.includes(c.status)); return cs.length ? `<section class="colgroup"><h3><span class="dot st-${sts[0]}"></span>${label} <span class="tab-n">${cs.length}</span></h3><div class="collist">${cs.map(colRow).join('')}</div></section>` : ''; }).join('');
@@ -1548,7 +1550,7 @@ function inspectTable(t, db) {
   const ex = t.examples?.length ? `<p class="hint" style="margin-bottom:8px">Loaded into the migrated schema and accepted by its constraints. Names beside ids are the example people${isNew ? '' : '; tinted fields are new or changed'}.</p>${t.examples.map((r, i) => `<div class="ex-row"><div class="ex-cap">${i + 1}. ${esc(rowCap(r))}</div>${kvTable(r, isNew ? {} : marks)}</div>`).join('')}` : '';
   const dmd = db.dataMigration?.table === t.id && db.dataMigration;
   const dm = dmd ? `<section><h3>${esc(dmd.title)}</h3>${bullets(dmd.explain)}</section>${lineDiff(JSON.stringify(dmd.before, null, 2), JSON.stringify(dmd.after, null, 2))}` : '';
-  const win = openWindow({ title: t.name, status: t.status, kind: 'Table', section: 'database', tabs: [
+  const win = openWindow({ title: t.name, copy: t.name, status: t.status, kind: 'Table', section: 'database', tabs: [
     { id: 'summary', label: 'Summary', html: `<section><h3>Each row is</h3><p>${md(t.row || t.purpose)}</p></section>${points(t.status === 'context' ? 'Why it is shown' : 'What this PR changes', t.explain)}` },
     { id: 'columns', label: tabLabel(isNew ? 'Columns' : 'Changes', changedCols), html: cols },
     { id: 'examples', label: tabLabel('Examples', t.examples), html: ex },
@@ -1889,12 +1891,12 @@ function chatPrompt(q) {
 function setChatOpen(open) {
   $('.app').classList.toggle('chat-open', open);
   $('#chat').hidden = !open; $('#chatBtn').setAttribute('aria-expanded', String(open));
-  try { localStorage.setItem('pr5k-chat', open ? '1' : ''); } catch (e) {}
+  try { localStorage.setItem('5k-pr-review-chat', open ? '1' : ''); } catch (e) {}
   if (open) $('#chat textarea').focus();
 }
 /* Drag the chat's left edge to widen it; the width is kept per browser. Double-click resets it. */
 function initChatResize(panel) {
-  const app = $('.app'), KEY = 'pr5k-chat-w';
+  const app = $('.app'), KEY = '5k-pr-review-chat-w';
   const clamp = w => Math.round(Math.max(320, Math.min(w, innerWidth * 0.7, innerWidth - 420)));
   const setW = (w, keep) => {
     if (w == null) { app.style.removeProperty('--chat-w'); try { localStorage.removeItem(KEY); } catch (e) {} return; }
@@ -1970,7 +1972,7 @@ function initChat() {
   });
   $('#chatBtn').addEventListener('click', () => setChatOpen(panel.hidden));
   initChatResize(panel);
-  let saved = ''; try { saved = localStorage.getItem('pr5k-chat') || ''; } catch (e) {}
+  let saved = ''; try { saved = localStorage.getItem('5k-pr-review-chat') || ''; } catch (e) {}
   if (saved && innerWidth > 820) { $('.app').classList.add('chat-open'); panel.hidden = false; $('#chatBtn').setAttribute('aria-expanded', 'true'); }
 }
 initChat();

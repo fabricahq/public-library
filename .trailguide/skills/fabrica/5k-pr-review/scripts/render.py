@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a PR5K snapshot (JSON) into one self-contained HTML page.
+"""Render a 5K PR review snapshot (JSON) into one self-contained HTML page.
 
 Usage: render.py SNAPSHOT.json OUT.html
 """

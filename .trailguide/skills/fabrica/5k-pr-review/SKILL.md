@@ -1,16 +1,16 @@
 ---
-name: pr5k
-description: Build PR5K, a 5,000-foot view of a pull request on one canvas, so a reviewer sees its big picture before its details. Use when someone wants to review a PR's schema changes, entities, architecture decisions, design-principle fit, verification and dead code rather than its lines.
+name: 5k-pr-review
+description: Build a 5K PR review, a 5,000-foot view of a pull request on one canvas, so a reviewer sees its big picture before its details. Use when someone wants to review a PR's schema changes, entities, architecture decisions, design-principle fit, verification and dead code rather than its lines.
 metadata:
   trailguide-skill-type: review
-  display-name: PR5K
+  display-name: 5K PR Review
   short-description: Review the big picture of a pull request
-  default-prompt: Use $pr5k to show me the big picture of this pull request.
+  default-prompt: Use $5k-pr-review to show me the big picture of this pull request.
 ---
 
-# PR5K
+# 5K PR Review
 
-PR5K is the 5,000-foot view of a pull request: high enough to see the shape of the change, low enough to make out its tables, entities and decisions.
+A 5K PR review is the 5,000-foot view of a pull request: high enough to see the shape of the change, low enough to make out its tables, entities and decisions.
 
 Help a reviewer understand a pull request: what it created, what it changed, how the pieces relate, and how it was verified. This is not a bug review. Never report defects as findings; adversarial code review covers that. Describe what is there, with literal examples, so the reviewer gets a feel for how it works.
 
@@ -21,7 +21,7 @@ The output is one self-contained page: a section rail, a pannable canvas, and an
 1. Read the PR: title, body, base and head branches, the stack it sits on, stats, commits, review comments and CI status. Read the repository's planning or decision records the PR touches; they are the best source for why.
 2. Diff base against head. Work from the merge base (`git diff base...head`).
 3. If you are the agent that built the PR, collect your own verification from this session. Otherwise take it from the PR body, commits and comments, and say so in `verification.agentNote`.
-4. Read the project's personas from `.pr5k/settings.yaml` at the repository root and copy them into the snapshot's `personas`, so the page's Settings window shows them. Use them to write descriptions in the product's own terms: name a persona when a change matters to particular people ("Field agents can now..."), and otherwise say "users". If the file is missing, say "users"; never invent personas. Copy its `catalog` block into the snapshot's `catalog` as well; it is off unless the file turns it on. The file is optional: without it the skill runs with no personas and no catalog.
+4. Read the project's personas from `.5k/pr-review.yaml` at the repository root and copy them into the snapshot's `personas`, so the page's Settings window shows them. Use them to write descriptions in the product's own terms: name a persona when a change matters to particular people ("Field agents can now..."), and otherwise say "users". If the file is missing, say "users"; never invent personas. Copy its `catalog` block into the snapshot's `catalog` as well; it is off unless the file turns it on. The file is optional: without it the skill runs with no personas and no catalog.
 
 ## Scan quickly
 
@@ -31,7 +31,7 @@ The scripts in `scripts/` do the mechanical half of a scan, so your own time goe
 2. **Rescan only what changed.** Record the commit you scanned in the snapshot's `scan.head`. On a rescan, run `scan.py changes ... --since <scan.head>`: its `redo` says which steps to repeat (`schema`, `backend`, `goDeadcode`, `frontend`, the files whose `props` to read again, `catalog`, `knip`, `install`, `evidence`, `stats`). Reuse everything else from the last build.
 3. **Let the scripts do the mechanical steps.**
    - `scan.py checkout --dir DIR --ref REF` makes or moves a scratch worktree, and installs JavaScript dependencies only when the lockfile changed since that tree's last install.
-   - `scan.py schema --format goose|plain --out DIR` applies the migrations at base and head, read from git, to fresh databases, and writes both dumps and a diff by table, column, constraint, index, policy and function. Set `PR5K_PSQL` and `PR5K_PG_DUMP` when `psql` needs another user.
+   - `scan.py schema --format goose|plain --out DIR` applies the migrations at base and head, read from git, to fresh databases, and writes both dumps and a diff by table, column, constraint, index, policy and function. Set `PR_REVIEW_PSQL` and `PR_REVIEW_PG_DUMP` when `psql` needs another user.
    - `scan.py stats`, `scan.py components --frontend DIR` (components with their JSX edges and levels, bottom-up) and `scan.py deadcode --base-dir A --head-dir B` (knip, deadcode and staticcheck at both, diffed).
    - `node scripts/props.cjs FRONTEND '[[file, export], ...]'` reads each component's properties from the type of its first parameter.
    - `node scripts/catalog-code.cjs FRONTEND CATALOG_FILES...` takes each catalog state's code from its file.

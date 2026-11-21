@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The mechanical half of a PR5K scan, so a rescan redoes only what changed and the agent's own time goes to
+"""The mechanical half of a 5K PR review scan, so a rescan redoes only what changed and the agent's own time goes to
 writing about it. Each subcommand prints JSON; the agent turns it into the snapshot's prose.
 
   changes   What changed between base and head, by kind, and with --since the last scanned head, which
@@ -13,7 +13,7 @@ writing about it. Each subcommand prints JSON; the agent turns it into the snaps
             use, its file's own helpers included), those that draw it, and its level from the bottom up.
   deadcode  Run knip (and, for Go, deadcode and staticcheck) in two checked-out trees and diff the findings.
 
-Postgres is reached with the command in PR5K_PSQL (default `psql`) and PR5K_PG_DUMP (default `pg_dump`),
+Postgres is reached with the command in PR_REVIEW_PSQL (default `psql`) and PR_REVIEW_PG_DUMP (default `pg_dump`),
 for example `runuser -u postgres -- psql`.
 """
 import argparse, fnmatch, hashlib, json, os, re, shlex, subprocess, sys, time
@@ -95,7 +95,7 @@ def cmd_checkout(o):
     else:
         subprocess.run(["git", "-C", str(tree), "checkout", "-q", "--detach", o.ref], check=True)
     name, digest = lock_digest(tree)
-    stamp = tree / ".pr5k-installed"
+    stamp = tree / ".5k-pr-review-installed"
     installed = False
     if name and (not stamp.exists() or stamp.read_text() != digest) and not o.no_install:
         tool = {"bun.lock": ["bun", "install", "--frozen-lockfile"], "bun.lockb": ["bun", "install", "--frozen-lockfile"],
@@ -117,7 +117,7 @@ def migration_sql(text, fmt):
 
 
 def run_psql(args, sql=None):
-    cmd = shlex.split(os.environ.get("PR5K_PSQL", "psql")) + ["-q", "-v", "ON_ERROR_STOP=1", *args]
+    cmd = shlex.split(os.environ.get("PR_REVIEW_PSQL", "psql")) + ["-q", "-v", "ON_ERROR_STOP=1", *args]
     r = subprocess.run(cmd, input=sql, capture_output=True, text=True)
     if r.returncode:
         raise SystemExit(f"psql failed: {r.stderr.strip()[:2000]}")
@@ -135,7 +135,7 @@ def build_db(o, ref, name):
             run_psql(["-d", name], migration_sql(git(o.repo, "show", f"{ref}:{f}"), o.format))
         except SystemExit as e:
             raise SystemExit(f"{ref}:{f}: {e}")
-    dump = subprocess.run(shlex.split(os.environ.get("PR5K_PG_DUMP", "pg_dump")) + ["-s", "-O", "-x", "-d", name], capture_output=True, text=True, check=True).stdout
+    dump = subprocess.run(shlex.split(os.environ.get("PR_REVIEW_PG_DUMP", "pg_dump")) + ["-s", "-O", "-x", "-d", name], capture_output=True, text=True, check=True).stdout
     return files, dump
 
 
@@ -356,12 +356,12 @@ def main():
     common.add_argument("--repo", required=True)
     common.add_argument("--base"); common.add_argument("--head")
     common.add_argument("--migrations", default="**/migrations/*.sql", help="glob of migration files, relative to the repository")
-    common.add_argument("--catalog", default="", help="the catalog's folder, from .pr5k/settings.yaml")
+    common.add_argument("--catalog", default="", help="the catalog's folder, from .5k/pr-review.yaml")
     common.add_argument("--generated", default=r"generated|\.gen\.|/bindings/", help="regex for generated files")
     p = sub.add_parser("changes", parents=[common]); p.add_argument("--since", help="the head the canvas was last built from")
     p = sub.add_parser("checkout", parents=[common]); p.add_argument("--dir", required=True); p.add_argument("--ref", required=True); p.add_argument("--no-install", action="store_true")
     p = sub.add_parser("schema", parents=[common]); p.add_argument("--format", choices=["goose", "plain"], default="plain")
-    p.add_argument("--out", required=True); p.add_argument("--prefix", default="pr5k"); p.add_argument("--setup", help="SQL to run before the migrations, such as roles they grant to")
+    p.add_argument("--out", required=True); p.add_argument("--prefix", default="pr_review"); p.add_argument("--setup", help="SQL to run before the migrations, such as roles they grant to")
     p.add_argument("--all", action="store_true", help="include unchanged tables")
     sub.add_parser("stats", parents=[common])
     p = sub.add_parser("components", parents=[common]); p.add_argument("--frontend", default="frontend", help="the frontend's folder, which paths are given relative to")
