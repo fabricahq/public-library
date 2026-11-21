@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tests for review_panel.py, with fake `claude` and `codex` commands standing in for real sessions."""
+import base64
 import copy
 import json
 import os
@@ -10,6 +11,7 @@ import tempfile
 import textwrap
 import time
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.request
 
@@ -255,9 +257,10 @@ class PureHelpers(unittest.TestCase):
             'reviewers/check-rules.md': '---\nmode: append\n---\nAlso check our ADRs.\n',
             'reviewers/check-payments.md': '---\nsummary: Checks payment flows\n---\nLook for double charges.\n',
         })
-        review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        chosen, added = review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
         reviewers = roster['reviewers']
-        self.assertEqual(list(reviewers), ['check-payments', 'check-docs', 'check-rules'])
+        self.assertEqual(chosen, ['check-payments', 'check-docs', 'check-rules'])
+        self.assertEqual(added, ['check-payments'])
         self.assertEqual(reviewers['check-docs']['focus_text'], 'Our docs focus.')
         self.assertEqual(reviewers['check-docs']['agent'], {'harness': 'codex', 'model': 'gpt-x', 'effort': 'high'})
         self.assertEqual(reviewers['check-docs']['source'], 'replaced by .fabrica/review-panel/reviewers/check-docs.md')
@@ -266,6 +269,82 @@ class PureHelpers(unittest.TestCase):
         self.assertEqual(reviewers['check-payments']['summary'], 'Checks payment flows')
         self.assertEqual(reviewers['check-payments']['agent']['harness'], 'claude-code')
         self.assertEqual(roster['synthesize']['agent']['effort'], 'max')
+
+    def test_organization_settings_sit_between_the_built_in_roster_and_the_repository(self):
+        org = self.config_folder({
+            'panel.yaml': 'reviewers:\n  - check-security\n  - check-docs\n  - check-payments\nsynthesis:\n  effort: max\n',
+            'reviewers/check-docs.md': '---\nmodel: sonnet\n---\nOrg docs focus.\n',
+            'reviewers/check-payments.md': '---\nsummary: Checks payment flows\n---\nLook for double charges.\n',
+        })
+        repo = self.config_folder({
+            '.fabrica/review-panel/reviewers/check-docs.md': '---\nmode: append\n---\nAlso our ADRs.\n',
+            '.fabrica/review-panel/reviewers/check-local.md': '---\nsummary: Local\n---\nOnly here.\n',
+        })
+        where = {'status': 'found', 'repo': 'acme/.fabrica', 'commit': 'a' * 40, 'folder': str(org)}
+        roster, reviewers = review_panel.load_roster(None, False, repo, settings_only=True, org=where)
+        # The organization's list, plus what the repository adds without a list of its own.
+        self.assertEqual(list(reviewers), ['check-security', 'check-docs', 'check-payments', 'check-local'])
+        docs = reviewers['check-docs']
+        self.assertEqual(docs['focus_text'], 'Org docs focus.\n\n## Added by this repository\n\nAlso our ADRs.')
+        self.assertEqual(docs['agent']['model'], 'sonnet')
+        self.assertEqual(docs['source'], 'organization, extended by .fabrica/review-panel/reviewers/check-docs.md')
+        self.assertEqual(roster['synthesize']['agent']['effort'], 'max')
+        # The settings window sees the organization's settings as inherited, and the repository's as its own.
+        summary = roster['all']
+        self.assertTrue(summary['reviewers']['check-payments']['builtin'])
+        self.assertEqual(summary['reviewers']['check-payments']['org_file'], 'acme/.fabrica/review-panel/reviewers/check-payments.md')
+        self.assertIsNone(summary['reviewers']['check-payments']['file'])
+        self.assertEqual(summary['reviewers']['check-docs']['builtin_text'], 'Org docs focus.')
+        self.assertEqual(summary['builtin_synthesis']['effort'], 'max')
+        self.assertFalse(summary['reviewers']['check-rules']['included'])
+        self.assertEqual(roster['config']['org']['repo'], 'acme/.fabrica')
+        self.assertNotIn('folder', roster['config']['org'])
+
+    def test_organization_settings_come_from_one_repository_cached_by_commit(self):
+        cache = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: subprocess.run(['rm', '-rf', str(cache)]))
+        commit = 'b' * 40
+        replies = {
+            'repos/acme/.fabrica/commits/HEAD': {'sha': commit},
+            f'repos/acme/.fabrica/git/trees/{commit}?recursive=1': {'tree': [
+                {'type': 'blob', 'path': 'review-panel/panel.yaml', 'sha': 'p1'},
+                {'type': 'blob', 'path': 'review-panel/reviewers/check-docs.md', 'sha': 'd1'},
+                {'type': 'blob', 'path': 'review-panel/notes.txt', 'sha': 'n1'},
+                {'type': 'blob', 'path': 'README.md', 'sha': 'r1'}]},
+            'repos/acme/.fabrica/git/blobs/p1': {'content': base64.b64encode(b'synthesis:\n  effort: max\n').decode()},
+            'repos/acme/.fabrica/git/blobs/d1': {'content': base64.b64encode(b'Docs.\n').decode()},
+        }
+        calls = []
+        def fake(path):
+            calls.append(path)
+            return (replies[path], None) if path in replies else (None, 'missing')
+        with mock.patch.object(review_panel, 'ORG_CACHE', cache), mock.patch.object(review_panel, 'gh_api', fake):
+            folder, got, status, note = review_panel.fetch_org_folder('acme/.fabrica')
+            self.assertEqual((got, status, note), (commit, 'found', None))
+            self.assertEqual(sorted(str(p.relative_to(folder)) for p in folder.rglob('*') if p.is_file() and p.name != '.complete'),
+                             ['panel.yaml', 'reviewers/check-docs.md'])
+            calls.clear()
+            review_panel.fetch_org_folder('acme/.fabrica')
+            self.assertEqual(len(calls), 1)  # Same head commit: nothing downloaded again.
+            with mock.patch.object(review_panel, 'gh_api', lambda path: (None, 'network down')):
+                again, got, status, note = review_panel.fetch_org_folder('acme/.fabrica')
+                self.assertEqual((again, status), (folder, 'cached'))
+                self.assertIn('network down', note)
+            self.assertEqual(review_panel.fetch_org_folder('acme/other')[2], 'missing')
+
+    def test_the_organization_repository_is_a_per_person_choice(self):
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: subprocess.run(['rm', '-rf', str(home)]))
+        with mock.patch.object(review_panel, 'USER_SETTINGS', home / 'settings.json'):
+            self.assertEqual(review_panel.org_repo_choice('acme'), ('acme/.fabrica', False))
+            review_panel.set_org_repo('acme', 'acme/settings')
+            self.assertEqual(review_panel.org_repo_choice('acme'), ('acme/settings', True))
+            review_panel.set_org_repo('acme', '')
+            self.assertEqual(review_panel.org_repo_choice('acme'), (None, True))
+            review_panel.set_org_repo('acme', None)
+            self.assertEqual(review_panel.org_repo_choice('acme'), ('acme/.fabrica', False))
+            with self.assertRaisesRegex(review_panel.PanelError, 'owner/name'):
+                review_panel.set_org_repo('acme', 'https://example.com/x')
 
     def test_walkthroughs_need_instructions_and_a_known_record_setting(self):
         roster = self.roster()

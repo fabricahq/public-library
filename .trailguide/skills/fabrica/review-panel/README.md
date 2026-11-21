@@ -65,7 +65,13 @@ The panel reads this folder from the checkout it runs in, never from a pull requ
 python3 PATH_TO_SKILL/scripts/review_panel.py settings
 ```
 
-It opens the latest run's page at its settings window, which shows where each reviewer's settings come from (built-in or the repository) and saves edits as files in `.fabrica/review-panel/`, uncommitted, for you to review and commit. A saved report page can't write files, so its settings window copies the commands that write them instead.
+It opens the latest run's page at its settings window, which shows where each reviewer's settings come from (built-in, the organization, or the repository) and saves edits as files in `.fabrica/review-panel/`, uncommitted, for you to review and commit. A saved report page can't write files, so its settings window copies the commands that write them instead.
+
+### Organization settings
+
+Settings every repository in a GitHub organization shares live in the same layout at `review-panel/` in the organization's settings repository, `<owner>/.fabrica` by default. The panel reads that folder from the head of its default branch with `gh`, caches it by commit, and applies it between the built-in settings and the repository's own folder: a repository's file for a reviewer overrides the organization's, and without its own `reviewers` list a repository runs the organization's list plus the reviewers it adds. When GitHub can't be reached, the run uses the last cached copy and says so; with no copy, it goes ahead without the organization's settings. The panel reads only this one repository, never one the reviewed code names.
+
+The settings window's Organization page shows which repository and commit are in use, changes the repository or turns organization settings off (a choice kept on your computer, in `~/.config/review-panel/settings.json`), and edits the organization's settings. Because they reach every repository, it doesn't write them: it copies commands to run in a checkout of the settings repository, so the change goes through a pull request there.
 
 ## Severity
 

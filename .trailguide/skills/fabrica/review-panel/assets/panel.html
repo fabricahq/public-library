@@ -493,6 +493,12 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .code-block .btn { position: absolute; top: 8px; right: 8px; }
 
 /* Where a setting comes from, and the model picker. */
+.org-line { margin: 0 0 10px; }
+.org-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.org-pick label { font-weight: 600; font-size: 13px; }
+.org-pick input { flex: 1 1 220px; min-width: 0; font-family: var(--mono); font-size: 13px; }
+.org-pick .hint { flex-basis: 100%; }
+.warn-line { color: var(--adv); }
 .source-note { font-size: 12.5px; color: var(--muted); background: var(--code); border-radius: 7px; padding: 7px 10px; }
 .source-note.repo { background: var(--accent-bg); color: var(--accent); }
 .source-note code { font-size: 12px; }
@@ -581,7 +587,9 @@ button svg.ck { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4
 .mpick .cicon svg, .mopt .cicon svg { width: 15px; height: 15px; }
 .mpick .cicon .claude, .mopt .cicon .claude { color: var(--claude); }
 /* Settings mode switch */
-.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.mode-detail a { color: var(--accent); text-decoration: none; }
+.mode-detail a:hover { text-decoration: underline; }
 .mode { all: unset; box-sizing: border-box; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
 .mode:hover { border-color: var(--line-strong); background: var(--hover); }
 .mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1472,7 +1480,7 @@ function reviewerView(name) {
     <p class="pane-desc">${esc(entry.focus)}</p>
     <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${live && tab !== 'activity' ? `<button type="button" class="linkish watch" data-tab="activity"><span class="live-dot"></span>Watch live</button>` : ''}${sessionLink(entry)}${logLink}</div>
     ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
-    ${entry.source && entry.source !== 'built-in' ? `<div class="src-note" title="${esc(entry.source)}">Customized by this repository</div>` : ''}
+    ${entry.source && entry.source !== 'built-in' ? `<div class="src-note" title="${esc(entry.source)}">Customized by ${/(^|\s)\.fabrica\/review-panel\//.test(entry.source) ? 'this repository' : 'your organization'}</div>` : ''}
     ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="banner">${esc(entry.error)}</div>` : ''}
     ${r ? `<p class="summary-line">${inlineMd(r.summary)}</p>` : live && tab !== 'activity' ? `<p class="note mono">${esc(entry.activity || 'Reading the change…')}</p>` : ''}`;
   const tabBtn = (id, label, n) => `<button type="button" class="tab ${tab === id ? 'on' : ''}" data-tab="${id}">${label}${n !== undefined ? `<span class="n">${n}</span>` : ''}</button>`;
@@ -1842,9 +1850,11 @@ document.addEventListener('keydown', event => {
 });
 
 /* ---------- settings ---------- */
-// Settings have two sources: the skill's built-in roster, and a repository's .fabrica/review-panel/ folder, which
-// overrides the built-in setting for each reviewer it has a file for. Nothing is kept anywhere else. When the runner
-// serves this page, Save writes the folder's files into the working tree; the standalone page can only copy them.
+// Settings come in layers: the skill's built-in roster; the organization's review-panel/ folder in its settings
+// repository (<owner>/.fabrica unless the person picked another), which every repository in the organization
+// inherits; and a repository's .fabrica/review-panel/ folder, which overrides both for each reviewer it has a file
+// for. When the runner serves this page, Save writes the repository's files into the working tree. The
+// organization's files go through a pull request in its settings repository, so the page copies them instead.
 const EFFORTS = ['default', 'low', 'medium', 'high', 'max'];
 const LIVE = !inline;
 const HARNESS_WORDS = { 'claude-code': 'Claude Code', codex: 'Codex' };
@@ -1856,9 +1866,15 @@ const FALLBACK_MODELS = [
 ];
 const models = () => (state && state.models && state.models.length ? state.models : FALLBACK_MODELS);
 const settings = { max: !!recall('review-panel:settings-max'), open: false, section: 'overview', editing: null, cfg: null, picker: null, saving: false, flash: '', error: '' };
-const cfgKey = () => 'review-panel:settings:' + state.repo;
+const cfgKey = () => 'review-panel:settings:' + state.repo + (editingOrg() ? ':org' : '');
+const orgInfo = () => (state.config && state.config.org) || { status: 'none' };
+const orgFound = () => ['found', 'cached'].includes(orgInfo().status);
+// The organization's settings can be edited when there is an organization repository to write them to.
+const orgEditable = () => ['found', 'cached', 'missing'].includes(orgInfo().status) && !!state.org_roster;
+const editingOrg = () => viewMode() === 'org' && orgEditable();
 // Runs from before the roster was recorded only know the reviewers they ran.
 function roster() {
+  if (editingOrg()) return state.org_roster;
   if (state.roster) return state.roster;
   const reviewers = {};
   for (const [name, e] of Object.entries(state.reviewers)) {
@@ -1876,7 +1892,7 @@ function baseConfig() {
     reviewers: Object.entries(r.reviewers).map(([name, e]) => {
       const original = { icon: e.icon || BUILTIN_ICONS[name] || 'eye', summary: e.summary || '', harness: e.agent.harness, model: e.agent.model, effort: e.agent.effort || 'default',
         prompt: e.file && e.file_body ? e.file_body : e.builtin_text, mode: e.file ? e.mode : 'replace', included: e.included !== false, removeFile: false };
-      return { name, builtin: e.builtin, file: e.file, source: e.source, isNew: false, builtinText: e.builtin_text,
+      return { name, builtin: e.builtin, file: e.file, orgFile: e.org_file || null, source: e.source, isNew: false, builtinText: e.builtin_text,
         builtinAgent: e.builtin_agent, builtinSummary: e.builtin_summary, builtinIcon: e.builtin_icon || BUILTIN_ICONS[name], ...original, original };
     }),
     synthesis: { ...r.synthesis, effort: r.synthesis.effort || 'default' },
@@ -1886,6 +1902,7 @@ function baseConfig() {
     walkthroughs: walkConfig(r), originalWalkthroughs: walkConfig(r),
     builtinWalkthroughs: { record: 'off', ...(r.builtin_walkthroughs && r.builtin_walkthroughs.agent ? r.builtin_walkthroughs.agent : { model: 'opus', effort: 'default' }) },
     retention: (r.retention && r.retention.days) || 14, originalRetention: (r.retention && r.retention.days) || 14,
+    builtinRetention: (r.builtin_retention && r.builtin_retention.days) || 14,
   };
 }
 function walkConfig(r) {
@@ -1899,6 +1916,7 @@ function loadConfig() {
   const saved = recall(cfgKey());
   settings.cfg = saved && saved.basedOn === JSON.stringify(roster()) && Array.isArray(saved.reviewers) ? saved : baseConfig();
   settings.cfg.basedOn = JSON.stringify(roster());
+  settings.cfgOrg = editingOrg();
   dropBlankDrafts();
 }
 function saveConfig() { store(cfgKey(), settings.cfg); }
@@ -1920,7 +1938,8 @@ const walkGuideChanged = () => settings.cfg.walkthroughs.instructions.trim() !==
 const retentionChanged = () => Number(settings.cfg.retention) !== Number(settings.cfg.originalRetention);
 const panelChanged = () => settings.cfg.reviewers.some(r => r.builtin && r.included !== r.original.included) || synthesisChanged() || walkChanged() || retentionChanged();
 const yamlString = text => `"${String(text).replace(/"/g, "'").replace(/\n/g, ' ')}"`;
-const configDir = () => (state.config && state.config.dir) || '.fabrica/review-panel';
+const configDir = () => editingOrg() ? (orgInfo().path || 'review-panel') : (state.config && state.config.dir) || '.fabrica/review-panel';
+const layerWord = () => editingOrg() ? 'organization' : 'repository';
 function reviewerFile(r) {
   const lines = ['---', `summary: ${yamlString(r.summary)}`, ...(r.icon && r.icon !== r.builtinIcon ? [`icon: ${r.icon}`] : []), `harness: ${r.harness}`, `model: ${r.model}`, `effort: ${r.effort}`];
   // A built-in reviewer whose prompt is untouched gets front matter only, so it keeps getting the skill's prompt.
@@ -1931,7 +1950,8 @@ function reviewerFile(r) {
 const sameAgent = (a, b) => b && a.harness === b.harness && a.model === b.model && (a.effort || 'default') === (b.effort || 'default');
 function panelFile() {
   const cfg = settings.cfg;
-  const lines = ['# Review panel settings for this repository. See the review-panel skill README.'];
+  const lines = [editingOrg() ? `# Review panel settings for every repository in ${orgInfo().owner}. See the review-panel skill README.`
+    : '# Review panel settings for this repository. See the review-panel skill README.'];
   if (cfg.reviewers.some(r => !r.included && r.builtin)) {
     lines.push('', '# Run only these reviewers, in this order.', 'reviewers:', ...cfg.reviewers.filter(r => r.included).map(r => `  - ${r.name}`));
   } else {
@@ -1947,7 +1967,7 @@ function panelFile() {
     if (w.model !== bw.model) lines.push(`  model: ${w.model}`);
     if (w.effort !== bw.effort) lines.push(`  effort: ${w.effort}`);
   }
-  if (Number(cfg.retention) !== 14) lines.push('', '# Delete a finished run this many days after it ran, even if its PR is still open.', 'retention:', `  days: ${Number(cfg.retention)}`);
+  if (Number(cfg.retention) !== Number(cfg.builtinRetention || 14)) lines.push('', '# Delete a finished run this many days after it ran, even if its PR is still open.', 'retention:', `  days: ${Number(cfg.retention)}`);
   return lines.join('\n') + '\n';
 }
 // What Save would do: files to write and files to delete, as paths inside the config folder.
@@ -1965,7 +1985,7 @@ function pendingChanges() {
 function setupScript() {
   const { files, remove } = pendingChanges();
   const dir = configDir();
-  const lines = ['# Run from the repository root, then commit the folder.', `mkdir -p ${dir}/reviewers`];
+  const lines = [editingOrg() ? `# Run from the root of a checkout of ${orgInfo().repo}, then commit and open a pull request.` : '# Run from the repository root, then commit the folder.', `mkdir -p ${dir}/reviewers`];
   for (const path of remove) lines.push(`rm ${dir}/${path}`);
   for (const [path, text] of Object.entries(files)) lines.push('', `cat > ${dir}/${path} <<'REVIEW_PANEL_EOF'`, text.replace(/\n$/, ''), 'REVIEW_PANEL_EOF');
   return lines.join('\n') + '\n';
@@ -1974,15 +1994,19 @@ function setupScript() {
 function sourceChip(r) {
   if (r.isNew) return '<span class="chip edited">new, not saved</span>';
   if (changed(r)) return '<span class="chip edited">not saved</span>';
-  if (!r.builtin) return `<span class="chip ok" title="${esc(r.file || r.source)}">added by repository</span>`;
-  if (r.file) return `<span class="chip ok" title="${esc(r.file)}">${r.mode === 'append' ? 'built-in + repository' : 'repository'}</span>`;
+  const layer = layerWord();
+  if (!r.builtin) return `<span class="chip ok" title="${esc(r.file || r.source)}">added by ${layer}</span>`;
+  if (r.file) return `<span class="chip ok" title="${esc(r.file)}">${r.mode === 'append' ? `${r.orgFile ? 'organization' : 'built-in'} + ${layer}` : layer}</span>`;
+  if (r.orgFile) return `<span class="chip ok" title="${esc(r.orgFile)}">organization</span>`;
   return '<span class="chip">built-in</span>';
 }
 function sourceLine(r) {
   const path = `${configDir()}/reviewers/${r.name}.md`;
   if (r.removeFile) return `Saving deletes <code>${esc(path)}</code>, so this reviewer goes back to its built-in settings.`;
   if (r.isNew) return `Saving adds <code>${esc(path)}</code>.`;
-  if (!r.file) return edited(r) ? `Saving adds <code>${esc(path)}</code>, which overrides the built-in settings for this reviewer only.` : 'Built-in settings. Change anything here and saving adds a file for this reviewer to the repository.';
+  if (!r.file && r.orgFile) return edited(r) ? `Saving adds <code>${esc(path)}</code>, which overrides your organization’s settings for this reviewer in this repository only.`
+    : `From your organization’s <code>${esc(r.orgFile)}</code>. Change anything here and saving adds a file for this reviewer to this repository.`;
+  if (!r.file) return edited(r) ? `Saving adds <code>${esc(path)}</code>, which overrides the built-in settings for this reviewer only.` : `Built-in settings. Change anything here and saving adds a file for this reviewer to the ${layerWord()}.`;
   if (!r.builtin) return `Defined by <code>${esc(r.file)}</code>.`;
   if (r.prompt.trim() === r.builtinText.trim()) return `Built-in prompt, with settings from <code>${esc(r.file)}</code>.`;
   return r.mode === 'append' ? `The built-in prompt, plus the text in <code>${esc(r.file)}</code>.` : `Overridden by <code>${esc(r.file)}</code>.`;
@@ -2061,7 +2085,7 @@ const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 // Deleting asks first, in the page: the viewer's frame refuses confirm().
 // In built-in mode the editors are read-only; say why, and point to the config file first.
 function builtinNotice() {
-  return `<div class="notice">Built-in settings, shown read-only. To change them, switch to <button type="button" class="linkish" data-mode="config">Config file</button> in Overview.
+  return `<div class="notice">Built-in settings, shown read-only. To change them, switch to <button type="button" class="linkish" data-mode="config">Repository</button> or <button type="button" class="linkish" data-mode="org">Organization</button> in Overview.
     <span class="sub">Improvements everyone would benefit from are welcome as a contribution to <a href="https://github.com/fabricahq/public-library" target="_blank" rel="noopener">fabricahq/public-library</a>. Forking the skill is the last resort.</span></div>`;
 }
 // Rich dropdowns for Runs on and Effort, matching the model picker: the harness's logo beside its name.
@@ -2222,9 +2246,10 @@ function cleanupPane() {
 function setupPrompt() {
   const dir = configDir();
   const list = Object.entries(roster().reviewers).map(([name, e]) => `- ${name}: ${e.summary}`).join('\n');
-  return `Set up the review panel's settings for this repository.
-
-The review-panel skill reads ${dir}/ from the repository it runs in:
+  const intro = editingOrg()
+    ? `Set up the review panel's organization settings in this repository, ${orgInfo().repo}.\n\nThe review-panel skill reads ${dir}/ from the head of this repository's default branch, for every repository in ${orgInfo().owner}; each repository's own .fabrica/review-panel/ can override it. The folder holds:`
+    : `Set up the review panel's settings for this repository.\n\nThe review-panel skill reads ${dir}/ from the repository it runs in:`;
+  return `${intro}
 
 - ${dir}/panel.yaml (optional): a \`reviewers:\` list of reviewer names, in the order they should run, and a \`synthesis:\` map with \`harness\`, \`model\`, and \`effort\`. Without a list, every built-in reviewer runs, plus every file in reviewers/.
 - ${dir}/reviewers/<name>.md: one file per reviewer. The Markdown body is the reviewer's focus prompt. Front matter sets \`summary\` (one line), \`harness\` (claude-code or codex), \`model\`, and \`effort\`. A file named after a built-in reviewer replaces its prompt, or adds to it with \`mode: append\`. Any other name adds a new reviewer and needs a \`summary\`.
@@ -2237,13 +2262,13 @@ ${list}
 First ask me which reviewers to keep, change, or add, and what this repository needs them to watch for. Then write the files, keeping each reviewer's prompt to one concern, and show me what you wrote.
 `;
 }
-// The two settings modes. The mode in use is a fact about the repository (does the folder exist?); the switch
-// shows what each mode means and what it takes to move to the other one.
+// The settings layers. Which ones are in use is a fact about the repository and its organization (do the folders
+// exist?); the switch shows what each layer means and what it takes to use it.
 const folderFound = () => !!(state.config && state.config.found);
-const viewMode = () => settings.mode || (folderFound() ? 'config' : 'builtin');
-const canEdit = () => viewMode() === 'config';
+const viewMode = () => settings.mode || (folderFound() ? 'config' : orgFound() ? 'org' : 'builtin');
+const canEdit = () => viewMode() === 'config' || editingOrg();
 function modeCard(id, title, text) {
-  const inUse = (id === 'config') === folderFound();
+  const inUse = id === 'config' ? folderFound() : id === 'org' ? orgFound() : !folderFound() && !orgFound();
   return `<button type="button" class="mode ${viewMode() === id ? 'on' : ''}" data-mode="${id}" role="radio" aria-checked="${viewMode() === id}">
       <span class="radio" aria-hidden="true"></span>
       <span class="mtext"><b>${title}${inUse ? '<span class="inuse">In use</span>' : ''}</b><span>${text}</span></span>
@@ -2258,8 +2283,10 @@ function overviewPane() {
   const cfg = settings.cfg;
   const command = (state.config && state.config.command) || 'python3 <skill>/scripts/review_panel.py settings';
   let detail;
-  if (viewMode() === 'builtin' && !found) {
-    detail = `<button type="button" class="linkish" data-sect="reviewers">See the ${plural(cfg.reviewers.length, 'reviewer')} →</button>`;
+  if (viewMode() === 'org') {
+    detail = orgDetail();
+  } else if (viewMode() === 'builtin' && !found) {
+    detail = `${orgFound() ? `<p>Your organization’s settings in <code>${esc(orgInfo().repo)}</code> change some of these; see Organization.</p>` : ''}<button type="button" class="linkish" data-sect="reviewers">See the ${plural(cfg.reviewers.length, 'reviewer')} →</button>`;
   } else if (viewMode() === 'builtin') {
     detail = `<p>This repository has a <code>${esc(dir)}/</code> folder, so the panel uses it. To go back to the built-in settings, delete the folder and commit:</p>${copyLine(`git rm -r ${dir}`, 'copy-remove', 'remove-note')}`;
   } else if (found) {
@@ -2268,7 +2295,7 @@ function overviewPane() {
     const out = cfg.reviewers.filter(r => !r.original.included).length;
     const parts = [fromRepo && `${plural(fromRepo, 'reviewer')} changed`, added && `${added} added`, out && `${out} deleted`,
       !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis) && 'synthesis model changed'].filter(Boolean);
-    detail = `<p>The panel reads <code>${esc(dir)}/</code> from the code it reviews${parts.length ? `: ${esc(parts.join(', '))}` : ''}. Anything without a file there stays built-in.</p>
+    detail = `<p>The panel reads <code>${esc(dir)}/</code> from the code it reviews${parts.length ? `: ${esc(parts.join(', '))}` : ''}. Anything without a file there keeps ${orgFound() ? `your organization’s settings from <code>${esc(orgInfo().repo)}</code>, or the built-in ones` : 'the built-in settings'}.</p>
       <p>${LIVE ? 'Change reviewers and the synthesis here and press <b>Save to repository</b>, then commit the folder.' : `This page is a saved report and can’t write files. To edit and save, run this in the repository:`}</p>
       ${LIVE ? '' : copyLine(command, 'copy-command', 'command-note')}`;
   } else {
@@ -2289,14 +2316,56 @@ function overviewPane() {
     <div class="sbody prose">
       <div class="modes" role="radiogroup" aria-label="Settings mode">
         ${modeCard('builtin', 'Built-in settings', 'The skill’s reviewers, as shipped.')}
-        ${modeCard('config', 'Config file', `This repository’s <code>${esc(dir)}/</code> overrides them.`)}
+        ${modeCard('org', 'Organization', orgInfo().owner ? `<code>${esc(orgInfo().repo || orgInfo().default)}</code> sets them for every repository in ${esc(orgInfo().owner)}.` : 'An organization’s <code>.fabrica</code> repository sets them for all its repositories.')}
+        ${modeCard('config', 'Repository', `This repository’s <code>${esc(state.config && state.config.dir || '.fabrica/review-panel')}/</code> overrides both.`)}
       </div>
       <div class="mode-detail">${detail}</div>
     </div>`;
 }
+// The organization layer: which repository holds it (the person's choice, kept on this computer), what the panel
+// found there, and how to change it.
+function orgDetail() {
+  const org = orgInfo();
+  if (org.status === 'none') return `<p>${esc(org.note || 'This repository has no GitHub organization to read settings from.')}</p>`;
+  const repoLink = org.repo ? `<a href="https://github.com/${esc(org.repo)}" target="_blank" rel="noopener"><code>${esc(org.repo)}</code></a>` : '<i>none</i>';
+  const picker = settings.orgEditing
+    ? `<div class="org-pick"><label for="org-repo">Settings repository</label><input id="org-repo" type="text" spellcheck="false" value="${esc(org.repo || org.default)}" placeholder="${esc(org.default)}">
+        <button type="button" class="btn small primary" data-sact="org-save">Use it</button><button type="button" class="btn small" data-sact="org-cancel">Cancel</button>
+        <span class="hint">Kept on this computer for repositories in ${esc(org.owner)}. ${org.picked ? `<button type="button" class="linkish" data-sact="org-default">Use the default, ${esc(org.default)}</button> · ` : ''}${org.repo ? '<button type="button" class="linkish" data-sact="org-off">Turn organization settings off</button>' : ''}</span></div>`
+    : `<p class="org-line">Settings repository: ${repoLink}${org.status === 'off' ? ' (turned off)' : org.picked ? '' : ' (the default)'} ${LIVE ? '<button type="button" class="linkish" data-sact="org-change">Change</button>' : ''}</p>`;
+  const where = `<a href="${esc(org.url || '#')}" target="_blank" rel="noopener"><code>${esc(org.path)}/</code></a>`;
+  let body;
+  if (org.status === 'off') body = '<p>The panel reads no organization settings for this repository.</p>';
+  else if (org.status === 'unreachable') body = `<p class="warn-line">${esc(org.note)}. Runs go ahead with the built-in and repository settings.</p>`;
+  else if (org.status === 'missing') body = `<p>${esc(org.note)}. To create it, change what you need under Reviewers and Synthesis, then copy the setup commands and run them in a checkout of <code>${esc(org.repo)}</code>, and open a pull request.</p>
+      <details class="agent-setup"><summary>Or have your coding agent set it up</summary>
+        <p>Copy this prompt into your agent in a checkout of <code>${esc(org.repo)}</code>. It asks what you want, then writes the files.</p>
+        <div class="rowline"><span class="note" id="prompt-note"></span><button type="button" class="btn small" data-sact="copy-prompt">Copy setup prompt</button></div>
+        <pre class="setup-prompt">${esc(setupPrompt())}</pre></details>`;
+  else body = `<p>Every repository in ${esc(org.owner)} starts from ${where} in ${repoLink} (commit <code>${esc((org.commit || '').slice(0, 7))}</code> on its default branch), and a repository’s own <code>.fabrica/review-panel/</code> overrides it.</p>
+      ${org.status === 'cached' ? `<p class="warn-line">${esc(org.note)}.</p>` : ''}
+      <p>Change reviewers here, then press <b>Copy setup commands</b> and run them in a checkout of <code>${esc(org.repo)}</code>. Settings that reach every repository go through a pull request there, so someone reviews them.</p>`;
+  return picker + body;
+}
+async function pickOrg(repo) {
+  settings.error = '';
+  try {
+    const response = await fetch('org', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repo }) });
+    const reply = await response.json().catch(() => ({ error: `the runner answered ${response.status}` }));
+    if (!response.ok || !reply.ok) throw new Error(reply.error || `the runner answered ${response.status}`);
+    Object.assign(state, { roster: reply.roster, config: reply.config, org_roster: reply.org_roster });
+    settings.orgEditing = false; settings.cfg = null; loadConfig();
+    const org = orgInfo();
+    settings.flash = org.status === 'off' ? 'Organization settings are off for this repository.' : `Reading organization settings from <code>${esc(org.repo)}</code>.`;
+  } catch (error) {
+    settings.error = `Not changed: ${error.message}`;
+  }
+  renderSettings();
+}
 const closeBtn = () => `<span class="head-btns"><button type="button" class="icon-btn" data-sact="maximize" aria-label="${settings.max ? 'Restore size' : 'Maximize'}" title="${settings.max ? 'Restore size' : 'Maximize'}">${settings.max ? MIN_SVG : MAX_SVG}</button>` + '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>';
 function footer() {
   if (!canEdit()) return '';
+  if (editingOrg()) return orgFooter();
   const { count } = pendingChanges();
   if (!count && settings.section === 'overview' && !settings.flash && !settings.error) return '';
   const dir = configDir();
@@ -2309,6 +2378,15 @@ function footer() {
     ${count ? '<button type="button" class="btn" data-sact="discard">Discard</button>' : ''}
     ${LIVE ? `<button type="button" class="btn primary" data-sact="save" ${count && !settings.saving ? '' : 'disabled'}>${settings.saving ? 'Saving…' : 'Save to repository'}</button>`
       : `<button type="button" class="btn primary" data-sact="copy-setup" ${count ? '' : 'disabled'}>Copy setup commands</button>`}</div>`;
+}
+function orgFooter() {
+  const { count } = pendingChanges();
+  if (!count && !settings.flash && !settings.error) return '';
+  const note = settings.error ? `<span class="dot-err"></span>${esc(settings.error)}` : settings.flash && !count ? `<span class="dot-ok"></span>${settings.flash}`
+    : `<span class="dot-warn"></span>${plural(count, 'file')} to change in <code>${esc(orgInfo().repo)}</code>. Run the commands in a checkout of it, then open a pull request.`;
+  return `<div class="sfoot"><span class="note" id="setup-note">${note}</span>
+    ${count ? '<button type="button" class="btn" data-sact="discard">Discard</button>' : ''}
+    <button type="button" class="btn primary" data-sact="copy-setup" ${count ? '' : 'disabled'}>Copy setup commands</button></div>`;
 }
 function renderSettings() {
   const holder = document.getElementById('settings');
@@ -2361,7 +2439,7 @@ async function saveSettings(extra) {
     const response = await fetch('settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files, remove }) });
     const reply = await response.json().catch(() => ({ error: `the runner answered ${response.status}` }));
     if (!response.ok || !reply.ok) throw new Error(reply.error || `the runner answered ${response.status}`);
-    state.roster = reply.roster; state.config = reply.config; settings.mode = null;
+    state.roster = reply.roster; state.config = reply.config; if (reply.org_roster) state.org_roster = reply.org_roster; settings.mode = null;
     const written = Object.keys(files).length + remove.length;
     settings.cfg = null; store(cfgKey(), null); loadConfig();
     if (settings.editing !== null && settings.editing >= settings.cfg.reviewers.length) settings.editing = null;
@@ -2400,7 +2478,10 @@ document.getElementById('settings').addEventListener('click', async event => {
   const sect = t.closest('[data-sect]');
   if (sect) { settings.section = sect.dataset.sect; settings.editing = null; renderSettings(); return; }
   const mode = t.closest('[data-mode]');
-  if (mode) { settings.mode = mode.dataset.mode; settings.section = 'overview'; settings.editing = null; if (settings.mode === 'builtin') dropBlankDrafts(); renderSettings(); return; }
+  if (mode) { settings.mode = mode.dataset.mode; settings.section = 'overview'; settings.editing = null; settings.orgEditing = false;
+    if (settings.mode === 'builtin') dropBlankDrafts();
+    if (!!settings.cfgOrg !== editingOrg()) loadConfig();
+    renderSettings(); return; }
   if (t.matches('.sscrim')) { openSettings(false); return; }
   const act = t.closest('[data-sact]:not(.sscrim)');
   const row = t.closest('.srow');
@@ -2445,6 +2526,11 @@ document.getElementById('settings').addEventListener('click', async event => {
     case 'copy-remove': await copy(`git rm -r ${configDir()}`, document.getElementById('remove-note'), act); return;
     case 'maximize': settings.max = !settings.max; store('review-panel:settings-max', settings.max); break;
     case 'create-folder': await saveSettings({ 'panel.yaml': panelFile() }); return;
+    case 'org-change': settings.orgEditing = true; renderSettings(); { const i = document.getElementById('org-repo'); if (i) { i.focus(); i.select(); } } return;
+    case 'org-cancel': settings.orgEditing = false; break;
+    case 'org-save': await pickOrg(document.getElementById('org-repo').value.trim()); return;
+    case 'org-default': await pickOrg(null); return;
+    case 'org-off': await pickOrg(''); return;
   }
   saveConfig();
   renderSettings();

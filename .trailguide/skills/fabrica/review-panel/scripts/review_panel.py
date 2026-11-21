@@ -6,6 +6,7 @@ read-only tools. The panel writes everything to a run directory: state.json (wha
 polls), each reviewer's prompt, event log, and findings, the synthesis, and a standalone report.html.
 """
 import argparse
+import base64
 import concurrent.futures
 import datetime
 import json
@@ -32,6 +33,12 @@ ROSTER = SKILL / 'panel.json'
 # replaces, extends, or adds a reviewer's focus prompt. Read from the checkout the command runs in, never from
 # a pull request under review, so a change can't rewrite the panel that judges it.
 CONFIG_DIR = Path('.fabrica') / 'review-panel'
+# An organization's shared settings: the same folder layout, at review-panel/ in the organization's settings
+# repository, <owner>/.fabrica unless the person picked another one (or none) in Settings.
+ORG_CONFIG_PATH = 'review-panel'
+ORG_REPO_NAME = '.fabrica'
+USER_SETTINGS = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'review-panel' / 'settings.json'
+ORG_CACHE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'review-panel' / 'org'
 HARNESSES = ('claude-code', 'codex')
 NEW_REVIEWER_AGENT = {'harness': 'claude-code', 'model': 'opus', 'effort': 'high'}
 # A finding's severity follows from its impact and likelihood (prompts/severity.md has the same table), so the
@@ -922,8 +929,9 @@ def _agent_with(agent, settings, where):
     return agent
 
 
-def apply_repo_config(roster, folder, label):
-    """Merge a repository's .fabrica/review-panel folder over the built-in roster, in place."""
+def apply_repo_config(roster, folder, label, layer='repository'):
+    """Merge a settings folder over the roster, in place: an organization's over the built-in roster, then a
+    repository's over that. Returns the folder's reviewers list, if its panel.yaml has one."""
     reviewers = roster['reviewers']
     config_path = folder / 'panel.yaml'
     config = parse_yaml(config_path.read_text(), str(config_path)) if config_path.exists() else {}
@@ -936,7 +944,7 @@ def apply_repo_config(roster, folder, label):
         if set(retention if isinstance(retention, dict) else {'x'}) != {'days'} or not isinstance(days, int) or days < 1:
             raise PanelError(f'{config_path}: retention must be a map with days, a whole number of days of at least 1')
         roster['retention'] = {'days': days}
-    apply_walkthroughs(roster, config.get('walkthroughs'), folder, label, config_path)
+    apply_walkthroughs(roster, config.get('walkthroughs'), folder, label, config_path, layer)
     for key, target in (('synthesis', roster['synthesize']), ('codex_fallback', None)):
         settings = config.get(key)
         if settings is None:
@@ -963,11 +971,12 @@ def apply_repo_config(roster, folder, label):
         if name in reviewers:
             reviewers[name].update(file=relative, file_body=body, mode=mode)
             spec = reviewers[name]
-            if not body:  # Front matter only: change the summary or agent and keep the built-in prompt.
-                spec['source'] = f'built-in prompt, settings from {relative}'
+            base = 'organization' if spec.get('org_file') else 'built-in'
+            if not body:  # Front matter only: change the summary or agent and keep the inherited prompt.
+                spec['source'] = f'{base} prompt, settings from {relative}'
             elif mode == 'append':
-                spec['focus_text'] += '\n\n## Added by this repository\n\n' + body
-                spec['source'] = f'built-in, extended by {relative}'
+                spec['focus_text'] += f'\n\n## Added by this {layer}\n\n' + body
+                spec['source'] = f'{base}, extended by {relative}'
             else:
                 spec['focus_text'] = body
                 spec['source'] = f'replaced by {relative}'
@@ -996,11 +1005,140 @@ def apply_repo_config(roster, folder, label):
         if missing:
             raise PanelError(f"{config_path}: no reviewer named {', '.join(missing)}; add reviewers/{missing[0]}.md "
                              f"or choose from {', '.join(reviewers)}")
-        roster['reviewers'] = {n: reviewers[n] for n in chosen}
-    roster.setdefault('config', {})['panel'] = config
+    roster.setdefault('config', {})['panel' if layer == 'repository' else 'org_panel'] = config
+    return chosen, added
 
 
-def apply_walkthroughs(roster, settings, folder, label, config_path):
+def inherit_layer(roster):
+    """After the organization's folder: what it set becomes what the repository's settings start from, so the
+    settings window shows it as inherited and saves only the repository's own changes."""
+    for spec in roster['reviewers'].values():
+        if spec.get('file'):
+            spec['org_file'] = spec.pop('file')
+            spec['org_source'] = spec['source']
+            spec.pop('file_body', None)
+            spec.pop('mode', None)
+        spec.update(builtin_text=spec['focus_text'], builtin_agent=dict(spec['agent']), builtin_summary=spec.get('summary', ''),
+                    builtin_icon=spec.get('icon'))
+    roster['builtin_synthesis'] = dict(roster['synthesize']['agent'])
+    walk = roster['walkthroughs']
+    roster['builtin_walkthroughs'] = {'record': walk['record'], 'agent': dict(walk['agent'])}
+    if walk.get('file'):
+        walk['org_file'], walk['file'] = walk['file'], None
+    roster['builtin_retention'] = dict(roster.get('retention') or {'days': 14})
+
+
+def read_user_settings():
+    try:
+        data = json.loads(USER_SETTINGS.read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def org_repo_choice(owner):
+    """The organization settings repository for a GitHub owner: the person's pick, or <owner>/.fabrica; None if off."""
+    picked = read_user_settings().get('org_repos', {}).get(owner)
+    if picked is None:
+        return f'{owner}/{ORG_REPO_NAME}', False
+    return (picked or None), True
+
+
+def set_org_repo(owner, name):
+    """Remember which repository holds this owner's organization settings; '' turns them off, None restores the default."""
+    if name and not re.fullmatch(r'[A-Za-z0-9-]+/[A-Za-z0-9._-]+', name):
+        raise PanelError('the organization settings repository looks like owner/name, such as fabricahq/.fabrica')
+    data = read_user_settings()
+    repos = data.setdefault('org_repos', {})
+    if name is None:
+        repos.pop(owner, None)
+    else:
+        repos[owner] = name
+    USER_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+    USER_SETTINGS.write_text(json.dumps(data, indent=2) + '\n')
+
+
+def gh_api(path):
+    """GET a GitHub API path with the gh CLI's login. Returns (data, None), or (None, 'missing' | a reason)."""
+    if not shutil.which('gh'):
+        return None, 'the GitHub CLI (gh) is not installed'
+    try:
+        result = subprocess.run(['gh', 'api', path], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return None, f'gh api failed: {error}'
+    if result.returncode != 0:
+        if 'HTTP 404' in result.stderr or 'Not Found' in result.stderr:
+            return None, 'missing'
+        return None, (result.stderr.strip().splitlines() or ['gh api failed'])[-1]
+    try:
+        return json.loads(result.stdout), None
+    except ValueError:
+        return None, 'gh api returned something other than JSON'
+
+
+def fetch_org_folder(name):
+    """Download review-panel/ from the head of name's default branch into a cache keyed by commit.
+
+    Returns (folder or None, commit or None, status, note). Status is found, missing (no such repository you can
+    read, or no review-panel/ folder in it), cached (GitHub couldn't be reached, so the last copy is used), or
+    unreachable (no copy either). Only this one configured repository is read, never anything the reviewed code names."""
+    cache = ORG_CACHE / name.replace('/', '__')
+    def last_copy(reason):
+        try:
+            commit = (cache / 'latest').read_text().strip()
+            if (cache / commit / '.complete').exists():
+                return cache / commit, commit, 'cached', f'could not reach GitHub ({reason}); using the copy from commit {commit[:7]}'
+        except OSError:
+            pass
+        return None, None, 'unreachable', f'could not read {name} ({reason}), and there is no earlier copy'
+    head, error = gh_api(f'repos/{name}/commits/HEAD')
+    if error == 'missing':
+        return None, None, 'missing', f'no repository {name}, or this GitHub login cannot read it'
+    if error:
+        return last_copy(error)
+    commit = head.get('sha', '') if isinstance(head, dict) else ''
+    if not re.fullmatch(r'[0-9a-f]{40}', commit):
+        return last_copy('unexpected reply for the head commit')
+    folder = cache / commit
+    if not (folder / '.complete').exists():
+        tree, error = gh_api(f'repos/{name}/git/trees/{commit}?recursive=1')
+        if error:
+            return last_copy(error)
+        prefix = ORG_CONFIG_PATH + '/'
+        blobs = {e['path'][len(prefix):]: e['sha'] for e in tree.get('tree', [])
+                 if e.get('type') == 'blob' and e.get('path', '').startswith(prefix) and SETTINGS_FILE.fullmatch(e['path'][len(prefix):])}
+        if not blobs:
+            return None, commit, 'missing', f'{name} has no {ORG_CONFIG_PATH}/ folder with panel.yaml or reviewers/'
+        shutil.rmtree(folder, ignore_errors=True)
+        for path, sha in blobs.items():
+            blob, error = gh_api(f'repos/{name}/git/blobs/{sha}')
+            if error:
+                return last_copy(error)
+            target = folder / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(base64.b64decode(blob.get('content', '')))
+        (folder / '.complete').write_text('')
+        (cache / 'latest').write_text(commit)
+    return folder, commit, 'found', None
+
+
+def resolve_org(repo):
+    """Where this checkout's organization settings come from, fetched: a dict the settings window shows."""
+    full = github_repo(repo) if repo else None
+    if not full:
+        return {'status': 'none', 'note': 'origin is not a GitHub repository, so there is no organization to read settings from'}
+    owner = full.split('/')[0]
+    name, picked = org_repo_choice(owner)
+    org = {'owner': owner, 'repo': name, 'picked': picked, 'default': f'{owner}/{ORG_REPO_NAME}', 'path': ORG_CONFIG_PATH}
+    if not name:
+        return {**org, 'status': 'off', 'note': 'turned off in Settings'}
+    folder, commit, status, note = fetch_org_folder(name)
+    org.update(status=status, note=note, commit=commit, folder=str(folder) if folder else None,
+               url=f'https://github.com/{name}/tree/{commit or "HEAD"}/{ORG_CONFIG_PATH}')
+    return org
+
+
+def apply_walkthroughs(roster, settings, folder, label, config_path, layer='repository'):
     """Read panel.yaml's walkthroughs map and the folder's walkthroughs.md, which tells the agent how to run the app."""
     walk = roster.setdefault('walkthroughs', {'record': 'off', 'agent': dict(NEW_REVIEWER_AGENT), 'instructions': '', 'file': None})
     guide = folder / 'walkthroughs.md'
@@ -1016,7 +1154,7 @@ def apply_walkthroughs(roster, settings, folder, label, config_path):
     record = str(settings.get('record', walk['record']))
     if record not in RECORD_CHOICES:
         raise PanelError(f"{config_path}: walkthroughs record must be one of {', '.join(RECORD_CHOICES)}")
-    if record != 'off' and not walk.get('instructions'):
+    if record != 'off' and not walk.get('instructions') and layer == 'repository':  # Each repository says how to run its app.
         raise PanelError(f'{config_path}: walkthroughs record {record} needs {label}/walkthroughs.md, which tells the '
                          'agent how to start the app and record a browser session')
     walk['record'] = record
@@ -1027,7 +1165,7 @@ def apply_walkthroughs(roster, settings, folder, label, config_path):
 
 def roster_summary(roster):
     """Every reviewer the panel would run, and where each setting comes from, for the settings window."""
-    chosen = roster['config'].get('panel', {}).get('reviewers')
+    chosen = roster.get('chosen')
     every = {**roster.get('built_in', {}), **roster['reviewers']}
     if chosen:
         every = {**{n: every[n] for n in chosen if n in every}, **every}
@@ -1037,6 +1175,7 @@ def roster_summary(roster):
                              'builtin_agent': spec.get('builtin_agent'), 'builtin_summary': spec.get('builtin_summary'),
                              'icon': spec.get('icon'), 'builtin_icon': spec.get('builtin_icon'),
                              'file': spec.get('file'), 'file_body': spec.get('file_body', ''), 'mode': spec.get('mode', 'replace'),
+                             'org_file': spec.get('org_file'), 'org_source': spec.get('org_source'),
                              'included': chosen is None or name in chosen}
                       for name, spec in every.items()},
         'synthesis': dict(roster['synthesize']['agent']),
@@ -1045,11 +1184,12 @@ def roster_summary(roster):
         'panel_codex_fallback': roster['config'].get('panel', {}).get('codex_fallback'),
         'walkthroughs': dict(roster.get('walkthroughs') or {}),
         'retention': dict(roster.get('retention') or {'days': 14}),
+        'builtin_retention': dict(roster.get('builtin_retention') or {'days': 14}),
         'builtin_walkthroughs': roster.get('builtin_walkthroughs'),
     }
 
 
-def load_roster(only, claude_only, repo=None, panel=None, settings_only=False):
+def load_roster(only, claude_only, repo=None, panel=None, settings_only=False, org=None):
     roster = json.loads(ROSTER.read_text())
     for spec in roster['reviewers'].values():
         spec['focus_text'] = spec['builtin_text'] = (SKILL / spec.pop('focus')).read_text().strip()
@@ -1065,8 +1205,20 @@ def load_roster(only, claude_only, repo=None, panel=None, settings_only=False):
     script = Path(__file__).resolve()
     roster['config'] = {'dir': str(CONFIG_DIR) if not panel else str(folder), 'found': bool(folder and folder.is_dir()),
                         'command': shlex.join(['python3', str(script), 'settings', *(['--panel', str(panel)] if panel else [])])}
+    org = org if org is not None else (resolve_org(repo) if repo else {'status': 'none'})
+    roster['config']['org'] = {k: v for k, v in org.items() if k != 'folder'}
+    roster['org_folder'] = org.get('folder')
+    chosen = None
+    if org.get('folder'):
+        chosen, _ = apply_repo_config(roster, Path(org['folder']), f"{org['repo']}/{ORG_CONFIG_PATH}", layer='organization')
+        inherit_layer(roster)
     if roster['config']['found']:
-        apply_repo_config(roster, folder, roster['config']['dir'])
+        repo_chosen, added = apply_repo_config(roster, folder, roster['config']['dir'])
+        # Without its own list, a repository runs the organization's list plus the reviewers it adds.
+        chosen = repo_chosen if repo_chosen is not None else (chosen + [n for n in added if n not in chosen] if chosen else None)
+    roster['chosen'] = chosen
+    if chosen is not None:
+        roster['reviewers'] = {n: roster['reviewers'][n] for n in chosen}
     roster['all'] = roster_summary(roster)
     reviewers = roster['reviewers']
     if only:
@@ -1214,12 +1366,13 @@ def standalone_html(state_json):
 SETTINGS_FILE = re.compile(r'(panel\.yaml|walkthroughs\.md|reviewers/[a-z0-9-]+\.md)')
 
 
-def save_settings(repo, panel, files, remove):
+def save_settings(repo, panel, files, remove, org=None):
     """Write the settings window's files into the repository's config folder, after checking the result loads.
 
     `files` maps a path inside the folder (panel.yaml or reviewers/<name>.md) to its text; `remove` lists paths to
     delete. Nothing is written unless the folder, with these changes, is one the next run would accept."""
     folder = Path(panel) if panel else repo / CONFIG_DIR
+    org = org if org is not None else resolve_org(repo)
     paths = [*files, *remove]
     bad = [p for p in paths if not isinstance(p, str) or not SETTINGS_FILE.fullmatch(p)]
     if bad:
@@ -1235,19 +1388,31 @@ def save_settings(repo, panel, files, remove):
             (trial / path).unlink(missing_ok=True)
         for path, text in files.items():
             (trial / path).write_text(text)
-        load_roster(None, False, panel=trial, settings_only=True)  # Raises PanelError, which the page shows.
+        load_roster(None, False, panel=trial, settings_only=True, org=org)  # Raises PanelError, which the page shows.
     (folder / 'reviewers').mkdir(parents=True, exist_ok=True)
     for path in remove:
         (folder / path).unlink(missing_ok=True)
     for path, text in files.items():
         (folder / path).write_text(text)
-    roster, _ = load_roster(None, False, repo, panel, settings_only=True)
+    roster, _ = load_roster(None, False, repo, panel, settings_only=True, org=org)
     return roster
 
 
+def org_settings_roster(org):
+    """The built-in roster with only the organization's folder over it: what the settings window edits when it
+    writes the organization's files."""
+    roster, _ = load_roster(None, False, settings_only=True, org={**org, 'folder': None})
+    if org.get('folder'):
+        apply_repo_config(roster, Path(org['folder']), f"{org['repo']}/{ORG_CONFIG_PATH}", layer='organization')
+        roster['all'] = roster_summary(roster)
+    return roster['all']
+
+
 def refresh_settings(data, roster):
+    org = roster['config'].get('org') or {}
     data.update(roster=roster['all'], models=roster.get('models', []),
-                config={k: v for k, v in roster['config'].items() if k != 'panel'})
+                org_roster=org_settings_roster({**org, 'folder': roster.get('org_folder')}),
+                config={k: v for k, v in roster['config'].items() if k not in ('panel', 'org_panel')})
 
 
 def set_archived(data, keys, archived):
@@ -1339,7 +1504,8 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
             # Only the page this server handed out can save: the path holds the secret token, and a JSON body
             # from another site needs a CORS preflight, which this server never answers.
             archive = self.path == f'/{token}/archive'
-            if not archive and (self.path != f'/{token}/settings' or repo is None):
+            pick_org = self.path == f'/{token}/org' and repo is not None
+            if not archive and not pick_org and (self.path != f'/{token}/settings' or repo is None):
                 self.send_error(404)
                 return
             if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
@@ -1356,9 +1522,18 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
                     (run_dir / 'report.html').write_text(standalone_html(state.snapshot()))
                     self.reply(200, {'ok': True, 'archived': state.data['archived']})
                     return
-                roster = save_settings(repo, panel, dict(request.get('files') or {}), list(request.get('remove') or []))
+                if pick_org:
+                    full = github_repo(repo)
+                    if not full:
+                        raise PanelError('origin is not a GitHub repository, so there is no organization')
+                    choice = request.get('repo')
+                    set_org_repo(full.split('/')[0], None if choice is None else str(choice).strip())
+                    roster, _ = load_roster(None, False, repo, panel, settings_only=True)
+                else:
+                    roster = save_settings(repo, panel, dict(request.get('files') or {}), list(request.get('remove') or []))
                 state.update(lambda data: refresh_settings(data, roster))
-                status, reply = 200, {'ok': True, 'roster': state.data['roster'], 'config': state.data['config']}
+                status, reply = 200, {'ok': True, 'roster': state.data['roster'], 'config': state.data['config'],
+                                      'org_roster': state.data.get('org_roster')}
             except (ValueError, AttributeError, TypeError) as error:
                 status, reply = 400, {'ok': False, 'error': f'bad request: {error}'}
             except (PanelError, OSError) as error:
@@ -1457,8 +1632,9 @@ def initial_state(repo, run_dir, target, stat, roster, reviewers):
         'reviewers': {name: entry(spec['agent'], focus=spec['summary'], planned=spec['planned'], note=spec.get('note'),
                                   focus_text=spec['focus_text'], source=spec['source'], icon=spec.get('icon'))
                       for name, spec in reviewers.items()},
-        'config': {k: v for k, v in roster.get('config', {}).items() if k != 'panel'}, 'snippets': {},
+        'config': {k: v for k, v in roster.get('config', {}).items() if k not in ('panel', 'org_panel')}, 'snippets': {},
         'models': roster.get('models', []), 'prices_as_of': roster.get('prices_as_of'), 'roster': roster.get('all'),
+        'org_roster': org_settings_roster({**roster['config'].get('org', {}), 'folder': roster.get('org_folder')}) if 'config' in roster else None,
         'synthesis': entry(roster['synthesize']['agent'], status='waiting'),
         'walkthroughs': {'record': 'off', 'note': None, 'items': {}},
         'retention_days': (roster.get('retention') or {}).get('days', 14),
@@ -1594,6 +1770,11 @@ def run(args):
     repo = Path(git(['rev-parse', '--show-toplevel'], Path.cwd()))
     common = git_common(repo)
     roster, reviewers = load_roster(args.only, args.claude_only, repo, args.panel)
+    org = roster['config'].get('org') or {}
+    if org.get('status') in ('found', 'cached'):
+        print(f"Organization settings: {org['repo']}/{ORG_CONFIG_PATH} at {org['commit'][:7]}", flush=True)
+    if org.get('status') in ('cached', 'unreachable'):
+        print(f"review-panel: organization settings: {org['note']}", file=sys.stderr, flush=True)
     if not args.keep_runs:
         try:
             removed = prune_runs(repo, roster.get('retention', {}).get('days', 14))
