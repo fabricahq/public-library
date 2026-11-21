@@ -11,7 +11,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  grill-me-ui:
+  grill-me:
+    name: 5k-grill-me
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     timeout-minutes: 10
     env:
@@ -23,19 +24,19 @@ jobs:
       - name: Test the canvas server and session contracts
         run: |
           python3 --version
-          for test in .trailguide/skills/fabrica/grill-me-ui/tests/test_*.py; do
+          for test in .trailguide/skills/fabrica/5k-grill-me/tests/test_*.py; do
             python3 "$test"
           done
       - name: Install browser test dependencies
-        working-directory: .github/scripts/grill-me-ui
+        working-directory: .github/scripts/5k-grill-me
         run: |
           node --version
           npm ci --no-audit --no-fund
           npx playwright install --with-deps chromium webkit
       - name: Test canvas behavior and browser journeys
-        working-directory: .github/scripts/grill-me-ui
+        working-directory: .github/scripts/5k-grill-me
         env:
-          NODE_PATH: ${{ github.workspace }}/.github/scripts/grill-me-ui/node_modules
+          NODE_PATH: ${{ github.workspace }}/.github/scripts/5k-grill-me/node_modules
         run: |
           npm test
           npm run test:browser

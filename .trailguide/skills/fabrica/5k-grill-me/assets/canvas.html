@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Grill Me UI</title>
+    <title>5K Grill Me</title>
     <script id="appearance-controller">
       const appearance = (() => {
         const key = "grill-me-ui:appearance";
@@ -1230,7 +1230,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <body>
     <header>
       <div class="heading">
-        <h1 id="title"><svg class="tree-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21V6M12 12 5 8M12 16l7-5M8 21h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="4" r="2.5" fill="currentColor"/><circle cx="4" cy="7" r="2.5" fill="currentColor"/><circle cx="20" cy="10" r="2.5" fill="currentColor"/></svg><span>Grill Me UI</span></h1>
+        <h1 id="title"><svg class="tree-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21V6M12 12 5 8M12 16l7-5M8 21h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="4" r="2.5" fill="currentColor"/><circle cx="4" cy="7" r="2.5" fill="currentColor"/><circle cx="20" cy="10" r="2.5" fill="currentColor"/></svg><span>5K Grill Me</span></h1>
         <div class="toast" id="toast" role="status" hidden></div>
       </div>
       <div class="utilities">
@@ -1324,7 +1324,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </select>
       </div>
       <div class="menu-actions">
-        <button id="openAbout" aria-haspopup="dialog" aria-controls="aboutDialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.01"/></svg><span>About Grill Me UI</span></button>
+        <button id="openAbout" aria-haspopup="dialog" aria-controls="aboutDialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.01"/></svg><span>About 5K Grill Me</span></button>
       </div>
     </section>
     <aside
@@ -1380,9 +1380,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="dialog-actions"><button class="secondary" id="closeDeliveryHelp">Close</button><button class="primary copy-action" id="copyResumeMessage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 9h11v11H9zM15 5V3H3v12h2"/></svg><span>Copy resume message</span></button></div>
     </dialog>
     <dialog id="aboutDialog" class="about-dialog" aria-labelledby="aboutTitle">
-      <h2 id="aboutTitle" tabindex="-1" autofocus><svg class="tree-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21V6M12 12 5 8M12 16l7-5M8 21h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="4" r="2.5" fill="currentColor"/><circle cx="4" cy="7" r="2.5" fill="currentColor"/><circle cx="20" cy="10" r="2.5" fill="currentColor"/></svg><span>Grill Me UI</span></h2>
-      <div class="about-copy" tabindex="0" role="region" aria-label="About Grill Me UI details">
-      <p>Grill Me UI is a skill by <a href="https://fabricahq.com" target="_blank" rel="noopener noreferrer">Fabrica</a> that brings Matt Pocock’s <a href="https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md" target="_blank" rel="noopener noreferrer">grill-me</a> workflow to a visual canvas for exploring questions and recording your answers.</p>
+      <h2 id="aboutTitle" tabindex="-1" autofocus><svg class="tree-logo" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21V6M12 12 5 8M12 16l7-5M8 21h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="4" r="2.5" fill="currentColor"/><circle cx="4" cy="7" r="2.5" fill="currentColor"/><circle cx="20" cy="10" r="2.5" fill="currentColor"/></svg><span>5K Grill Me</span></h2>
+      <div class="about-copy" tabindex="0" role="region" aria-label="About 5K Grill Me details">
+      <p>5K Grill Me is a skill by <a href="https://fabricahq.com" target="_blank" rel="noopener noreferrer">Fabrica</a> that brings Matt Pocock’s <a href="https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md" target="_blank" rel="noopener noreferrer">grill-me</a> workflow to a visual canvas for exploring questions and recording your answers.</p>
       <p class="about-inspiration">The design-tree approach is inspired by Fred Brooks’ <a href="https://www.informit.com/store/design-of-design-essays-from-a-computer-scientist-9780321770547" target="_blank" rel="noopener noreferrer"><em>The Design of Design</em></a>.</p>
       <p class="about-license">Matt Pocock’s grill-me skill is shared under the <a href="https://github.com/mattpocock/skills/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
       </div>
@@ -1502,6 +1502,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         sending = false,
         submissionCache = Object.create(null),
         restored = false;
+      // Browser storage keeps the skill's former name, grill-me-ui, so saved answers and drafts survive the rename.
       const storageKey = "grill-me-ui:" + session.id;
       const readSaved = () => JSON.parse(localStorage.getItem(storageKey) ?? localStorage.getItem("grill-ui:" + session.id) ?? "null");
       const draftKey = id => "grill-me-ui-draft:" + JSON.stringify([session.id, id]);
@@ -1676,9 +1677,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         $("connectionMode").textContent = state;
         const chat = agent.name === "Agent" ? "your agent chat" : `your ${agent.name} chat`;
         const hint = !bridge || (connected && !directDelivery() && !listening)
-          ? `You send answers to ${chat} by manually copying them from Grill Me UI and pasting them into the chat.`
+          ? `You send answers to ${chat} by manually copying them from 5K Grill Me and pasting them into the chat.`
           : !connected
-            ? `The connection to Grill Me UI is unavailable. You can still copy your answers and paste them into ${chat}.`
+            ? `The connection to 5K Grill Me is unavailable. You can still copy your answers and paste them into ${chat}.`
             : `Your answers are sent to ${agent.name === "Agent" ? "the agent" : agent.name} automatically. The agent updates this tree as you work.`;
         $("connectionInfo").textContent = activity ? activityProgress.title + ". " + activityProgress.description : hint;
         $("copyChatId").hidden = !connection.sessionId;
@@ -2096,14 +2097,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         }
       }
       function replyMessage(n, text, context = draftContext(n)) {
-        return `Continue our grill-me-ui session: ${session.title}\nSession: ${session.id}\n${bridge?.sessionDir ? "Canvas files: " + bridge.sessionDir + "\n" : ""}${connection.sessionId ? "Agent session: " + connection.provider + " / " + connection.sessionId + "\n" : ""}Draft based on snapshot revision: ${context.baseRevision}\nCurrent displayed revision: ${session.revision}\n\n${n.id}: ${n.title}\nQuestion when drafted: ${context.question || n.question}\nPrevious answer when drafted: ${context.previousAnswer || "(No answer recorded)"}\nMy answer: ${text}\n\nReconcile this with the current session, revisit affected dependent answers, update relevant documentation, and publish the next design-tree snapshot. Ask about any conflict with newer decisions. Do not implement the design until we confirm shared understanding.`;
+        return `Continue our 5k-grill-me session: ${session.title}\nSession: ${session.id}\n${bridge?.sessionDir ? "Canvas files: " + bridge.sessionDir + "\n" : ""}${connection.sessionId ? "Agent session: " + connection.provider + " / " + connection.sessionId + "\n" : ""}Draft based on snapshot revision: ${context.baseRevision}\nCurrent displayed revision: ${session.revision}\n\n${n.id}: ${n.title}\nQuestion when drafted: ${context.question || n.question}\nPrevious answer when drafted: ${context.previousAnswer || "(No answer recorded)"}\nMy answer: ${text}\n\nReconcile this with the current session, revisit affected dependent answers, update relevant documentation, and publish the next design-tree snapshot. Ask about any conflict with newer decisions. Do not implement the design until we confirm shared understanding.`;
       }
       function sessionExport() {
         return JSON.stringify({ session, answerState, drafts, draftContexts, pending: inbox,
           ...(completedRevision === session.revision && inbox.every(e => e.kind === "help") ? {completedRevision} : {}) }, null, 2);
       }
       function sessionMessage(json = sessionExport()) {
-        return `Continue this grill-me-ui design session using the skill's design-tree artifact contract. Preserve current submitted answers, application-owned answerState, and structured context (constraints, assumptions, alternatives, and precedents). Verify facts as needed, preserve useful findings in notes or precedents, reconcile pending replies and drafts, and render the updated canvas.\n\n${json}`;
+        return `Continue this 5k-grill-me design session using the skill's design-tree artifact contract. Preserve current submitted answers, application-owned answerState, and structured context (constraints, assumptions, alternatives, and precedents). Verify facts as needed, preserve useful findings in notes or precedents, reconcile pending replies and drafts, and render the updated canvas.\n\n${json}`;
       }
       const copyFeedbackTimers = new WeakMap();
       function showCopySuccess(button) {
@@ -3049,8 +3050,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         const progress = interviewProgress();
         if (!progress?.action) return;
         const prompt = progress.complete
-          ? "Use /tospec to turn this completed Grill Me UI interview into a set of specifications. Preserve the agreed answers and constraints. Prepare specifications for review; do not start implementation."
-          : "Review this Grill Me UI interview, reconcile submitted answers, and ask any remaining questions. If every branch is settled, publish the final snapshot with --complete using the grill-me-ui skill. Confirm shared understanding before moving to specifications or implementation.";
+          ? "Use /tospec to turn this completed 5K Grill Me interview into a set of specifications. Preserve the agreed answers and constraints. Prepare specifications for review; do not start implementation."
+          : "Review this 5K Grill Me interview, reconcile submitted answers, and ask any remaining questions. If every branch is settled, publish the final snapshot with --complete using the 5k-grill-me skill. Confirm shared understanding before moving to specifications or implementation.";
         copyReply(`${prompt}\n\n${bridge?.sessionDir ? "Canvas files: " + bridge.sessionDir + "\n\n" : ""}${sessionExport()}`, button);
       }
       $("copyNextStep").onclick = () => copyInterviewNextStep($("copyNextStep"));
@@ -3073,7 +3074,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         $('closeDeliveryHelp').className = ready ? 'primary' : 'secondary';
         $('deliveryHelpAction').textContent = bridge ? 'Ask the agent to resume this canvas and process your saved answers.' : 'Ask the agent to open this design in a live canvas and process your saved answers.';
         $('deliveryHelpOutcome').textContent = bridge ? 'In the live canvas, look for Connected in the top-right corner. New answers can then reach the agent automatically.' : 'Continue in the live canvas the agent opens. Look for Connected there; this standalone copy will remain in copy-and-paste mode.';
-        $('deliveryHelpMessage').textContent = bridge ? 'Resume this Grill Me UI session and automatic answer delivery. Read my saved answers, then continue the interview here.' : 'Open this Grill Me UI session in a live canvas with automatic answer delivery. Preserve my saved answers and continue the interview there.';
+        $('deliveryHelpMessage').textContent = bridge ? 'Resume this 5K Grill Me session and automatic answer delivery. Read my saved answers, then continue the interview here.' : 'Open this 5K Grill Me session in a live canvas with automatic answer delivery. Preserve my saved answers and continue the interview there.';
       }
       document.addEventListener('click', event => {
         const trigger = event.target.closest('[data-delivery-help]');
@@ -3088,7 +3089,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         if (deliveryHelpReturnTarget?.isConnected) deliveryHelpReturnTarget.focus({preventScroll:true});
       });
       $('copyResumeMessage').onclick = () => {
-        const prompt = (bridge ? 'Use the grill-me-ui skill to resume this Grill Me UI session and automatic answer delivery. ' : 'Use the grill-me-ui skill to open this design in a live canvas with automatic answer delivery. This standalone file cannot reconnect in place. ') + 'Read and reconcile saved replies before asking new questions; do not duplicate answers already received. Preserve the current decisions and drafts. Resume the supported live delivery or listening loop, and continue the interview in the live canvas. If this host cannot support automatic delivery, explain that and keep copy/paste available.';
+        const prompt = (bridge ? 'Use the 5k-grill-me skill to resume this 5K Grill Me session and automatic answer delivery. ' : 'Use the 5k-grill-me skill to open this design in a live canvas with automatic answer delivery. This standalone file cannot reconnect in place. ') + 'Read and reconcile saved replies before asking new questions; do not duplicate answers already received. Preserve the current decisions and drafts. Resume the supported live delivery or listening loop, and continue the interview in the live canvas. If this host cannot support automatic delivery, explain that and keep copy/paste available.';
         const context = bridge?.sessionDir
           ? `Canvas files: ${bridge.sessionDir}\nDesign session: ${session.id}${connection.sessionId ? '\nAgent chat: ' + connection.sessionId : ''}`
           : sessionExport();

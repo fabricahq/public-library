@@ -32,7 +32,7 @@ const root=path.resolve(__dirname,'../..'),script=path.join(root,'scripts/grill_
   const before=JSON.parse(fs.readFileSync(path.join(dir,'state.json'))).events;
   await page.locator('#copyResumeMessage').click();await page.locator('#copyResumeMessage.copy-success').waitFor();
   const copied=await page.evaluate(()=>navigator.clipboard.readText());
-  assert(copied.includes('Use the grill-me-ui skill')&&copied.includes(dir)&&copied.includes('do not duplicate'));
+  assert(copied.includes('Use the 5k-grill-me skill')&&copied.includes(dir)&&copied.includes('do not duplicate'));
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'state.json'))).events,before,'Copying must not submit an answer or reconnect');
   await page.keyboard.press('Escape');assert(await dialog.isHidden());
   assert(await page.locator('#reconnectHelp').evaluate(el=>el===document.activeElement));

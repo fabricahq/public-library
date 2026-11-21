@@ -40,7 +40,7 @@ library:
     recommended:
       - skills/build
       - pstack:pstack/skills/correct
-      - skills/grill-me-ui
+      - skills/5k-grill-me
       - skills/create-verification-skill
       - skills/maintain-verification-skill
       - skills/ratchet-files

@@ -1,0 +1,5 @@
+summary: Renames grill-me-ui to 5k-grill-me; projects switch to skills/5k-grill-me to keep receiving updates.
+skills:
+  skills/grill-me-ui:
+    change: retired
+    replacedBy: skills/5k-grill-me

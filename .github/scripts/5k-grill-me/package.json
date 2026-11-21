@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "description": "Browser test dependencies for the bundled 5k-grill-me canvas.",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 ../../../.trailguide/skills/fabrica/5k-grill-me/tests/test_*.cjs",
+    "test:browser": "node --test --test-concurrency=1 ../../../.trailguide/skills/fabrica/5k-grill-me/tests/browser/test_*.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.60.0"
+  }
+}

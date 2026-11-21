@@ -30,7 +30,7 @@ function questionHelpProgress() {
     description:'Your answers are unchanged. The explanation will appear here when it is ready.'};
 }
 function questionHelpPrompt(n) {
-  return `Use the grill-me-ui skill to help me understand ${n.id}: ${n.title}. Read references/question-help.md. Prepare ELI-15 (really simple), ELI-18, and a concrete scenario walkthrough in this node's help field for the current revision. Preserve every question, recommendation, answer, and draft. This is not an answer or permission to implement.\n\nSession: ${session.id}\n${bridge?.sessionDir ? 'Canvas files: ' + bridge.sessionDir + '\n' : ''}Question: ${n.question}\nRecommendation: ${recommendationText(n) || '(None)'}\n${pendingQuestionHelp(n) ? 'Acknowledge help receipt: ' + pendingQuestionHelp(n).id + '\n' : ''}\nCurrent design:\n${sessionExport()}`;
+  return `Use the 5k-grill-me skill to help me understand ${n.id}: ${n.title}. Read references/question-help.md. Prepare ELI-15 (really simple), ELI-18, and a concrete scenario walkthrough in this node's help field for the current revision. Preserve every question, recommendation, answer, and draft. This is not an answer or permission to implement.\n\nSession: ${session.id}\n${bridge?.sessionDir ? 'Canvas files: ' + bridge.sessionDir + '\n' : ''}Question: ${n.question}\nRecommendation: ${recommendationText(n) || '(None)'}\n${pendingQuestionHelp(n) ? 'Acknowledge help receipt: ' + pendingQuestionHelp(n).id + '\n' : ''}\nCurrent design:\n${sessionExport()}`;
 }
 function questionHelpContent() {
   return '<div id="questionHelp" class="question-help"></div>';
