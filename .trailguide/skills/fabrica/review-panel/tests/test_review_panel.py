@@ -73,7 +73,7 @@ FAKE_CLAUDE = textwrap.dedent('''\
         text = 'I looked and it seems fine.'
     else:
         text = '```json\\n' + os.environ['FAKE_REVIEW'] + '\\n```'
-    print(json.dumps({'type': 'result', 'subtype': 'success', 'session_id': 'sess-1', 'result': text,
+    print(json.dumps({'type': 'result', 'subtype': 'success', 'session_id': 'sess-1', 'result': text, 'total_cost_usd': 0.25,
                       'usage': {'input_tokens': 1000, 'output_tokens': 200}}))
 ''')
 
@@ -89,7 +89,7 @@ FAKE_CODEX = textwrap.dedent('''\
     out = sys.argv[sys.argv.index('-o') + 1]
     print(json.dumps({'type': 'thread.started', 'thread_id': 't-1'}))
     print(json.dumps({'type': 'item.started', 'item': {'type': 'command_execution', 'command': 'git diff'}}))
-    print(json.dumps({'type': 'turn.completed', 'usage': {'input_tokens': 500, 'output_tokens': 50}}))
+    print(json.dumps({'type': 'turn.completed', 'usage': {'input_tokens': 500, 'cached_input_tokens': 100, 'output_tokens': 50}}))
     with open(out, 'w') as f:
         f.write('```json\\n' + os.environ['FAKE_REVIEW'] + '\\n```')
 ''')
@@ -587,6 +587,14 @@ class PanelRun(unittest.TestCase):
         self.assertEqual(state['target']['repo_name'], 'repo')
         self.assertIsNone(state['target']['github'])
         self.assertIn('review_panel.py run --base main', state['target']['rerun'])
+        # Claude Code reports its own cost; a Codex session is priced from its tokens with panel.json's list prices.
+        self.assertEqual(state['reviewers']['check-docs']['usage']['cost'], 0.25)
+        codex = state['reviewers']['check-correctness']
+        price = review_panel.model_prices()[codex['agent']['model']]
+        want = (400 * price['input'] + 100 * price['cached_input'] + 50 * price['output']) / 1_000_000
+        self.assertAlmostEqual(codex['usage']['cost'], want)
+        self.assertEqual(codex['session'], {'harness': 'codex', 'id': 't-1', 'cwd': str(run_dir / 'worktree')})
+        self.assertEqual(state['reviewers']['check-docs']['session']['id'], 'sess-1')
 
     def test_repo_panel_folder_customizes_the_run(self):
         self.install('claude', FAKE_CLAUDE)

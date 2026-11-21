@@ -384,6 +384,17 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 .handoff-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; background: var(--ink); color: var(--bg); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); max-width: calc(100% - 32px); flex-wrap: wrap; }
 .handoff-bar .btn { background: transparent; color: var(--bg); border-color: rgba(127,127,127,.5); }
 .handoff-bar .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.cost-dialog { width: min(760px, 100%); }
+.cost-dialog h3 { margin: 0; font-size: 17px; }
+.cost-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cost-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.cost-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.cost-table td svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 6px; }
+.cost-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.cost-table .sub { color: var(--faint); }
+.cost-table tr.top td { background: var(--adv-bg); }
+.cost-table tfoot td { font-weight: 600; border-bottom: 0; }
+.cost-who { display: inline-flex; align-items: center; }
 .overlay { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .dialog { background: var(--panel); border-radius: 12px; width: min(820px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; gap: 10px; padding: 18px; }
 .dialog h3 { margin: 0; font-size: 16px; }
@@ -705,6 +716,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
 <div id="settings"></div>
 <div id="detail"></div>
 <div id="handoff"></div>
+<div id="cost"></div>
 <script id="inline-state" type="application/json"></script>
 <script>
 'use strict';
@@ -1307,7 +1319,7 @@ function synthesisView() {
   const head = `<div class="pane-head"><h2>Synthesis</h2>${syn.result ? `<span class="pill v-${esc(syn.result.verdict)}">${esc(syn.result.verdict)}</span>${severityCounts(syn.result.findings)}` : statusPill(syn.status)}</div>
     <p class="pane-desc">Verifies, merges, and ranks the reviewers’ findings.</p>
     ${retentionLine()}
-    <div class="pane-meta">${agentChip(syn)}${statsLine(syn)}</div>`;
+    <div class="pane-meta">${agentChip(syn)}${statsLine(syn)}${sessionLink(syn)}</div>`;
   if (!syn.result) {
     let message = pending ? `Waiting for ${plural(pending, 'reviewer')} to finish.` : 'Checking, merging, and ranking the reviewers’ findings…';
     if (['failed', 'skipped', 'cancelled'].includes(syn.status)) message = `Synthesis ${syn.status}: ${syn.error || ''}`;
@@ -1374,6 +1386,20 @@ function droppedLine(r) {
   const blocking = dropped.filter(d => { const f = rawFinding(`${d.reviewer}:${d.finding}`); return f && BLOCKING.includes(f.severity); }).length;
   return `<div class="${blocking ? 'banner' : 'note dropped-line'}">The synthesis dropped ${plural(dropped.length, 'reviewer finding')}${blocking ? `, ${blocking} of them critical or high` : ''}. <button type="button" class="linkish" data-act="show-raw">Review the drops</button></div>`;
 }
+// The command that reopens a finished session in its own CLI, to read the whole conversation or ask it more.
+// Claude Code keys sessions by folder, and the run's worktree is gone once the run ends, so the command recreates
+// the empty folder first.
+function sessionCommand(entry) {
+  const s = entry.session;
+  if (!s || !s.id) return '';
+  const q = v => /^[\w@%+=:,./-]+$/.test(v) ? v : `'${v.replace(/'/g, `'\\''`)}'`;
+  return s.harness === 'codex' ? `codex resume ${q(s.id)}` : `mkdir -p ${q(s.cwd)} && cd ${q(s.cwd)} && claude --resume ${q(s.id)}`;
+}
+function sessionLink(entry) {
+  const command = sessionCommand(entry);
+  if (!command || entry.status === 'running') return '';
+  return `<button type="button" class="linkish" data-act="copy-session" data-command="${esc(command)}" title="Copies: ${esc(command)}">Copy command to open this session</button>`;
+}
 function reviewerView(name) {
   const entry = state.reviewers[name];
   const r = entry.result;
@@ -1384,7 +1410,7 @@ function reviewerView(name) {
   const logLink = inline ? '' : `<a class="raw" href="log/${esc(name)}" target="_blank" rel="noopener">Raw session log</a>`;
   const head = `<div class="pane-head"><h2>${esc(reviewerLabel(name))}</h2>${statusPill(entry.status)}${r ? severityCounts(r.findings) : ''}</div>
     <p class="pane-desc">${esc(entry.focus)}</p>
-    <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${live && tab !== 'activity' ? `<button type="button" class="linkish watch" data-tab="activity"><span class="live-dot"></span>Watch live</button>` : ''}${logLink}</div>
+    <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${live && tab !== 'activity' ? `<button type="button" class="linkish watch" data-tab="activity"><span class="live-dot"></span>Watch live</button>` : ''}${sessionLink(entry)}${logLink}</div>
     ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
     ${entry.source && entry.source !== 'built-in' ? `<div class="src-note" title="${esc(entry.source)}">Customized by this repository</div>` : ''}
     ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="banner">${esc(entry.error)}</div>` : ''}
@@ -1398,7 +1424,7 @@ function reviewerView(name) {
     : `<div class="empty">${r ? 'This reviewer listed no checks.' : 'No checks yet.'}</div>`;
   if (tab === 'activity') body = activityHtml(entry, steps, live);
   if (tab === 'prompt') body = entry.prompt ? `<div class="rowline"><span class="note">The full prompt this session received: shared reviewer instructions, this reviewer’s focus, then the change.</span><button type="button" class="btn" data-copy="prompt">Copy prompt</button></div><div class="prompt">${esc(entry.prompt)}</div>` : '<div class="empty">The prompt appears when the session starts.</div>';
-  return head + `<div class="tabs" role="tablist">${tabBtn('findings', 'Findings', rows.length)}${tabBtn('checks', 'What it checked', checks.length)}${tabBtn('activity', live ? '<span class="live-dot"></span>Activity' : 'Activity', steps.length || undefined)}${tabBtn('prompt', 'Prompt')}</div>${body}`;
+  return head + `<div class="tabs" role="tablist">${tabBtn('findings', 'Findings', rows.length)}${tabBtn('checks', 'What it checked', checks.length)}${tabBtn('prompt', 'Prompt')}${tabBtn('activity', live ? '<span class="live-dot"></span>Activity' : 'Activity', steps.length || undefined)}</div>${body}`;
 }
 
 // What a session has looked at so far, step by step, from the runner's record of its tool calls.
@@ -1442,6 +1468,61 @@ function card(key, name, entry, desc) {
     : entry.status === 'done' ? '' : `<span class="st ${esc(entry.status)}" title="${esc(entry.status)}${entry.activity ? ': ' + esc(entry.activity) : ''}${entry.error ? ': ' + esc(entry.error) : ''}"></span>`;
   return `<button type="button" class="navrow ${ui.view === key ? 'sel' : ''}" data-view="${esc(key)}" title="${esc(desc)}"><span class="ico">${icon}</span><span class="lbl">${esc(name)}</span>${right}</button>`;
 }
+/* ---------- cost: what the review would cost at API prices ---------- */
+// Claude Code reports each session's cost itself. Codex reports only tokens, which the runner prices from panel.json;
+// a model without a price there is left out of the total rather than guessed at.
+function costSessions() {
+  const rows = Object.entries(state.reviewers).map(([name, e]) => ({ label: reviewerLabel(name), icon: reviewerIcon(name), entry: e }));
+  rows.push({ label: 'Synthesis', icon: iconSvg('git-merge'), entry: state.synthesis });
+  for (const [id, e] of Object.entries((state.walkthroughs || {}).items || {})) rows.push({ label: `Walkthrough of finding ${id.replace(/^S/, '')}`, icon: VIDEO_SVG, entry: e });
+  return rows.filter(r => r.entry && r.entry.usage && (r.entry.usage.input || r.entry.usage.output || r.entry.usage.cost)).map(r => {
+    const u = r.entry.usage, a = r.entry.agent || {};
+    const model = a.harness === 'codex' ? a.model : r.entry.served_model || a.model;
+    let cost = typeof u.cost === 'number' ? u.cost : null;
+    if (cost === null && a.harness === 'codex') {
+      // Runs from before the runner priced Codex sessions: price their tokens here.
+      const listed = (state.models || []).find(m => m.id === a.model);
+      if (listed && listed.price) {
+        const cached = Math.min(u.cached || 0, u.input || 0);
+        cost = (((u.input || 0) - cached) * listed.price.input + cached * (listed.price.cached_input ?? listed.price.input) + (u.output || 0) * listed.price.output) / 1e6;
+      }
+    }
+    return { ...r, model, harness: a.harness, u, cost, partial: !!u.unpriced || cost === null };
+  });
+}
+const money = n => n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(2)}`;
+function costTotal() {
+  const rows = costSessions();
+  return { rows, total: rows.reduce((sum, r) => sum + (r.cost || 0), 0), partial: rows.some(r => r.partial) };
+}
+const COST_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1.2 1.7 2.8 2.1 2.8.9 2.8 2.1-1.2 2-2.8 2c-1.3 0-2.4-.6-2.9-1.5"/><path d="M12 6v1.8M12 16.2V18"/></svg>';
+function costButton() {
+  const { rows, total, partial } = costTotal();
+  // Runs from before the panel recorded costs have tokens but no cost: say nothing rather than show $0.
+  if (!rows.some(r => r.cost !== null)) return '';
+  return `<button type="button" class="tb-btn" data-act="cost" aria-haspopup="dialog" title="What this review would cost at API prices">${COST_SVG}<span class="lbl">${partial && !total ? 'Cost' : `${partial ? '≥' : '≈'} ${money(total)}`}</span></button>`;
+}
+function renderCost() {
+  const holder = document.getElementById('cost');
+  if (!ui.costOpen) { holder.innerHTML = ''; return; }
+  const { rows, total, partial } = costTotal();
+  const top = Math.max(0, ...rows.map(r => r.cost || 0));
+  const body = rows.map(r => `<tr class="${r.cost && r.cost === top ? 'top' : ''}">
+      <td><span class="cost-who">${r.icon}${esc(r.label)}</span></td>
+      <td>${LOGOS[r.harness] || ''}${esc(modelName(r.model))}</td>
+      <td class="num" title="${(r.u.input || 0).toLocaleString()} tokens in, ${(r.u.cached || 0).toLocaleString()} of them read from cache">${compact(r.u.input || 0)}</td>
+      <td class="num">${compact(r.u.output || 0)}</td>
+      <td class="num">${r.cost === null ? '<span class="note" title="panel.json has no price for this model, or this run did not record the cost">unknown</span>' : `${money(r.cost)}${r.partial ? '<span class="sub" title="Part of this session ran on a model without a price"> +?</span>' : ''}`}</td>
+    </tr>`).join('');
+  const asOf = state.prices_as_of ? ` (list prices as of ${esc(state.prices_as_of)})` : '';
+  holder.innerHTML = `<div class="overlay" data-act="cost-close"><div class="dialog cost-dialog" role="dialog" aria-modal="true" aria-labelledby="cost-title">
+    <div class="fw-head"><h3 id="cost-title">${partial ? 'At least ' : 'About '}${money(total)} at API prices</h3><button type="button" class="btn icon" data-act="cost-close" aria-label="Close" title="Close (Esc)">✕</button></div>
+    <p class="note" style="margin:0">What these sessions would cost if each were billed per token. Sessions signed in with a Claude or ChatGPT subscription use the plan’s limits instead, so this is for comparing runs, models, and reviewers, not a bill.</p>
+    <div class="scroll-x"><table class="cost-table"><thead><tr><th>Session</th><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cost</th></tr></thead>
+      <tbody>${body}</tbody><tfoot><tr><td colspan="4">Total${state.status === 'running' ? ' so far' : ''}</td><td class="num">${partial ? '≥ ' : ''}${money(total)}</td></tr></tfoot></table></div>
+    <p class="note" style="margin:0">Claude Code works out its own sessions’ cost. Codex sessions are priced from their tokens with the skill’s panel.json${asOf}; a model it has no price for is left out of the total.</p>
+  </div></div>`;
+}
 function renderChrome() {
   const t = state.target;
   document.title = `Review panel: ${t.label}`;
@@ -1461,6 +1542,7 @@ function renderChrome() {
   ].filter(Boolean).join('');
   const links = [
     t.url ? `<a class="tb-btn" href="${esc(t.url)}" target="_blank" rel="noopener" title="Open the pull request on GitHub"><svg class="gh" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg><span class="lbl">Open on GitHub ↗</span></a>` : '',
+    costButton(),
     t.rerun ? `<button type="button" class="tb-btn" data-act="rerun" title="Copy the command that reviews this change again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span class="lbl">Rerun${t.number ? ' #' + t.number : ''}</span></button>` : '',
   ].join('');
   const linksBox = document.getElementById('tb-links');
@@ -1643,6 +1725,10 @@ document.addEventListener('click', async event => {
     if (a === 'archive-picked') { await setArchived([...ui.picked], true); return; }
     if (a === 'detail-copy') { await copy(handoffText([findRow(ui.detail)]), document.getElementById('fw-note'), act); return; }
     if (a === 'settings') { openSettings(true); return; }
+    if (a === 'copy-session') { await copy(act.dataset.command, null, act); return; }
+    if (a === 'cost') { ui.costOpen = true; renderCost(); document.querySelector('#cost .btn[data-act="cost-close"]')?.focus(); return; }
+    if (a === 'cost-close' && t !== act && act.classList.contains('overlay')) return;
+    if (a === 'cost-close') { ui.costOpen = false; renderCost(); document.querySelector('[data-act="cost"]')?.focus(); return; }
     if (a === 'rerun') { await copy(state.target.rerun, null, act); return; }
     if (a === 'guide') { openGuide(true); return; }
     if (a === 'guide-close') { openGuide(false); return; }
@@ -1689,6 +1775,7 @@ document.addEventListener('keydown', event => {
   if (event.key === ' ' && event.target.matches('tr.row')) { event.preventDefault(); const key = event.target.dataset.key; togglePick(key); document.querySelector(`#pane tr.row[data-key="${CSS.escape(key)}"]`)?.focus(); return; }
   if (!document.getElementById('guide').hidden && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) { showGuide(guideAt + (event.key === 'ArrowRight' ? 1 : -1)); return; }
   if (!closeKey) return;
+  if (ui.costOpen) { event.preventDefault(); ui.costOpen = false; renderCost(); return; }
   if (settings.open) { event.preventDefault(); if (settings.editing !== null && event.key === 'Escape' && !event.target.matches('textarea, input, select')) { settings.editing = null; renderSettings(); } else openSettings(false); return; }
   if (!document.getElementById('guide').hidden) { openGuide(false); return; }
   if (ui.dialog) { ui.dialog = false; renderHandoff(); }
@@ -2397,7 +2484,7 @@ showGuide(0);
 
 /* ---------- data ---------- */
 // The handoff dialog isn't redrawn by polls while it's open, so edits in it survive a live run.
-function render() { renderChrome(); renderPane(false); if (!ui.dialog) renderHandoff(); }
+function render() { renderChrome(); renderPane(false); if (!ui.dialog) renderHandoff(); if (ui.costOpen) renderCost(); }
 function adopt(next) {
   const first = !state;
   upgradeSeverities(next);

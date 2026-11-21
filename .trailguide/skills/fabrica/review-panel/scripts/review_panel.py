@@ -369,7 +369,10 @@ def claude_event(line, usage):
     if kind == 'result':
         totals = event.get('usage') or {}
         usage['input'] = sum(int(totals.get(key) or 0) for key in ('input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens'))
+        usage['cached'] = int(totals.get('cache_read_input_tokens') or 0)
         usage['output'] = int(totals.get('output_tokens') or 0)
+        if isinstance(event.get('total_cost_usd'), (int, float)):
+            usage['cost'] = float(event['total_cost_usd'])  # What Claude Code works out at API prices.
         if event.get('is_error') or event.get('subtype') not in (None, 'success'):
             raise RuntimeError(claude_failure(event))
         return None, event.get('result') or '', event.get('session_id')
@@ -389,6 +392,7 @@ def codex_event(line, usage):
     if kind == 'turn.completed':
         totals = event.get('usage') or {}
         usage['input'] = usage.get('input', 0) + int(totals.get('input_tokens') or 0)
+        usage['cached'] = usage.get('cached', 0) + int(totals.get('cached_input_tokens') or 0)
         usage['output'] = usage.get('output', 0) + int(totals.get('output_tokens') or 0)
     if kind in ('turn.failed', 'error'):
         error = event.get('error') or {}
@@ -449,6 +453,25 @@ class State:
         with os.fdopen(fd, 'w') as stream:
             json.dump(self.data, stream, ensure_ascii=False, indent=2)
         os.replace(name, self.path)
+
+
+def model_prices():
+    """Each priced model's list prices in USD per million tokens, from panel.json."""
+    return {m['id']: m['price'] for m in json.loads(ROSTER.read_text()).get('models', []) if isinstance(m.get('price'), dict)}
+
+
+def price_usage(model, usage, prices):
+    """Set a Codex session's API-equivalent cost from its tokens, or mark it unpriced when the model has no price.
+
+    Codex reports tokens but no cost; its input count includes the cached input, which is billed at its own rate.
+    """
+    price = prices.get(model)
+    if not price:
+        usage['unpriced'] = 1
+        return
+    cached = min(usage.get('cached', 0), usage.get('input', 0))
+    usage['cost'] = ((usage.get('input', 0) - cached) * price['input'] + cached * price.get('cached_input', price['input'])
+                     + usage.get('output', 0) * price['output']) / 1_000_000
 
 
 def add_usage(first, second):
@@ -722,6 +745,7 @@ class Panel:
         else:
             last_message = folder / f'last-message-{attempt}.txt'
             command, parse = codex_command(agent, self.code_dir, last_message), codex_event
+        prices = model_prices() if agent['harness'] == 'codex' else None
         (folder / f'command-{attempt}.json').write_text(json.dumps(command))  # How this session ran.
 
         def on_line(line):
@@ -731,6 +755,10 @@ class Panel:
                 except (json.JSONDecodeError, AttributeError):
                     pass
             activity, text, ident = parse(line, usage)
+            if prices is not None:
+                price_usage(agent.get('model'), usage, prices)
+            if ident and ident != final['id']:
+                report(None, None, session={'harness': agent['harness'], 'id': ident, 'cwd': str(self.code_dir)})
             if ident:
                 final['id'] = ident
             if text is not None:
@@ -783,10 +811,12 @@ class Panel:
         folder.mkdir(parents=True, exist_ok=True)
         started = time.monotonic()
 
-        def report(activity, usage, model=None):
+        def report(activity, usage, model=None, session=None):
             def change(data):
                 if model:
                     entry(data)['served_model'] = model
+                if session:
+                    entry(data)['session'] = session  # Lets the page offer the command that reopens it.
                 if activity:
                     entry(data)['activity'] = activity
                     add_step(entry(data), round(time.monotonic() - started), activity)
@@ -1428,7 +1458,7 @@ def initial_state(repo, run_dir, target, stat, roster, reviewers):
                                   focus_text=spec['focus_text'], source=spec['source'], icon=spec.get('icon'))
                       for name, spec in reviewers.items()},
         'config': {k: v for k, v in roster.get('config', {}).items() if k != 'panel'}, 'snippets': {},
-        'models': roster.get('models', []), 'roster': roster.get('all'),
+        'models': roster.get('models', []), 'prices_as_of': roster.get('prices_as_of'), 'roster': roster.get('all'),
         'synthesis': entry(roster['synthesize']['agent'], status='waiting'),
         'walkthroughs': {'record': 'off', 'note': None, 'items': {}},
         'retention_days': (roster.get('retention') or {}).get('days', 14),

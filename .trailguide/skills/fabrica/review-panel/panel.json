@@ -146,12 +146,22 @@
     {
       "id": "gpt-6.2-astra",
       "name": "GPT-6.2 Astra",
-      "harness": "codex"
+      "harness": "codex",
+      "price": {
+        "input": 8.0,
+        "cached_input": 0.4,
+        "output": 40.0
+      }
     },
     {
       "id": "gpt-6.2-sol",
       "name": "GPT-6.2 Sol",
-      "harness": "codex"
+      "harness": "codex",
+      "price": {
+        "input": 2.0,
+        "cached_input": 0.1,
+        "output": 10.0
+      }
     },
     {
       "id": "gpt-6.2-terra",
@@ -163,5 +173,6 @@
       "name": "GPT-6.2 Luna",
       "harness": "codex"
     }
-  ]
+  ],
+  "prices_as_of": "2026-11-20"
 }

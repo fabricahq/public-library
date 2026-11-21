@@ -107,6 +107,8 @@ Runs, videos included, live in `.git/review-panel/` and are never committed or p
 
 A full run starts nine sessions (eight reviewers and the synthesis), each limited to 20 minutes; a run of the whole panel on a small pull request took about eight minutes. Reviewers read a snapshot of your branch, including uncommitted and new files, so you can keep working meanwhile. Claude reviewers can only read and search files (no shell, project settings, hooks, or MCP servers), and Codex reviewers run in Codex's read-only sandbox. Results stay in `.git/review-panel/` in the reviewed repository until the review is over; nothing is posted anywhere.
 
+The cost button at the top of the page estimates what the run's sessions would cost at API prices, for comparing runs, models, and reviewers; subscription sessions draw on the plan's limits instead. Claude Code reports each session's cost itself. Codex reports only tokens, which the panel prices with the `price` of each model in `panel.json` (US dollars per million tokens); a model without one is left out of the total. Each finished session also offers the command that reopens it in its CLI, `claude --resume` or `codex resume`, to read the whole conversation or ask it more.
+
 ## Credits
 
 The live page shows the Claude and OpenAI marks from Font Awesome Free 7.2.0 under CC BY 4.0; see [references/icon-attribution.md](references/icon-attribution.md). The architecture reviewer's focus draws on John Ousterhout's *A Philosophy of Software Design*.
