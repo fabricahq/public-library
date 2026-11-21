@@ -1441,13 +1441,30 @@ function fitStage(f) {
   const fit = () => {
     try {
       const d = f.contentDocument; if (!d?.body) return;
-      const was = f.offsetHeight + 'px'; f.style.height = '0px';
-      const h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight);
-      const next = h ? Math.min(h + 2, 1400) + 'px' : was;
-      f.style.height = Math.abs(parseFloat(next) - parseFloat(was)) > 1 ? next : was;
+      const cur = f.offsetHeight;
+      const over = overlayBottom(d);
+      f.style.height = '0px';
+      const h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight, over);
+      const next = h ? Math.min(h + 2, 1400) : cur;
+      f.style.height = (Math.abs(next - cur) > 1 ? next : cur) + 'px';
     } catch (e) { f.style.height = '420px'; }
   };
   fit(); setTimeout(fit, 400); setTimeout(fit, 1200); setTimeout(fit, 2500);
+  try {
+    const w = f.contentWindow;
+    new w.MutationObserver(() => { w.cancelAnimationFrame(f._fit); f._fit = w.requestAnimationFrame(fit); })
+      .observe(f.contentDocument.body, { childList: true, subtree: true, attributes: true });
+  } catch (e) { /* a frame on another origin keeps its first height */ }
+}
+/* Menus, lists and dialogs float outside the page's flow, so the frame grows to their full length while one is open. */
+function overlayBottom(d) {
+  let bottom = 0;
+  d.querySelectorAll('[data-radix-popper-content-wrapper], [role="listbox"], [role="menu"], [role="dialog"]').forEach(el => {
+    const r = el.getBoundingClientRect(); if (!r.height) return;
+    const full = Math.max(r.height, el.scrollHeight, ...[...el.children].map(c => c.scrollHeight));
+    bottom = Math.max(bottom, r.top + d.defaultView.scrollY + full + 12);
+  });
+  return Math.ceil(bottom);
 }
 /* Keys pressed inside a preview stay the canvas's: a state that focuses its own field on load gives focus
    back, and Escape or Option-W in a preview closes the window unless the component used the key itself. */
