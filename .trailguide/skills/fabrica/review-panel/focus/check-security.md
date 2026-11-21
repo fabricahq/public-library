@@ -26,4 +26,4 @@ Also walk the change through the [OWASP Top 10:2025](https://owasp.org/Top10/202
 
 When the change builds on a model or an agent, also check the [OWASP Top 10 for LLM Applications](https://genai.owasp.org/llm-top-10/) risks it touches, especially excessive agency (tools or permissions broader than the task) and model output that reaches a shell, query, file write, or network call without validation. Name only the categories the change touches in your summary.
 
-Rate severity by what an attacker gains and how reachable it is. A theoretical issue behind several unlikely conditions is `negligible-likelihood`.
+Rate impact by what an attacker gains, and likelihood by whether an attacker can reach it on purpose. A theoretical issue behind several unlikely conditions is `negligible-likelihood`.

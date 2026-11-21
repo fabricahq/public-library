@@ -8,10 +8,11 @@ Do not modify any files. You have read-only access to the repository in your wor
 - Label each finding with a **category**:
   - `defect`: the change breaks the spec, a supplied decision, or existing agreed behavior, or plainly does something wrong.
   - `policy`: the right answer depends on a choice nobody has made yet. Name the choice and the options.
-  - `negligible-likelihood`: a real gap that needs an unlikely combination of events. Suggest accepting and documenting it.
-- Give each finding a **severity**:
-  - `blocking`: should be fixed (or decided) before this merges.
-  - `advisory`: worth knowing or improving, but fine to merge without.
+  - `negligible-likelihood`: a real gap that needs an unlikely combination of events. Suggest accepting and documenting it; its likelihood is `rare`.
+- Rate each finding's **impact** and **likelihood**:
+
+{{SEVERITY}}
+
 - Report only what you are confident is real after reading the code. Do not pad the list. "No findings" is a good result when it is true.
 - For each finding, give a concrete failure scenario (inputs, state, or sequence that produces the wrong result) and the fix.
 - List anything you needed but could not check, such as a test you could not run or a spec you didn't have, under `unverified`.
@@ -30,7 +31,9 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
   "findings": [
     {
       "id": "F1",
-      "severity": "blocking | advisory",
+      "impact": "severe | significant | minor | cosmetic",
+      "likelihood": "common | uncommon | rare",
+      "severity_reason": "One sentence naming the impact and how likely it is",
       "category": "defect | policy | negligible-likelihood",
       "title": "Short statement of the problem",
       "file": "path/from/repo/root.ext",
@@ -48,4 +51,4 @@ Set `rule` when a finding breaks one of the repository's written rules: `{"id": 
 
 Keep `summary` under 400 characters. The detail belongs in `checks`, one entry for each thing you checked (each acceptance criterion, each rule, each risk you traced), and in `findings`. A check that is `not-met` or `partly` has a finding that explains it.
 
-`verdict` is `blocking` when any finding is blocking, `concerns` when there are only advisory findings, and `pass` when there are none. Number findings F1, F2, and so on.
+`verdict` is `blocking` when any finding's severity, from the table above, is critical or high, `concerns` when there are other findings, and `pass` when there are none. The panel checks this against your ratings. Number findings F1, F2, and so on.

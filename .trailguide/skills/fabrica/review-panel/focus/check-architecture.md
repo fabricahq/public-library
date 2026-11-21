@@ -8,4 +8,4 @@ You judge the design of the change, in the spirit of John Ousterhout's *A Philos
 - **Special cases and error cases.** Could the design define a case out of existence instead of handling it everywhere?
 - **Fit.** Does the change follow the repository's existing structure, or introduce a second way of doing something the codebase already does?
 
-Then propose one alternative design that would be meaningfully simpler, if there is one, and compare the two honestly: what each costs now and later. Put it in a finding with category `policy` and severity `advisory` unless the current design will clearly cause defects or block likely work, in which case it is `blocking`. If the design is sound, say so and return no findings.
+Then propose one alternative design that would be meaningfully simpler, if there is one, and compare the two honestly: what each costs now and later. Put it in a finding with category `policy` and impact `cosmetic` unless the current design will clearly cause defects or block likely work, in which case rate it by those defects. If the design is sound, say so and return no findings.

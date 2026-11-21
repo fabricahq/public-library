@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Review panel</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2216%22%20height=%2216%22%20viewBox=%220%200%2016%2016%22%20fill=%22currentColor%22%3E%3Cstyle%3Esvg%7Bcolor:%234d638b%7D%40media%20%28prefers-color-scheme:dark%29%7Bsvg%7Bcolor:%2393a9d3%7D%7D%3C/style%3E%3Cpath%20d=%22M2%2010L5%2013A2.121%202.121%200%200%200%208%2013L14%207A2.121%202.121%200%200%200%2011%204L6.5%208.5L5%207A2.121%202.121%200%200%200%202%2010Z%22%20fill=%22none%22%20stroke=%22currentColor%22%20stroke-width=%221.15%22%20stroke-linejoin=%22round%22/%3E%3Ccircle%20cx=%223.5%22%20cy=%228.5%22%20r=%220.7%22/%3E%3Ccircle%20cx=%226.5%22%20cy=%2211.5%22%20r=%220.7%22/%3E%3Ccircle%20cx=%229.5%22%20cy=%228.5%22%20r=%220.7%22/%3E%3Ccircle%20cx=%2212.5%22%20cy=%225.5%22%20r=%220.7%22/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22%234d638b%22%3E%3Ccircle%20cx=%223%22%20cy=%2212%22%20r=%221.6%22/%3E%3Ccircle%20cx=%226%22%20cy=%2215%22%20r=%221.6%22/%3E%3Ccircle%20cx=%229%22%20cy=%2218%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2212%22%20cy=%2215%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2212%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2218%22%20cy=%229%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2221%22%20cy=%226%22%20r=%221.6%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout, after PR 10K: a persistent top bar, a sidebar of the synthesis and reviewers, and the selected view filling the rest. */
@@ -123,6 +123,19 @@ nav .section-title { margin: 0; padding: 10px 8px 4px; font-weight: 400; }
 .sev-blocking, .v-blocking, .v-fix-first, .v-needs-decision, .r-not-met { background: var(--block-bg); color: var(--block); }
 .sev-advisory, .v-concerns, .r-partly { background: var(--adv-bg); color: var(--adv); }
 .v-pass, .v-ready, .r-met { background: var(--ok-bg); color: var(--ok); }
+.sev-critical { background: var(--block); color: var(--panel); }
+.sev-high { background: var(--block-bg); color: var(--block); }
+.sev-medium { background: var(--adv-bg); color: var(--adv); }
+.sev-low { background: var(--code); color: var(--muted); }
+.sev-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.sev-dot.sev-critical { background: var(--block); } .sev-dot.sev-high { background: var(--block); opacity: .55; }
+.sev-dot.sev-medium { background: var(--adv); } .sev-dot.sev-low { background: var(--muted); opacity: .5; }
+.sev-why { font-size: 13px; color: var(--muted); margin: 2px 0 10px; }
+.sev-why b { color: var(--ink); font-weight: 600; }
+.scroll-x { overflow-x: auto; max-width: 100%; }
+.sev-grid { border-collapse: collapse; margin: 10px 0 6px; font-size: 12.5px; }
+.sev-grid th, .sev-grid td { padding: 5px 10px; text-align: left; border-bottom: 1px solid var(--line); }
+.sev-grid th { font-weight: 600; color: var(--muted); }
 .r-unverified { background: var(--code); color: var(--muted); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .s-running .dot { animation: pulse 1.2s ease-in-out infinite; }
@@ -198,7 +211,11 @@ tr.row td.pick:hover { background: var(--accent-bg); }
 tr.row td.pick:hover input { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); outline-offset: 1px; border-radius: 3px; }
 td.fid { font-family: var(--mono); color: var(--muted); font-size: 12px; white-space: nowrap; }
 .ftitle { font-weight: 600; }
-.where { color: var(--muted); font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; margin-top: 2px; }
+.where { display: flex; min-width: 0; color: var(--ink); font-family: var(--mono); font-size: 12px; margin-top: 2px; white-space: nowrap; }
+/* The folder says which part of the codebase it is (backend, frontend, docs); it gives way before the file name does. */
+.path-dir { color: var(--faint); overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1000 auto; }
+.path-leaf { flex: 0 1 auto; min-width: 0; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
+.fact .path-dir { color: var(--faint); }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; }
 .chip { background: var(--code); color: var(--muted); border-radius: 6px; padding: 0 6px; font-size: 11.5px; font-family: var(--mono); white-space: nowrap; }
 .chip.more { background: var(--accent-bg); color: var(--accent); }
@@ -244,7 +261,9 @@ tr.row.flash td { animation: flash 2.4s ease-out; }
 .src-table tr.hit td { background: var(--adv-bg); }
 .src-table tr.hit td.ln { color: var(--adv); box-shadow: inset 3px 0 0 var(--adv); }
 kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--panel); font-family: var(--mono); font-size: 11px; line-height: 16px; text-align: center; color: var(--ink); }
-.fw-keys { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.fw-keys { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; font-size: 12px; color: var(--faint); margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+/* Shortcut hints stay quiet: there when you look for them, out of the way otherwise. */
+.fw-keys kbd, .vkeys kbd { color: var(--faint); border-color: var(--line); border-bottom-width: 1px; background: transparent; }
 .fw-keys > span { display: inline-flex; align-items: center; gap: 3px; }
 button.ref { font: inherit; font-size: .92em; font-weight: 600; color: var(--accent); background: var(--accent-bg); border: 0; border-radius: 5px; padding: 0 6px; cursor: pointer; white-space: nowrap; }
 button.ref:hover { text-decoration: underline; }
@@ -258,6 +277,12 @@ button.ref:hover { text-decoration: underline; }
 .fw-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .fw-scroll { overflow-y: auto; min-height: 0; flex: 1; margin-top: 10px; padding-top: 4px; border-top: 1px solid var(--line); }
 .fw-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 8px; }
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 14px; padding: 9px 16px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: 13px; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+#toast .linkish { color: inherit; font-weight: 600; text-decoration: underline; }
+.btn.with-icon, .archived-btn { display: inline-flex; align-items: center; gap: 6px; }
+.btn.with-icon svg, .archived-btn svg { width: 15px; height: 15px; flex: none; }
+.archived-btn .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+.archived-btn.on { background: var(--accent-bg); color: var(--accent); border-color: transparent; }
 .fw-nav, .fw-actions { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .btn.icon { padding: 2px 9px; }
 .btn:disabled { opacity: .45; cursor: default; }
@@ -285,7 +310,17 @@ tr.row:focus-visible, tr.row.flash:focus { outline: 2px solid var(--accent); out
 .pill.o-not-reachable { background: var(--code); color: var(--muted); }
 .walk-video { margin: 14px 0; }
 .walk-video figcaption { font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-.walk-video video { width: 100%; max-height: 60vh; border-radius: 10px; border: 1px solid var(--line); background: #000; }
+.walk-video .vp { border-radius: 10px; border: 1px solid var(--line); overflow: hidden; background: #000; display: flex; flex-direction: column; }
+.walk-video video { display: block; width: 100%; max-height: 44vh; background: #000; cursor: pointer; }
+.walk-video .vp:fullscreen { border: 0; border-radius: 0; }
+.walk-video .vp:fullscreen video { flex: 1; min-height: 0; max-height: none; height: 100%; object-fit: contain; }
+.vbar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--panel); border-top: 1px solid var(--line); color: var(--ink); }
+.vbar button { flex: none; display: inline-flex; align-items: center; justify-content: center; height: 28px; min-width: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 12.5px; cursor: pointer; }
+.vbar button:hover { background: var(--hover, rgba(127,127,127,.14)); }
+.vbar button svg { width: 16px; height: 16px; }
+.vbar .vtime { flex: none; font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--muted); }
+.vbar input[type=range] { flex: 1; min-width: 60px; accent-color: var(--accent); }
+.vkeys { font-size: 12px; color: var(--faint); margin-top: 6px; }
 .walk-steps { margin: 4px 0 0; padding-left: 22px; font-size: 13.5px; }
 .walk-setup { margin: 14px 0 6px; font-size: 13.5px; }
 .walk-setup summary { cursor: pointer; color: var(--accent); font-weight: 500; }
@@ -560,7 +595,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
 <body>
 <div class="app">
 <header class="topbar">
-  <span class="brand"><svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.56 14.46L7.2 19.1A2.687 2.687 0 0 0 11 19.1L21.44 8.66A2.687 2.687 0 0 0 17.64 4.86L9.1 13.4L6.36 10.66A2.687 2.687 0 0 0 2.56 14.46Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="4.46" cy="12.56" r="1.05"/><circle cx="7.36" cy="15.46" r="1.05"/><circle cx="10.84" cy="15.46" r="1.05"/><circle cx="13.74" cy="12.56" r="1.05"/><circle cx="16.64" cy="9.66" r="1.05"/><circle cx="19.54" cy="6.76" r="1.05"/></svg>Review Panel</span>
+  <span class="brand"><svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="3" cy="12" r="1.6"/><circle cx="6" cy="15" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="12" cy="15" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="18" cy="9" r="1.6"/><circle cx="21" cy="6" r="1.6"/></svg>Review Panel</span>
   <span class="tb-div" aria-hidden="true"></span>
   <div class="tb-title"><span class="tb-chip" id="chip"></span><h1 id="title">Review panel</h1></div>
   <div class="sub" id="sub"></div>
@@ -587,16 +622,25 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
   </div>
   <div class="guide-body" id="guide-body">
     <section id="g-severity">
-      <h3>Severity: does it hold up the merge?</h3>
-      <p class="lede">Every finding has one of two severities. The synthesis re-judges each reviewer's severity rather than copying it.</p>
+      <h3>Severity: how much does it matter?</h3>
+      <p class="lede">Each reviewer rates a finding's <b>impact</b> if it happens and how <b>likely</b> real use is to hit it, with a one-line reason. The panel works out the severity from the two, so the same facts get the same severity whoever rated them, and the synthesis re-judges both from the code.</p>
       <dl>
-        <dt><span class="pill sev-blocking">blocking</span></dt><dd>Fix it, or decide it, before this change merges.<span class="eg">A loop that drops the last item, a secret written to a log, a broken acceptance criterion.</span></dd>
-        <dt><span class="pill sev-advisory">advisory</span></dt><dd>Worth knowing or improving, but fine to merge without.<span class="eg">A missing test for an edge case, a misleading comment, a slow path that isn't hot yet.</span></dd>
+        <dt><span class="pill sev-critical">Critical</span></dt><dd>Blocks merge. Severe harm on a path people use routinely.<span class="eg">Saving a form deletes the record; any visitor can read another account's data.</span></dd>
+        <dt><span class="pill sev-high">High</span></dt><dd>Blocks merge. Severe harm on a less common path, or a wrong result on a routine one.<span class="eg">Data lost when someone retries in a second tab; every invoice total off by one item.</span></dd>
+        <dt><span class="pill sev-medium">Medium</span></dt><dd>Fine to merge with a follow-up. Severe but rare, a wrong result on a less common path, or a routine annoyance.<span class="eg">Typed text lost only if a save fails and the person leaves within a second; docs that send a reader to the wrong command.</span></dd>
+        <dt><span class="pill sev-low">Low</span></dt><dd>Optional. A minor annoyance off the main path, or polish and maintainability.<span class="eg">A confusing message on a rare error; a missing test; a misleading comment.</span></dd>
       </dl>
+      <div class="scroll-x"><table class="sev-grid"><thead><tr><th>Impact</th><th>Common</th><th>Uncommon</th><th>Rare</th></tr></thead><tbody>
+        <tr><th title="Data loss or corruption, a security or privacy breach, or a core flow that stops working">Severe</th><td><span class="pill sev-critical">Critical</span></td><td><span class="pill sev-high">High</span></td><td><span class="pill sev-medium">Medium</span></td></tr>
+        <tr><th title="A wrong result someone relies on, or a stated requirement not met; recoverable">Significant</th><td><span class="pill sev-high">High</span></td><td><span class="pill sev-medium">Medium</span></td><td><span class="pill sev-low">Low</span></td></tr>
+        <tr><th title="Degraded behavior with a workaround: slow, confusing, an error instead of the right result">Minor</th><td><span class="pill sev-medium">Medium</span></td><td><span class="pill sev-low">Low</span></td><td><span class="pill sev-low">Low</span></td></tr>
+        <tr><th title="Polish or maintainability only: structure, naming, tests, comments">Cosmetic</th><td><span class="pill sev-low">Low</span></td><td><span class="pill sev-low">Low</span></td><td><span class="pill sev-low">Low</span></td></tr>
+      </tbody></table></div>
+      <p class="note"><b>Common</b>: a normal path people use routinely. <b>Uncommon</b>: ordinary actions in a less common order or state, such as a second tab or a retry. <b>Rare</b>: needs unusual timing, a failure, or several conditions at once. For security, likelihood is whether an attacker can trigger it on purpose.</p>
     </section>
     <section id="g-category">
       <h3>Category: what kind of problem is it?</h3>
-      <p class="lede">Severity says how urgent a finding is; category says what to do about it.</p>
+      <p class="lede">Severity says how much a finding matters; category says what to do about it.</p>
       <dl>
         <dt><span class="pill r-unverified">defect</span></dt><dd>The change breaks the spec, a decision you supplied, or behavior the code already agreed on, or plainly does something wrong. Fix it.</dd>
         <dt><span class="pill r-unverified">policy</span></dt><dd>The right answer depends on a choice nobody has made yet. The finding names the choice and the options, and the synthesis turns it into a question for you.</dd>
@@ -607,8 +651,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
       <h3>The panel's verdict</h3>
       <p class="lede">The synthesis gives the change one verdict, and it must agree with the findings and questions under it.</p>
       <dl>
-        <dt><span class="pill v-ready">ready</span></dt><dd>No blocking findings and no blocking questions. Merge when you're happy with the advisories.</dd>
-        <dt><span class="pill v-fix-first">fix-first</span></dt><dd>At least one blocking finding that can be fixed without a new decision from you. Tick them and prepare a handoff.</dd>
+        <dt><span class="pill v-ready">ready</span></dt><dd>No critical or high findings and no blocking questions. Merge when you're happy with the rest.</dd>
+        <dt><span class="pill v-fix-first">fix-first</span></dt><dd>At least one critical or high finding that can be fixed without a new decision from you. Tick them and prepare a handoff.</dd>
         <dt><span class="pill v-needs-decision">needs-decision</span></dt><dd>At least one question only you can answer is holding up the merge. Answer it, marked <span class="pill sev-blocking">blocks merge</span>, first.</dd>
       </dl>
     </section>
@@ -617,8 +661,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
       <p class="lede">Follows from that reviewer's own findings, before the synthesis checks them.</p>
       <dl>
         <dt><span class="pill v-pass">pass</span></dt><dd>No findings. A good result when it's true.</dd>
-        <dt><span class="pill v-concerns">concerns</span></dt><dd>Only advisory findings.</dd>
-        <dt><span class="pill v-blocking">blocking</span></dt><dd>At least one blocking finding.</dd>
+        <dt><span class="pill v-concerns">concerns</span></dt><dd>Only medium or low findings.</dd>
+        <dt><span class="pill v-blocking">blocking</span></dt><dd>At least one critical or high finding.</dd>
       </dl>
     </section>
     <section id="g-checks">
@@ -667,7 +711,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
 const inline = document.getElementById('inline-state').textContent.trim();
 let state = inline ? JSON.parse(inline) : null;
 const ui = {
-  view: '__synthesis', tab: {}, q: '', sev: 'all', cat: 'all', who: 'all', raw: false,
+  view: '__synthesis', tab: {}, q: '', sev: 'all', cat: 'all', who: 'all', raw: false, archivedView: false,
   detail: null, picked: new Set(), lostConnection: false, dialog: false, draft: '',
 };
 
@@ -808,10 +852,9 @@ function statsLine(entry) {
   return parts.length ? `<span class="stats">${parts.join('')}</span>` : '';
 }
 function severityCounts(findings) {
-  const b = (findings || []).filter(f => f.severity === 'blocking').length;
-  const a = (findings || []).length - b;
-  if (!b && !a) return '<span class="pill s-done">no findings</span>';
-  return (b ? `<span class="pill sev-blocking">${b} blocking</span>` : '') + (a ? `<span class="pill sev-advisory">${a} advisory</span>` : '');
+  if (!(findings || []).length) return '<span class="pill s-done">no findings</span>';
+  return SEVERITIES.map(level => [level, findings.filter(f => f.severity === level).length]).filter(([, n]) => n)
+    .map(([level, n]) => `<span class="pill sev-${level}" title="${esc(SEVERITY_WORDS[level][1])}">${n} ${SEVERITY_WORDS[level][0].toLowerCase()}</span>`).join('');
 }
 
 /* ---------- rows: every finding, synthesized or raw, in one shape ---------- */
@@ -819,7 +862,7 @@ function synthesisRows() {
   const result = state.synthesis.result;
   if (!result) return [];
   return result.findings.map(f => ({
-    key: 'S:' + f.id, id: f.id, severity: f.severity, category: f.category, title: f.title, file: f.file, line: f.line,
+    key: 'S:' + f.id, id: f.id, severity: f.severity, impact: f.impact, likelihood: f.likelihood, reason: f.severity_reason, category: f.category, title: f.title, file: f.file, line: f.line,
     body: f.body, fix: f.fix, rule: f.rule || null, reviewers: f.raised_by || [], merges: f.merges || [],
   }));
 }
@@ -834,7 +877,7 @@ function rawRows(only) {
     for (const f of (entry.result && entry.result.findings) || []) {
       const ref = `${name}:${f.id}`;
       rows.push({
-        key: 'R:' + ref, id: f.id, severity: f.severity, category: f.category, title: f.title, file: f.file, line: f.line,
+        key: 'R:' + ref, id: f.id, severity: f.severity, impact: f.impact, likelihood: f.likelihood, reason: f.severity_reason, category: f.category, title: f.title, file: f.file, line: f.line,
         body: f.body, fix: f.fix, rule: f.rule || null, reviewers: [name], ref,
         outcome: mergedInto[ref] ? `in ${mergedInto[ref]}` : dropped[ref] ? 'dropped' : '', droppedReason: dropped[ref],
       });
@@ -848,9 +891,59 @@ function rawFinding(ref) {
   return entry && entry.result ? entry.result.findings.find(f => f.id === id) : null;
 }
 function allRows() { return [...synthesisRows(), ...rawRows()]; }
+// Archived findings are ones the person chose to leave as they are. The live page saves the choice in the run's
+// state through the panel's server; a saved report.html, which has no server, keeps it in this browser.
+function archived() {
+  const local = state && !LIVE ? recall('review-panel-archived:' + state.run_dir) || {} : {};
+  return { ...((state && state.archived) || {}), ...local };
+}
+const isArchived = key => !!archived()[key];
+async function setArchived(keys, on) {
+  if (!keys.length) return;
+  const before = { ...(state.archived || {}) };
+  const next = { ...before };
+  keys.forEach(k => on ? (next[k] = next[k] || new Date().toISOString()) : delete next[k]);
+  if (on) { keys.forEach(k => ui.picked.delete(k)); savePicks(); }
+  if (LIVE) {
+    state.archived = next;
+    try {
+      const response = await fetch('archive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keys, archived: on }) });
+      const reply = await response.json();
+      if (!reply.ok) throw new Error(reply.error);
+      state.archived = reply.archived;
+    } catch (e) { state.archived = before; toast(`Couldn’t save that: ${e.message || 'the panel isn’t running'}.`); renderAfterArchive(); return; }
+  } else {
+    const local = recall('review-panel-archived:' + state.run_dir) || {};
+    keys.forEach(k => on ? (local[k] = local[k] || new Date().toISOString()) : delete local[k]);
+    store('review-panel-archived:' + state.run_dir, local);
+  }
+  toast(`${on ? 'Archived' : 'Unarchived'} ${plural(keys.length, 'finding')}.`, () => setArchived(keys, !on));
+  renderAfterArchive();
+}
+function renderAfterArchive() {
+  if (ui.detail && isArchived(ui.detail) !== ui.archivedView) {
+    // The finding left the list the window steps through: move on to the next one shown, or close.
+    const keys = visibleKeys(), at = keys.indexOf(ui.detail);
+    renderPane(true);
+    const left = visibleKeys();
+    ui.detail = left[Math.min(at, left.length - 1)] || null;
+    if (!ui.detail) { closeDetail(); renderHandoff(); return; }
+  } else renderPane(true);
+  renderHandoff(); renderDetail();
+}
+function toast(text, undo) {
+  let box = document.getElementById('toast');
+  if (!box) { box = document.createElement('div'); box.id = 'toast'; box.setAttribute('role', 'status'); document.body.appendChild(box); }
+  box.innerHTML = `<span>${esc(text)}</span>${undo ? '<button type="button" class="linkish">Undo</button>' : ''}`;
+  box.hidden = false;
+  if (undo) box.querySelector('button').onclick = () => { box.hidden = true; undo(); };
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { box.hidden = true; }, 5000);
+}
 function filtered(rows) {
   const q = ui.q.trim().toLowerCase();
-  return rows.filter(r => (ui.sev === 'all' || r.severity === ui.sev)
+  const gone = archived();
+  return rows.filter(r => !!gone[r.key] === ui.archivedView && (ui.sev === 'all' || (ui.sev === 'blocks' ? BLOCKING.includes(r.severity) : r.severity === ui.sev))
     && (ui.cat === 'all' || r.category === ui.cat)
     && (ui.who === 'all' || r.reviewers.includes(ui.who))
     && (!q || [r.id, r.title, r.body, r.fix, r.file, r.reviewers.join(' ')].join(' ').toLowerCase().includes(q)));
@@ -862,14 +955,23 @@ function toolbar(rows, withReviewer) {
   const who = [...new Set(rows.flatMap(r => r.reviewers))];
   if (!cats.includes(ui.cat)) ui.cat = 'all';
   if (!withReviewer || !who.includes(ui.who)) ui.who = 'all';
-  const seg = (value, label) => `<button type="button" data-sev="${value}" class="${ui.sev === value ? 'on' : ''}">${label}</button>`;
+  const sevCount = level => rows.filter(r => level === 'blocks' ? BLOCKING.includes(r.severity) : r.severity === level).length;
+  const dot = level => `<span class="sev-dot sev-${level}"></span>`;
   return `<div class="toolbar">
     <input id="search" type="search" placeholder="Search findings" value="${esc(ui.q)}" aria-label="Search findings">
-    <span class="seg" role="group" aria-label="Severity">${seg('all', 'All')}${seg('blocking', 'Blocks merge')}${seg('advisory', 'Advisory')}</span>
+    ${filterPick('sev', 'Severity', [{ value: 'all', label: 'All severities', count: rows.length }, { value: 'blocks', label: 'Blocks merge', icon: dot('critical'), count: sevCount('blocks') },
+      ...SEVERITIES.map(level => ({ value: level, label: SEVERITY_WORDS[level][0], icon: dot(level), count: sevCount(level) }))], ui.sev)}
     ${filterPick('cat', 'Type', [{ value: 'all', label: 'All types', count: rows.length }, ...cats.map(c => ({ value: c, label: words(CATEGORY_WORDS, c)[0], count: rows.filter(r => r.category === c).length }))], ui.cat)}
+    ${archiveToggle(rows)}
     ${withReviewer ? filterPick('who', 'Reviewer', [{ value: 'all', label: 'All reviewers', count: rows.length }, ...who.map(w => ({ value: w, label: reviewerLabel(w), icon: reviewerIcon(w), count: rows.filter(r => r.reviewers.includes(w)).length }))], ui.who) : ''}
   </div>`;
 }
+function archiveToggle(rows) {
+  const gone = archived(), n = rows.filter(r => gone[r.key]).length;
+  if (!n && !ui.archivedView) return '';
+  return `<button type="button" class="btn archived-btn ${ui.archivedView ? 'on' : ''}" data-act="archived-view" aria-pressed="${ui.archivedView}" title="${ui.archivedView ? 'Back to the open findings' : 'Findings you chose to leave as they are'}">${ARCHIVE_SVG}Archived <span class="n">${n}</span></button>`;
+}
+const ARCHIVE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>';
 // The toolbar's filters use the same rich dropdown as the settings' pickers: icon, name, and a count.
 function filterPick(id, label, options, value) {
   const current = options.find(o => o.value === value) || options[0];
@@ -889,10 +991,23 @@ function visibleKeys() {
 }
 function findRow(key) { return allRows().find(r => r.key === key); }
 // Plain words for the synthesis contract's values, so the finding window reads without a glossary.
+// Severity follows from impact and likelihood (prompts/severity.md); critical and high block merging.
+const SEVERITIES = ['critical', 'high', 'medium', 'low'];
+const BLOCKING = ['critical', 'high'];
 const SEVERITY_WORDS = {
-  blocking: ['Blocks merge', 'Fix this before the change merges.'],
-  advisory: ['Advisory', 'Worth fixing, but it does not block the merge.'],
+  critical: ['Critical', 'Blocks merge. Severe harm on a path people use routinely.'],
+  high: ['High', 'Blocks merge. Severe harm on a less common path, or a wrong result on a routine one.'],
+  medium: ['Medium', 'Fine to merge with a follow-up. Severe but rare, a wrong result on a less common path, or a routine annoyance.'],
+  low: ['Low', 'Optional. A minor annoyance off the main path, or polish and maintainability.'],
 };
+const IMPACT_WORDS = { severe: 'severe impact', significant: 'significant impact', minor: 'minor impact', cosmetic: 'cosmetic impact' };
+// Runs from before the four levels said blocking or advisory.
+const LEGACY_SEVERITY = { blocking: 'high', advisory: 'medium' };
+function upgradeSeverities(next) {
+  const all = [...((next.synthesis && next.synthesis.result && next.synthesis.result.findings) || []),
+    ...Object.values(next.reviewers || {}).flatMap(e => (e.result && e.result.findings) || [])];
+  for (const f of all) if (LEGACY_SEVERITY[f.severity]) f.severity = LEGACY_SEVERITY[f.severity];
+}
 const CATEGORY_WORDS = {
   defect: ['Bug', 'The code does the wrong thing.'],
   policy: ['Needs your decision', 'A judgment call only the author can make.'],
@@ -934,13 +1049,79 @@ function walkthroughTab(r, walk) {
   const videos = result.videos && result.videos.length ? result.videos : result.video ? [{ file: result.video, title: '' }] : [];
   const src = file => `walkthroughs/${encodeURIComponent(r.id)}/${encodeURIComponent(file)}`;
   // The live page serves the videos, and report.html opened from the run folder finds them beside it; a copy of
-  // the page anywhere else can only say where they are.
-  const player = inline && location.protocol !== 'file:' ? (videos.length ? `<p class="note">The video${videos.length > 1 ? 's are' : ' is'} in the run folder, at ${videos.map(v => `<code>walkthroughs/${esc(r.id)}/${esc(v.file)}</code>`).join(', ')}. Open the run’s report.html to watch here.</p>` : '')
-    : videos.map(v => `<figure class="walk-video">${v.title ? `<figcaption>${esc(v.title)}</figcaption>` : ''}<video controls preload="metadata" src="${esc(src(v.file))}"></video></figure>`).join('');
+  // the page anywhere else can't load them, and each player then says where its video is.
+  const player = videos.map(v => videoPlayer(src(v.file), v.title, `walkthroughs/${r.id}/${v.file}`)).join('')
+    + (videos.length ? '<p class="vkeys"><kbd>Space</kbd> plays and pauses, <kbd>←</kbd> <kbd>→</kbd> skip 5 seconds, <kbd>F</kbd> toggles full screen.</p>' : '');
   const steps = (result.steps || []).length ? `<div class="sect-label">Steps</div><ol class="walk-steps">${result.steps.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>` : '';
   return `<div class="walk-head"><span class="pill o-${esc(result.outcome)}" title="${esc(hint)}">${esc(word)}</span>${result.attached ? '<span class="note">Recorded outside the panel and attached to this run.</span>' : agentChip(walk)}</div>
     <div class="body">${md(result.summary)}</div>${player}${steps}`;
 }
+// The browser's own controls cover the bottom of the picture, where older recordings put their captions, so the
+// player draws its controls in a bar below the video. Full screen takes the player, bar included, not the bare video.
+const MAX_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>';
+const MIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>';
+const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>';
+const PAUSE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+function videoPlayer(url, title, path) {
+  return `<figure class="walk-video">${title ? `<figcaption>${esc(title)}</figcaption>` : ''}
+    <div class="vp"><video preload="metadata" playsinline src="${esc(url)}" data-path="${esc(path)}"></video>
+      <div class="vbar"><button type="button" data-vact="play" aria-label="Play" title="Play (Space)">${PLAY_SVG}</button>
+        <span class="vtime">0:00 / 0:00</span><input type="range" min="0" max="1000" value="0" step="1" data-vseek aria-label="Position">
+        <button type="button" data-vact="speed" title="Playback speed">1×</button>
+        <button type="button" data-vact="full" aria-label="Full screen" title="Full screen (F)">${MAX_SVG}</button></div></div></figure>`;
+}
+const mediaClock = t => { t = Math.max(0, Math.floor(t || 0)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+function syncPlayer(video) {
+  const vp = video.closest('.vp'); if (!vp) return;
+  const play = vp.querySelector('[data-vact="play"]');
+  play.innerHTML = video.paused ? PLAY_SVG : PAUSE_SVG;
+  play.setAttribute('aria-label', video.paused ? 'Play' : 'Pause');
+  vp.querySelector('.vtime').textContent = `${mediaClock(video.currentTime)} / ${mediaClock(video.duration)}`;
+  const seek = vp.querySelector('[data-vseek]');
+  if (document.activeElement !== seek && video.duration) seek.value = Math.round(video.currentTime / video.duration * 1000);
+}
+['timeupdate', 'loadedmetadata', 'play', 'pause', 'ended'].forEach(type => document.addEventListener(type, e => { if (e.target.matches && e.target.matches('.walk-video video')) syncPlayer(e.target); }, true));
+document.addEventListener('error', e => {
+  if (!e.target.matches || !e.target.matches('.walk-video video')) return;
+  const vp = e.target.closest('.vp');
+  vp.outerHTML = `<p class="note">This copy of the page can’t load the video. It’s in the run folder at <code>${esc(e.target.dataset.path)}</code>; open the run’s report.html to watch it here.</p>`;
+}, true);
+document.addEventListener('input', e => {
+  if (!e.target.matches('[data-vseek]')) return;
+  const video = e.target.closest('.vp').querySelector('video');
+  if (video.duration) { video.currentTime = e.target.value / 1000 * video.duration; syncPlayer(video); }
+});
+function videoAction(video, act) {
+  const vp = video.closest('.vp');
+  if (act === 'play') video.paused || video.ended ? video.play().catch(() => {}) : video.pause();
+  if (act === 'speed') { const next = { 1: 1.5, 1.5: 2, 2: 1 }[video.playbackRate] || 1; video.playbackRate = next; vp.querySelector('[data-vact="speed"]').textContent = `${next}×`; }
+  if (act === 'full') document.fullscreenElement ? document.exitFullscreen().catch(() => {}) : vp.requestFullscreen && vp.requestFullscreen().catch(() => {});
+  if (act === 'back' || act === 'ahead') { video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + (act === 'back' ? -5 : 5))); syncPlayer(video); }
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-vact]');
+  const video = btn ? btn.closest('.vp')?.querySelector('video') : e.target.matches('.walk-video video') ? e.target : null;
+  if (!video) return;
+  e.stopPropagation();
+  videoAction(video, btn ? btn.dataset.vact : 'play');
+}, true);
+document.addEventListener('fullscreenchange', () => document.querySelectorAll('.walk-video [data-vact="full"]').forEach(b => {
+  const on = b.closest('.vp') === document.fullscreenElement;
+  b.innerHTML = on ? MIN_SVG : MAX_SVG; b.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
+}));
+// Space, the arrows, and F drive the player in full screen, or the first video of an open walkthrough tab, ahead of
+// the finding window's own keys (where Space would tick the finding).
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const act = { ' ': 'play', ArrowLeft: 'back', ArrowRight: 'ahead', f: 'full', F: 'full' }[e.key];
+  if (!act) return;
+  const full = document.fullscreenElement && document.fullscreenElement.matches('.vp') ? document.fullscreenElement : null;
+  if (!full && e.target.matches && e.target.matches('input, textarea, select, [contenteditable]')) return;
+  const video = full ? full.querySelector('video') : ui.detail && ui.fwTab === 'walkthrough' ? document.querySelector('#detail .walk-video video') : null;
+  if (!video) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  videoAction(video, act);
+}, true);
 // A finding that breaks a written rule reads as: the rule, what it says, what the change does, and the resolution.
 function ruleProblem(r) {
   const rule = r.rule;
@@ -995,12 +1176,14 @@ function detailHtml(r) {
     outcome = into ? `<div class="fact wide"><dt>Synthesis</dt><dd>Merged into <button type="button" class="linkish" data-goto="${esc(into.key)}" title="Show it in the synthesis's findings">finding ${esc(into.id.replace(/^S/, ''))}: ${inlineMd(into.title)}</button></dd></div>`
       : r.droppedReason ? `<div class="fact wide"><dt>Synthesis</dt><dd>Dropped: ${esc(r.droppedReason)}</dd></div>` : '';
   }
-  const where = r.file ? `<button type="button" class="linkish mono" data-fwtab="code" title="Show the code">${esc(r.file.split('/').pop())}${r.line ? `:${esc(r.line)}` : ''}</button>` : '';
+  const where = r.file ? `<button type="button" class="linkish mono" data-fwtab="code" title="Show the code">${pathHtml(r.file, r.line)}</button>` : '';
   const picked = ui.picked.has(r.key);
   const tab = ui.fwTab;
+  const archivedAt = archived()[r.key];
+  const why = r.reason ? `<p class="sev-why"><b>${esc(sevWord)}:</b> ${inlineMd(r.reason)}</p>` : '';
   const content = tab === 'code' ? codeTab(r) : tab === 'reviewers' ? reviewersTab(r) : tab === 'walkthrough' ? walkthroughTab(r, walk)
-    : r.rule ? ruleProblem(r)
-    : `<div class="body">${md(r.body)}</div>${r.fix ? `<div class="fix"><div class="fix-label">Suggested fix</div>${md(r.fix)}</div>` : ''}`;
+    : r.rule ? why + ruleProblem(r)
+    : `${why}<div class="body">${md(r.body)}</div>${r.fix ? `<div class="fix"><div class="fix-label">Suggested fix</div>${md(r.fix)}</div>` : ''}`;
   return `<div class="overlay" data-act="detail-close"><div class="dialog finding-window" role="dialog" aria-modal="true" aria-labelledby="fw-title" tabindex="-1">
     <div class="fw-head">
       <span class="note">${isRaw ? 'Original reviewer finding' : 'Finding'}${at >= 0 ? ` ${at + 1} of ${keys.length}` : ''}</span>
@@ -1009,18 +1192,21 @@ function detailHtml(r) {
     <h3 id="fw-title">${inlineMd(r.title)}</h3>
     <dl class="facts">
       <div class="fact" title="${esc(sevHint)}"><dt>Severity</dt><dd><span class="pill sev-${esc(r.severity)}">${esc(sevWord)}</span></dd></div>
+      ${r.impact && r.likelihood ? `<div class="fact" title="${esc(sevHint)}"><dt>Why</dt><dd>${esc(IMPACT_WORDS[r.impact] || r.impact)} × ${esc(r.likelihood)}</dd></div>` : ''}
       ${r.category ? `<div class="fact" title="${esc(catHint)}"><dt>Type</dt><dd>${esc(catWord)}</dd></div>` : ''}
       ${finders.length ? `<div class="fact"><dt>Found by</dt><dd>${finders.map(w => reviewerTag(w, r.merges)).join('<span class="sep">,</span> ')}</dd></div>` : ''}
-      ${where ? `<div class="fact"><dt>Where</dt><dd>${where}</dd></div>` : ''}
+      ${where ? `<div class="fact wide"><dt>Where</dt><dd>${where}</dd></div>` : ''}
       ${outcome}
+      ${archivedAt ? `<div class="fact"><dt>Archived</dt><dd>${esc(new Date(archivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</dd></div>` : ''}
     </dl>
     <div class="tabs fw-tabs" role="tablist">${tabs.map(([id, label]) => `<button type="button" role="tab" aria-selected="${tab === id}" class="tab ${tab === id ? 'on' : ''}" data-fwtab="${id}">${label}</button>`).join('')}</div>
     <div class="fw-scroll">${content}</div>
     <div class="fw-foot">
       <span class="fw-nav"><button type="button" class="btn" data-act="detail-prev" ${at > 0 ? '' : 'disabled'}>↑ Previous</button><button type="button" class="btn" data-act="detail-next" ${at >= 0 && at < keys.length - 1 ? '' : 'disabled'}>↓ Next</button></span>
-      <span class="fw-actions"><span class="note" id="fw-note"></span><label class="toggle"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''}> Add to handoff</label><button type="button" class="btn" data-act="detail-copy" title="Copy a prompt that asks an agent to fix only this finding">Copy fix prompt</button></span>
+      <span class="fw-actions"><span class="note" id="fw-note"></span>${archivedAt ? '' : `<label class="toggle"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''}> Add to handoff</label><button type="button" class="btn" data-act="detail-copy" title="Copy a prompt that asks an agent to fix only this finding">Copy fix prompt</button>`}
+        <button type="button" class="btn with-icon" data-act="detail-archive" title="${archivedAt ? 'Put it back with the open findings (E)' : 'Leave it as it is and hide it from the open findings (E)'}">${ARCHIVE_SVG}${archivedAt ? 'Unarchive' : 'Archive'}</button></span>
     </div>
-    <div class="fw-keys"><span><kbd>Esc</kbd> close</span><span><kbd>↑</kbd><kbd>↓</kbd> previous / next</span><span><kbd>Space</kbd> add to handoff</span><span><kbd>1</kbd>–<kbd>${tabs.length}</kbd> tabs</span></div>
+    <div class="fw-keys"><span><kbd>Esc</kbd> close</span><span><kbd>↑</kbd><kbd>↓</kbd> previous / next</span>${archivedAt ? '' : tab === 'walkthrough' && walk && walk.result ? '<span><kbd>Space</kbd> play / pause</span>' : '<span><kbd>Space</kbd> add to handoff</span>'}<span><kbd>E</kbd> ${archivedAt ? 'unarchive' : 'archive'}</span><span><kbd>1</kbd>–<kbd>${tabs.length}</kbd> tabs</span></div>
   </div></div>`;
 }
 function renderDetail() {
@@ -1068,6 +1254,12 @@ function stepDetail(delta) {
   if (next) openDetail(next);
 }
 const VIDEO_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>';
+// A finding's place as folder plus file, the folder quieter, so the table shows which part of the codebase it's in.
+function pathHtml(file, line) {
+  const cut = file.lastIndexOf('/');
+  const dir = cut >= 0 ? file.slice(0, cut + 1) : '';
+  return `${dir ? `<span class="path-dir">${esc(dir)}</span>` : ''}<span class="path-leaf">${esc(file.slice(cut + 1))}${line ? `:${esc(line)}` : ''}</span>`;
+}
 function walkMark(r) {
   const walk = r.key.startsWith('S:') && state.walkthroughs && state.walkthroughs.items ? state.walkthroughs.items[r.id] : null;
   if (!walk) return '';
@@ -1080,7 +1272,7 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
   const pickedShown = shown.filter(r => ui.picked.has(r.key)).length;
   const allOn = shown.length > 0 && pickedShown === shown.length, someOn = pickedShown > 0 && !allOn;
   const body = shown.map(r => {
-    const where = r.file ? `${r.file.split('/').pop()}${r.line ? `:${r.line}` : ''}` : '';
+    const where = r.file ? pathHtml(r.file, r.line) : '';
     const picked = ui.picked.has(r.key);
     const who = r.reviewers.slice(0, 2).map(w => reviewerTag(w, r.merges)).join('') + (r.reviewers.length > 2 ? `<span class="chip more">+${r.reviewers.length - 2}</span>` : '');
     const num = r.key.startsWith('S:') ? r.id.replace(/^S/, '') : String(rows.indexOf(r) + 1);
@@ -1089,16 +1281,16 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
         <td class="pick" title="Add to handoff (Space)"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Add this finding to the handoff"></td>
         <td class="fid">${esc(num)}</td>
         <td><span class="pill sev-${esc(r.severity)}">${esc(words(SEVERITY_WORDS, r.severity)[0])}</span></td>
-        <td><div class="ftitle">${inlineMd(r.title)}${walkMark(r)}</div>${where ? `<div class="where" title="${esc([r.file, r.line].filter(Boolean).join(':'))}">${esc(where)}</div>` : ''}</td>
+        <td><div class="ftitle">${inlineMd(r.title)}${walkMark(r)}</div>${where ? `<div class="where" title="${esc([r.file, r.line].filter(Boolean).join(':'))}">${where}</div>` : ''}</td>
         ${reviewerCol ? `<td><div class="whos">${who}</div></td>` : ''}
         ${outcomeCol ? `<td class="outcome">${outcome}</td>` : ''}
       </tr>`;
   }).join('');
   return `<div class="table-wrap"><table>
       <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th>#</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Found by</th>' : ''}${outcomeCol ? '<th title="What the synthesis did with this finding">Merged into</th>' : ''}</tr></thead>
-      <tbody>${body || `<tr><td colspan="${cols}" class="empty">${rows.length ? 'No findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
+      <tbody>${body || `<tr><td colspan="${cols}" class="empty">${ui.archivedView ? 'No archived findings match these filters.' : rows.length ? 'No open findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
     </table></div>
-    <div class="count-line">${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}${pickedShown ? `, ${pickedShown} selected` : ''}. Click a row to open it; tick the ones to hand off (Shift-click for a range).</div>`;
+    <div class="count-line">${ui.archivedView ? `${plural(shown.length, 'archived finding')}. Open one to unarchive it.` : `${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}${pickedShown ? `, ${pickedShown} selected` : ''}. Click a row to open it; tick the ones to hand off (Shift-click for a range).`}</div>`;
 }
 
 /* ---------- views ---------- */
@@ -1179,8 +1371,8 @@ function linkRefs(html) {
 function droppedLine(r) {
   const dropped = r.dropped || [];
   if (!dropped.length) return '';
-  const blocking = dropped.filter(d => { const f = rawFinding(`${d.reviewer}:${d.finding}`); return f && f.severity === 'blocking'; }).length;
-  return `<div class="${blocking ? 'banner' : 'note dropped-line'}">The synthesis dropped ${plural(dropped.length, 'reviewer finding')}${blocking ? `, ${blocking} of them blocking` : ''}. <button type="button" class="linkish" data-act="show-raw">Review the drops</button></div>`;
+  const blocking = dropped.filter(d => { const f = rawFinding(`${d.reviewer}:${d.finding}`); return f && BLOCKING.includes(f.severity); }).length;
+  return `<div class="${blocking ? 'banner' : 'note dropped-line'}">The synthesis dropped ${plural(dropped.length, 'reviewer finding')}${blocking ? `, ${blocking} of them critical or high` : ''}. <button type="button" class="linkish" data-act="show-raw">Review the drops</button></div>`;
 }
 function reviewerView(name) {
   const entry = state.reviewers[name];
@@ -1245,8 +1437,8 @@ function card(key, name, entry, desc) {
   const result = entry.result;
   const harness = entry.agent && entry.agent.harness;
   const icon = reviewerIcon(key);
-  const blocking = result ? result.findings.filter(f => f.severity === 'blocking').length : 0;
-  const right = result ? `<span class="cnt ${blocking ? 'blk' : ''}" title="${esc(result.findings.length + ' findings' + (blocking ? `, ${blocking} blocking` : ''))}">${result.findings.length}</span>`
+  const blocking = result ? result.findings.filter(f => BLOCKING.includes(f.severity)).length : 0;
+  const right = result ? `<span class="cnt ${blocking ? 'blk' : ''}" title="${esc(result.findings.length + ' findings' + (blocking ? `, ${blocking} block merge` : ''))}">${result.findings.length}</span>`
     : entry.status === 'done' ? '' : `<span class="st ${esc(entry.status)}" title="${esc(entry.status)}${entry.activity ? ': ' + esc(entry.activity) : ''}${entry.error ? ': ' + esc(entry.error) : ''}"></span>`;
   return `<button type="button" class="navrow ${ui.view === key ? 'sel' : ''}" data-view="${esc(key)}" title="${esc(desc)}"><span class="ico">${icon}</span><span class="lbl">${esc(name)}</span>${right}</button>`;
 }
@@ -1325,7 +1517,7 @@ function renderTable() {
 }
 
 /* ---------- handoff ---------- */
-function pickedRows() { const rows = allRows(); return [...ui.picked].map(k => rows.find(r => r.key === k)).filter(Boolean); }
+function pickedRows() { const rows = allRows(); return [...ui.picked].map(k => rows.find(r => r.key === k)).filter(r => r && !isArchived(r.key)); }
 function handoffText(chosen) {
   const t = state.target;
   const rows = chosen || pickedRows();
@@ -1344,7 +1536,7 @@ function handoffText(chosen) {
   const fence = text => ['```text', text.trim().replace(/```/g, '`\u200b``'), '```'];
   for (const r of rows) {
     const where = [r.file, r.line].filter(Boolean).join(':');
-    lines.push(`## ${r.ref || r.id}: ${r.title}`, '', `- Severity: ${r.severity}${r.category ? ` (${r.category})` : ''}`);
+    lines.push(`## ${r.ref || r.id}: ${r.title}`, '', `- Severity: ${r.severity}${r.category ? ` (${r.category})` : ''}${r.reason ? `: ${r.reason}` : ''}`);
     if (where) lines.push(`- Location: ${where}`);
     if (r.rule) lines.push(`- Rule: ${r.rule.id}${r.rule.file ? ` (${r.rule.file})` : ''}`, '', 'What the rule says:', '', ...fence(r.rule.quote));
     lines.push(`- Raised by: ${r.reviewers.join(', ')}`, '', ...fence(r.body), '');
@@ -1358,7 +1550,7 @@ function renderHandoff() {
   const holder = document.getElementById('handoff');
   const n = ui.picked.size;
   let html = '';
-  if (n) html += `<div class="handoff-bar"><span>${plural(n, 'finding')} selected</span><button type="button" class="btn" data-act="clear">Clear</button><button type="button" class="btn primary" data-act="handoff">Prepare handoff</button></div>`;
+  if (n) html += `<div class="handoff-bar"><span>${plural(n, 'finding')} selected</span><button type="button" class="btn" data-act="clear">Clear</button><button type="button" class="btn with-icon" data-act="archive-picked" title="Leave them as they are and hide them from the open findings">${ARCHIVE_SVG}Archive</button><button type="button" class="btn primary" data-act="handoff">Prepare handoff</button></div>`;
   if (ui.dialog && n) html += `<div class="overlay" data-act="close"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="handoff-title">
       <h3 id="handoff-title">Handoff for an implementing agent</h3>
       <p class="note" style="margin:0">Paste this into the agent that will make the fixes. You can edit it here first.</p>
@@ -1399,8 +1591,6 @@ document.addEventListener('click', async event => {
   if (view) { ui.view = view.dataset.view; ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; renderChrome(); renderPane(true); return; }
   const tab = t.closest('[data-tab]');
   if (tab) { ui.tab[ui.view] = tab.dataset.tab; renderPane(true); return; }
-  const sev = t.closest('[data-sev]');
-  if (sev) { ui.sev = sev.dataset.sev; document.querySelectorAll('[data-sev]').forEach(b => b.classList.toggle('on', b.dataset.sev === ui.sev)); renderTable(); return; }
   // The whole first cell is the checkbox's target, so a near miss ticks it instead of opening the row.
   const pickCell = t.closest('td.pick, th.pick');
   const box = pickCell ? pickCell.querySelector('input') : t.matches('[data-pick]') ? t : null;
@@ -1448,6 +1638,9 @@ document.addEventListener('click', async event => {
     if (a === 'detail-open') { openDetail(act.dataset.key); return; }
     if (a === 'detail-prev') { stepDetail(-1); return; }
     if (a === 'detail-next') { stepDetail(1); return; }
+    if (a === 'detail-archive') { await setArchived([ui.detail], !isArchived(ui.detail)); return; }
+    if (a === 'archived-view') { ui.archivedView = !ui.archivedView; renderPane(true); return; }
+    if (a === 'archive-picked') { await setArchived([...ui.picked], true); return; }
     if (a === 'detail-copy') { await copy(handoffText([findRow(ui.detail)]), document.getElementById('fw-note'), act); return; }
     if (a === 'settings') { openSettings(true); return; }
     if (a === 'rerun') { await copy(state.target.rerun, null, act); return; }
@@ -1482,7 +1675,8 @@ document.addEventListener('keydown', event => {
     if (event.target.matches('input, textarea, select')) return;
     if (event.key === 'ArrowDown' || event.key === 'j') { event.preventDefault(); stepDetail(1); }
     if (event.key === 'ArrowUp' || event.key === 'k') { event.preventDefault(); stepDetail(-1); }
-    if (event.key === ' ' && !event.target.matches('button, a')) {
+    if ((event.key === 'e' || event.key === 'E') && !event.metaKey && !event.ctrlKey && !event.altKey) { event.preventDefault(); setArchived([ui.detail], !isArchived(ui.detail)); return; }
+    if (event.key === ' ' && !event.target.matches('button, a') && !isArchived(ui.detail)) {
       event.preventDefault();
       ui.picked.has(ui.detail) ? ui.picked.delete(ui.detail) : ui.picked.add(ui.detail);
       savePicks(); renderTable(); renderHandoff(); renderDetail(); return;
@@ -1558,8 +1752,18 @@ function loadConfig() {
   const saved = recall(cfgKey());
   settings.cfg = saved && saved.basedOn === JSON.stringify(roster()) && Array.isArray(saved.reviewers) ? saved : baseConfig();
   settings.cfg.basedOn = JSON.stringify(roster());
+  dropBlankDrafts();
 }
 function saveConfig() { store(cfgKey(), settings.cfg); }
+// A reviewer added here and left blank is a slip, not a draft: it goes away when settings close or the view
+// switches to the built-in settings, instead of lingering as "new, not saved".
+const blankNew = r => r.isNew && !r.summary.trim() && !r.prompt.trim();
+function dropBlankDrafts() {
+  if (!settings.cfg || !settings.cfg.reviewers.some(blankNew)) return;
+  settings.cfg.reviewers = settings.cfg.reviewers.filter(r => !blankNew(r));
+  settings.editing = null;
+  saveConfig();
+}
 const FIELDS = ['icon', 'summary', 'harness', 'model', 'effort', 'prompt', 'mode'];
 const edited = r => r.isNew || r.removeFile || FIELDS.some(f => r[f] !== r.original[f]);
 const changed = r => edited(r) || r.included !== r.original.included;
@@ -1716,7 +1920,7 @@ function builtinNotice() {
 // Rich dropdowns for Runs on and Effort, matching the model picker: the harness's logo beside its name.
 const CHOICES = {
   harness: () => [{ value: 'claude-code', label: 'Claude Code', icon: LOGOS['claude-code'] }, { value: 'codex', label: 'Codex', icon: LOGOS.codex }],
-  record: () => [{ value: 'off', label: 'Off', hint: 'no videos' }, { value: 'blocking', label: 'Blocking findings', hint: 'one video each' }, { value: 'all', label: 'All findings', hint: 'slower; one session each' }],
+  record: () => [{ value: 'off', label: 'Off', hint: 'no videos' }, { value: 'blocking', label: 'Findings that block merge', hint: 'critical and high' }, { value: 'all', label: 'All findings', hint: 'slower; one session each' }],
   effort: () => EFFORTS.map(e => ({ value: e, label: e === 'default' ? 'Default' : e[0].toUpperCase() + e.slice(1), hint: e === 'default' ? 'the harness decides' : '' })),
 };
 function choiceButton(scope, field, value) {
@@ -1779,7 +1983,7 @@ function reviewerEditor(r, index) {
 }
 function reviewersPane() {
   const cfg = settings.cfg;
-  const rows = cfg.reviewers.map((r, i) => `
+  const rows = cfg.reviewers.map((r, i) => r.isNew && !canEdit() ? '' : `
     <div class="srow ${r.included ? '' : 'out'}" data-index="${i}" tabindex="0" role="button" aria-expanded="${settings.editing === i}">
       <span class="av">${iconSvg(r.icon)}</span>
       <span class="who"><b>${esc(reviewerLabel(r.name))}</b><span>${esc(r.summary || 'No summary yet')}</span></span>
@@ -1788,7 +1992,7 @@ function reviewersPane() {
   return `<div class="spane-head"><div><h2>Reviewers</h2><p>Every reviewer on the panel, and where its settings come from. Open one to read its prompt or change it.</p></div>${closeBtn()}</div>
     <div class="sbody">
       ${canEdit() ? '' : builtinNotice()}
-      <div class="group-head"><span class="n">${plural(cfg.reviewers.filter(r => r.included).length, 'reviewer')} on the panel</span>${canEdit() ? '<button type="button" class="linkish add" data-sact="add">+ Add reviewer</button>' : ''}</div>
+      <div class="group-head"><span class="n">${plural(cfg.reviewers.filter(r => r.included && (canEdit() || !r.isNew)).length, 'reviewer')} on the panel</span>${canEdit() ? '<button type="button" class="linkish add" data-sact="add">+ Add reviewer</button>' : ''}</div>
       <div class="slist">${rows}</div>
     </div>`;
 }
@@ -1943,8 +2147,6 @@ function overviewPane() {
       <div class="mode-detail">${detail}</div>
     </div>`;
 }
-const MAX_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>';
-const MIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>';
 const closeBtn = () => `<span class="head-btns"><button type="button" class="icon-btn" data-sact="maximize" aria-label="${settings.max ? 'Restore size' : 'Maximize'}" title="${settings.max ? 'Restore size' : 'Maximize'}">${settings.max ? MIN_SVG : MAX_SVG}</button>` + '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>';
 function footer() {
   if (!canEdit()) return '';
@@ -1998,6 +2200,7 @@ function renderSettings() {
 function openSettings(open) {
   settings.open = open;
   settings.picker = null;
+  if (!open) dropBlankDrafts();
   if (open) loadConfig();
   renderSettings();
   if (open) { const first = document.querySelector('#settings [aria-current="page"]'); if (first) first.focus(); }
@@ -2050,7 +2253,7 @@ document.getElementById('settings').addEventListener('click', async event => {
   const sect = t.closest('[data-sect]');
   if (sect) { settings.section = sect.dataset.sect; settings.editing = null; renderSettings(); return; }
   const mode = t.closest('[data-mode]');
-  if (mode) { settings.mode = mode.dataset.mode; settings.section = 'overview'; settings.editing = null; renderSettings(); return; }
+  if (mode) { settings.mode = mode.dataset.mode; settings.section = 'overview'; settings.editing = null; if (settings.mode === 'builtin') dropBlankDrafts(); renderSettings(); return; }
   if (t.matches('.sscrim')) { openSettings(false); return; }
   const act = t.closest('[data-sact]:not(.sscrim)');
   const row = t.closest('.srow');
@@ -2073,7 +2276,9 @@ document.getElementById('settings').addEventListener('click', async event => {
       settings.justAdded = true;
       break;
     }
-    case 'ask-delete': settings.confirmDelete = true; renderSettings(); { const c = document.getElementById('confirm-cancel'); if (c) c.focus(); } return;
+    case 'ask-delete':
+      if (r && blankNew(r)) { cfg.reviewers.splice(settings.editing, 1); settings.editing = null; break; }
+      settings.confirmDelete = true; renderSettings(); { const c = document.getElementById('confirm-cancel'); if (c) c.focus(); } return;
     case 'cancel-delete': settings.confirmDelete = false; break;
     case 'delete':
       settings.confirmDelete = false;
@@ -2195,6 +2400,7 @@ showGuide(0);
 function render() { renderChrome(); renderPane(false); if (!ui.dialog) renderHandoff(); }
 function adopt(next) {
   const first = !state;
+  upgradeSeverities(next);
   state = next;
   if (first) { const saved = recall('review-panel:' + state.run_dir); if (Array.isArray(saved)) saved.forEach(k => ui.picked.add(k)); }
 }

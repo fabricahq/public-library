@@ -6,14 +6,18 @@ Do not modify any files. You have read-only access to the repository and can rea
 
 1. **Verify.** For each reviewer finding, read the code it points at. Drop a finding that is wrong, already handled elsewhere, or out of scope for this change, and record why under `dropped`. When a finding is plausible but you can't confirm it, keep it and say so in its body.
 2. **Merge.** When several reviewers describe the same underlying problem, write it once, and list every reviewer finding it covers in `merges`, as `"reviewer:F1"`. A finding only one reviewer raised still lists that one. Every reviewer finding ends up in exactly one finding's `merges` or in `dropped`, so nothing a reviewer raised goes missing. Agreement from several reviewers raises your confidence; say so.
-3. **Rank.** Order findings blocking first, then by how much harm they would do. Re-judge severity yourself: a reviewer may have overstated or understated it. Keep the reviewer's category (`defect`, `policy`, `negligible-likelihood`) unless the code shows it is wrong.
+3. **Rank.** Re-judge each finding's impact and likelihood yourself on the scale below, from the code: a reviewer may have overstated or understated them, and reviewers who merged into one finding may disagree. Order findings by severity, then by how much harm they would do.
+
+{{SEVERITY}}
+
+    Keep the reviewer's category (`defect`, `policy`, `negligible-likelihood`) unless the code shows it is wrong.
 4. **Ask.** Turn every `policy` finding, and any conflict between reviewers that the code can't settle, into a question for the author under `questions`. Mark a question `blocking` when the change shouldn't merge until the author answers it.
 5. **Decide the verdict.**
-   - `ready`: no blocking findings and no open questions that block.
-   - `fix-first`: blocking findings the author can fix without making a new decision.
+   - `ready`: no critical or high findings and no open questions that block.
+   - `fix-first`: critical or high findings the author can fix without making a new decision.
    - `needs-decision`: at least one blocking question only the author can answer.
 
-   The verdict and severities must agree: `ready` has no blocking finding or blocking question, `fix-first` has a blocking finding, and `needs-decision` has a blocking question.
+   The verdict and severities must agree: `ready` has no critical or high finding and no blocking question, `fix-first` has a critical or high finding, and `needs-decision` has a blocking question.
 
 6. **Conclude.** Write the one to five things the author most needs to know as `conclusions`, most important first. They are the first thing the author reads, and they scan them, so each one is:
    - `kind`: what the author does about it. `fix` for something to change before merging, `decide` for a choice only they can make, `check` for something to verify that no reviewer could, such as running the tests, and `note` for anything else worth knowing.
@@ -37,7 +41,9 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
   "findings": [
     {
       "id": "S1",
-      "severity": "blocking | advisory",
+      "impact": "severe | significant | minor | cosmetic",
+      "likelihood": "common | uncommon | rare",
+      "severity_reason": "One sentence naming the impact and how likely it is",
       "category": "defect | policy | negligible-likelihood",
       "title": "Short statement of the problem",
       "file": "path/from/repo/root.ext",

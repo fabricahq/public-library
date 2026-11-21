@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tests for review_panel.py, with fake `claude` and `codex` commands standing in for real sessions."""
+import copy
 import json
 import os
 from pathlib import Path
@@ -19,7 +20,7 @@ import review_panel  # noqa: E402  (imported after the path is set)
 
 REVIEW = {
     'verdict': 'blocking', 'summary': 'Checked the parser.',
-    'findings': [{'id': 'F1', 'severity': 'blocking', 'category': 'defect', 'title': 'Off by one',
+    'findings': [{'id': 'F1', 'impact': 'significant', 'likelihood': 'common', 'severity_reason': 'Every list loses its last item: significant and common.', 'category': 'defect', 'title': 'Off by one',
                   'file': 'app.py', 'line': '2', 'body': 'Drops the last item.', 'fix': 'Use <=.'}],
     'unverified': [],
     'checks': [{'check': 'AC1: prints every item', 'result': 'not-met', 'evidence': 'The loop stops one short (F1).'}],
@@ -64,7 +65,7 @@ FAKE_CLAUDE = textwrap.dedent('''\
         names = re.findall(r'^## (check-[a-z-]+)$', prompt, re.M)
         value = {'verdict': 'fix-first', 'summary': 'One blocking defect.',
             'conclusions': [{'kind': 'fix', 'headline': 'Loop drops the last item', 'detail': None, 'findings': ['S1']}], 'findings': [
-            {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 'Off by one', 'file': 'app.py',
+            {'id': 'S1', 'impact': 'significant', 'likelihood': 'common', 'severity_reason': 'Every list loses its last item: significant and common.', 'category': 'defect', 'title': 'Off by one', 'file': 'app.py',
              'line': '2', 'body': 'Confirmed.', 'fix': 'Use <=.', 'merges': [n + ':F1' for n in names]}],
             'dropped': [], 'questions': [{'question': 'Keep the old format?', 'why': 'Clients parse it.', 'blocking': True}]}
         text = 'Done.\\n```json\\n' + json.dumps(value) + '\\n```'
@@ -117,12 +118,12 @@ class PureHelpers(unittest.TestCase):
 
     def test_validate_review_reports_an_unknown_severity(self):
         bad = json.loads(json.dumps(REVIEW))
-        bad['findings'][0]['severity'] = 'critical'
-        self.assertIn('findings[0].severity must be one of blocking, advisory', review_panel.validate_review(bad))
+        bad['findings'][0]['impact'] = 'blocking'
+        self.assertIn('findings[0].impact must be one of severe, significant, minor, cosmetic', review_panel.validate_review(bad))
 
     def synthesis(self, **changes):
         value = {'verdict': 'fix-first', 'summary': 's', 'conclusions': [{'kind': 'fix', 'headline': 'Off by one', 'detail': 'Use <=.', 'findings': ['S1']}], 'findings': [
-            {'id': 'S1', 'severity': 'blocking', 'category': 'defect', 'title': 't', 'body': 'b',
+            {'id': 'S1', 'impact': 'significant', 'likelihood': 'common', 'severity_reason': 'Every list loses its last item: significant and common.', 'category': 'defect', 'title': 't', 'body': 'b',
              'merges': ['check-docs:F1', 'check-rules:F1']}]}
         value.update(changes)
         return value
@@ -162,7 +163,7 @@ class PureHelpers(unittest.TestCase):
     def test_validate_synthesis_ties_the_verdict_to_blocking_questions(self):
         reviews = {'check-docs': REVIEW, 'check-rules': REVIEW}
         merged = self.synthesis()['findings'][0]
-        advisory = dict(merged, severity='advisory')
+        advisory = dict(merged, impact='minor', likelihood='rare')
         ready = self.synthesis(verdict='ready', findings=[advisory], questions=[{'question': 'Q?', 'blocking': True}])
         self.assertIn("verdict can't be 'ready' while a question is blocking", review_panel.validate_synthesis(ready, reviews))
         decide = self.synthesis(verdict='needs-decision', findings=[advisory], questions=[{'question': 'Q?', 'blocking': False}])
@@ -171,15 +172,15 @@ class PureHelpers(unittest.TestCase):
         self.assertIn('questions[0].blocking must be true or false', review_panel.validate_synthesis(missing, reviews))
 
     def test_report_lists_dropped_findings_blocking_first(self):
-        advisory = dict(REVIEW['findings'][0], id='F2', severity='advisory', title='Minor')
-        blocking = dict(REVIEW['findings'][0], severity='blocking', title='Major')
+        advisory = dict(REVIEW['findings'][0], id='F2', severity='low', title='Minor')
+        blocking = dict(REVIEW['findings'][0], severity='high', title='Major')
         state = {'target': {'label': 'x'}, 'reviewers': {'check-docs': {'status': 'done', 'result': {'findings': [blocking, advisory]}}},
                  'synthesis': {'result': {'verdict': 'ready', 'summary': 's', 'conclusions': ['c'], 'findings': [], 'questions': [],
                                           'dropped': [{'reviewer': 'check-docs', 'finding': 'F2', 'reason': 'Style only.'},
                                                       {'reviewer': 'check-docs', 'finding': 'F1', 'reason': 'Handled in tests.'}]}}}
         report = review_panel.report_markdown(state)
         self.assertIn('## Dropped by the synthesis', report)
-        self.assertLess(report.index('check-docs:F1 [blocking] Major: Handled in tests.'), report.index('check-docs:F2 [advisory] Minor'))
+        self.assertLess(report.index('check-docs:F1 [high] Major: Handled in tests.'), report.index('check-docs:F2 [low] Minor'))
 
     def test_live_server_needs_the_token_and_serves_the_fallback_log(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -394,7 +395,7 @@ class PureHelpers(unittest.TestCase):
 
     def test_validate_synthesis_rejects_fix_first_without_a_blocking_finding(self):
         value = self.synthesis(findings=[])
-        self.assertIn("verdict 'fix-first' needs a blocking finding", review_panel.validate_synthesis(value, {}))
+        self.assertIn("verdict 'fix-first' needs a critical or high finding", review_panel.validate_synthesis(value, {}))
 
     def test_validate_synthesis_rejects_questions_that_are_not_objects(self):
         value = self.synthesis(verdict='needs-decision', findings=[], questions=['Keep it?'])
@@ -402,7 +403,31 @@ class PureHelpers(unittest.TestCase):
 
     def test_validate_synthesis_rejects_ready_with_a_blocking_finding(self):
         problems = review_panel.validate_synthesis(self.synthesis(verdict='ready'), {'check-docs': REVIEW, 'check-rules': REVIEW})
-        self.assertIn("verdict can't be 'ready' while a finding is blocking", problems)
+        self.assertIn("verdict can't be 'ready' while a finding is critical or high", problems)
+
+    def test_severity_follows_impact_and_likelihood_not_the_sessions_label(self):
+        cases = {('severe', 'common'): 'critical', ('severe', 'rare'): 'medium', ('significant', 'common'): 'high',
+                 ('minor', 'uncommon'): 'low', ('cosmetic', 'common'): 'low'}
+        for (impact, likelihood), want in cases.items():
+            self.assertEqual(review_panel.severity_of({'impact': impact, 'likelihood': likelihood}), want)
+        claimed = dict(REVIEW, findings=[dict(REVIEW['findings'][0], severity='critical', impact='minor', likelihood='rare')])
+        value = review_panel.normalize(copy.deepcopy(claimed))
+        self.assertEqual(value['findings'][0]['severity'], 'low')
+        self.assertEqual(value['verdict'], 'concerns')
+
+    def test_validate_review_requires_a_severity_reason(self):
+        bad = copy.deepcopy(REVIEW)
+        del bad['findings'][0]['severity_reason']
+        self.assertIn('findings[0].severity_reason must be a non-empty string', review_panel.validate_review(bad))
+
+    def test_set_archived_adds_and_removes_findings(self):
+        data = {}
+        review_panel.set_archived(data, ['S:S1', 'R:check-docs:F2'], True)
+        self.assertEqual(sorted(data['archived']), ['R:check-docs:F2', 'S:S1'])
+        review_panel.set_archived(data, ['S:S1'], False)
+        self.assertEqual(list(data['archived']), ['R:check-docs:F2'])
+        with self.assertRaises(ValueError):
+            review_panel.set_archived(data, ['../state.json'], True)
 
     def test_normalize_turns_a_whole_number_line_into_a_string(self):
         value = review_panel.normalize({'findings': [{'line': 42}]})
@@ -686,7 +711,7 @@ class PanelRun(unittest.TestCase):
         self.assertEqual(state['synthesis']['status'], 'failed', state['reviewers'])
         report = (run_dir / 'report.md').read_text()
         self.assertIn('Synthesis failed', report)
-        self.assertIn('F1 [blocking] Off by one app.py:2', report)
+        self.assertIn('F1 [high] Off by one app.py:2', report)
 
     def test_nothing_to_review_is_a_usage_error(self):
         self.install('claude', FAKE_CLAUDE)

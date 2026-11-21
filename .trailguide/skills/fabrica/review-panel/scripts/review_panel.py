@@ -34,7 +34,18 @@ ROSTER = SKILL / 'panel.json'
 CONFIG_DIR = Path('.fabrica') / 'review-panel'
 HARNESSES = ('claude-code', 'codex')
 NEW_REVIEWER_AGENT = {'harness': 'claude-code', 'model': 'opus', 'effort': 'high'}
-SEVERITIES = ('blocking', 'advisory')
+# A finding's severity follows from its impact and likelihood (prompts/severity.md has the same table), so the
+# same facts get the same severity whichever reviewer rated them. Critical and high block merging.
+IMPACTS = ('severe', 'significant', 'minor', 'cosmetic')
+LIKELIHOODS = ('common', 'uncommon', 'rare')
+SEVERITY_TABLE = {
+    'severe': ('critical', 'high', 'medium'),
+    'significant': ('high', 'medium', 'low'),
+    'minor': ('medium', 'low', 'low'),
+    'cosmetic': ('low', 'low', 'low'),
+}
+SEVERITIES = ('critical', 'high', 'medium', 'low')
+BLOCKING = ('critical', 'high')
 CATEGORIES = ('defect', 'policy', 'negligible-likelihood')
 CHECK_RESULTS = ('met', 'not-met', 'partly', 'unverified')
 REVIEW_VERDICTS = ('pass', 'concerns', 'blocking')
@@ -105,9 +116,10 @@ def _check_finding(finding, where, problems):
     if not isinstance(finding, dict):
         problems.append(f'{where} is not an object')
         return
-    for key in ('id', 'severity', 'category', 'title', 'body'):
+    for key in ('id', 'category', 'title', 'body', 'severity_reason'):
         _require(isinstance(finding.get(key), str) and finding[key].strip(), f'{where}.{key} must be a non-empty string', problems)
-    _require(finding.get('severity') in SEVERITIES, f'{where}.severity must be one of {", ".join(SEVERITIES)}', problems)
+    _require(finding.get('impact') in IMPACTS, f'{where}.impact must be one of {", ".join(IMPACTS)}', problems)
+    _require(finding.get('likelihood') in LIKELIHOODS, f'{where}.likelihood must be one of {", ".join(LIKELIHOODS)}', problems)
     _require(finding.get('category') in CATEGORIES, f'{where}.category must be one of {", ".join(CATEGORIES)}', problems)
     for key in ('file', 'line', 'fix'):
         if key in finding:
@@ -239,18 +251,34 @@ def validate_synthesis(value, reviews):
                  f'questions[{index}].blocking must be true or false', problems)
     blocking_question = any(isinstance(q, dict) and q.get('blocking') is True for q in questions)
     if isinstance(findings, list):
-        blocking = any(isinstance(f, dict) and f.get('severity') == 'blocking' for f in findings)
+        blocking = any(isinstance(f, dict) and severity_of(f) in BLOCKING for f in findings)
         verdict = value.get('verdict')
-        _require(not (verdict == 'ready' and blocking), "verdict can't be 'ready' while a finding is blocking", problems)
-        _require(not (verdict == 'fix-first' and not blocking), "verdict 'fix-first' needs a blocking finding", problems)
+        _require(not (verdict == 'ready' and blocking), "verdict can't be 'ready' while a finding is critical or high", problems)
+        _require(not (verdict == 'fix-first' and not blocking), "verdict 'fix-first' needs a critical or high finding", problems)
         _require(not (verdict == 'needs-decision' and not blocking_question),
                  "verdict 'needs-decision' needs at least one blocking question", problems)
         _require(not (verdict == 'ready' and blocking_question), "verdict can't be 'ready' while a question is blocking", problems)
     return problems
 
 
+def severity_of(finding):
+    """The severity the table gives a finding's impact and likelihood, or None when either is missing."""
+    row = SEVERITY_TABLE.get(finding.get('impact'))
+    likelihood = finding.get('likelihood')
+    return row[LIKELIHOODS.index(likelihood)] if row and likelihood in LIKELIHOODS else None
+
+
+def apply_severity(findings):
+    """Set each finding's severity from its impact and likelihood, replacing any severity a session wrote."""
+    for finding in findings:
+        if isinstance(finding, dict):
+            finding['severity'] = severity_of(finding)
+
+
 def normalize_synthesis(value):
-    """Derive each synthesis finding's raised_by from the reviewer findings it merges."""
+    """Derive each synthesis finding's severity, and its raised_by from the reviewer findings it merges."""
+    if isinstance(value, dict) and isinstance(value.get('findings'), list):
+        apply_severity(value['findings'])
     for finding in value.get('findings', []) if isinstance(value, dict) and isinstance(value.get('findings'), list) else []:
         if isinstance(finding, dict) and isinstance(finding.get('merges'), list):
             names = [ref.split(':', 1)[0] for ref in finding['merges'] if isinstance(ref, str)]
@@ -261,7 +289,8 @@ def normalize_synthesis(value):
 def normalize(value):
     """Fix what the script can decide itself instead of asking a session again.
 
-    A whole-number line becomes a string, and a reviewer's verdict follows from its findings' severities.
+    A whole-number line becomes a string, each finding's severity follows from its impact and likelihood, and a
+    reviewer's verdict follows from those severities.
     """
     if not isinstance(value, dict) or not isinstance(value.get('findings'), list):
         return value
@@ -269,8 +298,9 @@ def normalize(value):
     for finding in findings:
         if isinstance(finding, dict) and isinstance(finding.get('line'), int):
             finding['line'] = str(finding['line'])
+    apply_severity(findings)
     if value.get('verdict') in REVIEW_VERDICTS:
-        if any(isinstance(f, dict) and f.get('severity') == 'blocking' for f in findings):
+        if any(isinstance(f, dict) and f.get('severity') in BLOCKING for f in findings):
             value['verdict'] = 'blocking'
         else:
             value['verdict'] = 'concerns' if findings else 'pass'
@@ -1028,15 +1058,19 @@ def load_roster(only, claude_only, repo=None, panel=None, settings_only=False):
     return roster, reviewers
 
 
+def severity_text():
+    return (SKILL / 'prompts' / 'severity.md').read_text().strip()
+
+
 def reviewer_prompt(name, spec, context, files):
-    base = (SKILL / 'prompts' / 'reviewer.md').read_text()
+    base = (SKILL / 'prompts' / 'reviewer.md').read_text().replace('{{SEVERITY}}', severity_text())
     focus = spec['focus_text']
     return (base.replace('{{REVIEWER}}', name).replace('{{CONTEXT_FILE}}', files['context'])
             + '\n\n---\n\n# Your focus\n\n' + focus + '\n\n---\n\n' + context)
 
 
 def synthesis_prompt(context, reviews, failures):
-    base = (SKILL / 'prompts' / 'synthesize.md').read_text()
+    base = (SKILL / 'prompts' / 'synthesize.md').read_text().replace('{{SEVERITY}}', severity_text())
     ran = ', '.join([*reviews, *failures])
     parts = [base, '\n---\n', context, f'\n# Reviewer reports\n\nThis run asked these reviewers only: {ran}.\n']
     for name, review in reviews.items():
@@ -1069,12 +1103,12 @@ def walkthrough_findings(synthesis, record):
     """The synthesis findings a walkthrough setting asks to record, in ranked order."""
     if record == 'off' or not synthesis:
         return []
-    return [f for f in synthesis['findings'] if record == 'all' or f['severity'] == 'blocking']
+    return [f for f in synthesis['findings'] if record == 'all' or f['severity'] in BLOCKING]
 
 
 def walkthrough_prompt(finding, instructions, context, out_dir):
     base = (SKILL / 'prompts' / 'walkthrough.md').read_text().replace('{{OUTPUT_DIR}}', str(out_dir))
-    shown = {k: finding.get(k) for k in ('id', 'severity', 'category', 'title', 'file', 'line', 'body', 'fix')}
+    shown = {k: finding.get(k) for k in ('id', 'severity', 'impact', 'likelihood', 'severity_reason', 'category', 'title', 'file', 'line', 'body', 'fix')}
     return '\n'.join([base, '\n---\n', "# This repository's walkthrough instructions\n", instructions, '\n---\n',
                       '# The finding\n', '```json', json.dumps(shown, indent=2, ensure_ascii=False), '```', '\n---\n', context]) + '\n'
 
@@ -1091,6 +1125,8 @@ def report_markdown(state):
             where += f":{finding['line']}"
         lines += [f"## {finding['id']} [{finding['severity']}] {finding['title']}",
                   f"{where} (merges {', '.join(finding.get('merges', []))})", '']
+        if finding.get('severity_reason'):
+            lines += [f"Severity: {finding['severity_reason']} ({finding.get('impact')} impact, {finding.get('likelihood')})", '']
         rule = finding.get('rule')
         if isinstance(rule, dict):
             lines += [f"Rule {rule.get('id')}" + (f" ({rule['file']})" if rule.get('file') else '') + ':', '',
@@ -1105,7 +1141,7 @@ def report_markdown(state):
     for item in synthesis.get('dropped', []):
         result = state['reviewers'].get(item['reviewer'], {}).get('result') or {}
         original = next((f for f in result.get('findings', []) if f.get('id') == item['finding']), {})
-        dropped.append((original.get('severity') != 'blocking', item, original))
+        dropped.append((original.get('severity') not in BLOCKING, item, original))
     if dropped:
         lines += ['## Dropped by the synthesis', '']
         for _, item, original in sorted(dropped, key=lambda d: d[0]):
@@ -1184,6 +1220,24 @@ def refresh_settings(data, roster):
                 config={k: v for k, v in roster['config'].items() if k != 'panel'})
 
 
+def set_archived(data, keys, archived):
+    """Archive or unarchive findings by their page keys, such as S:S1 or R:check-docs:F2.
+
+    An archived finding is one the person chose to leave as it is; the page hides it from the table and the
+    handoff, and lists it under Archived. The choice lives in the run's state, so it goes when the run is pruned.
+    """
+    if not isinstance(keys, list) or not all(isinstance(k, str) and re.fullmatch(r'[SR]:[A-Za-z0-9:_-]{1,120}', k) for k in keys):
+        raise ValueError('keys must be a list of finding keys')
+    if not isinstance(archived, bool):
+        raise ValueError('archived must be true or false')
+    store = data.setdefault('archived', {})
+    for key in keys:
+        if archived:
+            store.setdefault(key, now())
+        else:
+            store.pop(key, None)
+
+
 def serve(state, run_dir, port, token, repo=None, panel=None):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -1254,7 +1308,8 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
         def do_POST(self):
             # Only the page this server handed out can save: the path holds the secret token, and a JSON body
             # from another site needs a CORS preflight, which this server never answers.
-            if self.path != f'/{token}/settings' or repo is None:
+            archive = self.path == f'/{token}/archive'
+            if not archive and (self.path != f'/{token}/settings' or repo is None):
                 self.send_error(404)
                 return
             if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
@@ -1266,6 +1321,11 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
                 return
             try:
                 request = json.loads(self.rfile.read(min(int(self.headers.get('Content-Length', 0)), 2_000_000)))
+                if archive:
+                    state.update(lambda data: set_archived(data, request.get('keys'), request.get('archived')))
+                    (run_dir / 'report.html').write_text(standalone_html(state.snapshot()))
+                    self.reply(200, {'ok': True, 'archived': state.data['archived']})
+                    return
                 roster = save_settings(repo, panel, dict(request.get('files') or {}), list(request.get('remove') or []))
                 state.update(lambda data: refresh_settings(data, roster))
                 status, reply = 200, {'ok': True, 'roster': state.data['roster'], 'config': state.data['config']}
@@ -1273,6 +1333,9 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
                 status, reply = 400, {'ok': False, 'error': f'bad request: {error}'}
             except (PanelError, OSError) as error:
                 status, reply = 400, {'ok': False, 'error': str(error)}
+            self.reply(status, reply)
+
+        def reply(self, status, reply):
             body = json.dumps(reply).encode()
             self.send_response(status)
             self.send_header('Content-Type', 'application/json')

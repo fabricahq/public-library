@@ -67,14 +67,29 @@ python3 PATH_TO_SKILL/scripts/review_panel.py settings
 
 It opens the latest run's page at its settings window, which shows where each reviewer's settings come from (built-in or the repository) and saves edits as files in `.fabrica/review-panel/`, uncommitted, for you to review and commit. A saved report page can't write files, so its settings window copies the commands that write them instead.
 
+## Severity
+
+Each reviewer rates a finding's impact if it happens (severe, significant, minor, or cosmetic) and how likely real use is to hit it (common, uncommon, or rare), with a one-line reason. The script works out the severity from the two with a fixed table, so the same facts get the same severity whichever reviewer rated them:
+
+| Impact | Common | Uncommon | Rare |
+|---|---|---|---|
+| severe | critical | high | medium |
+| significant | high | medium | low |
+| minor | medium | low | low |
+| cosmetic | low | low | low |
+
+Critical and high findings block merging, so the verdict is `fix-first`; medium is fine to merge with a follow-up, and low is optional. [prompts/severity.md](prompts/severity.md) defines each rating for the sessions, and the page's Guide shows the same definitions.
+
+On the page, **Archive** (or <kbd>E</kbd>) sets aside a finding you've chosen to leave as it is: it leaves the table and the handoff, and the **Archived** button lists what you've archived, where you can unarchive it. The live page saves the choice in the run's state; a saved report.html keeps it in your browser.
+
 ## Video walkthroughs
 
-A repository can have the panel record a short video of each blocking finding, or of every finding, so a person can see what it looks like in the running app and judge how much it matters. After the synthesis, an agent runs the change in the run's temporary worktree, follows `walkthroughs.md` to start the app and drive it in a browser with video on, and reports whether the problem reproduced, didn't, or can't be seen in the UI. Each video appears in a Walkthrough tab on its finding.
+A repository can have the panel record a short video of each finding that blocks merging (critical or high), or of every finding, so a person can see what it looks like in the running app and judge how much it matters. After the synthesis, an agent runs the change in the run's temporary worktree, follows `walkthroughs.md` to start the app and drive it in a browser with video on, and reports whether the problem reproduced, didn't, or can't be seen in the UI. Each video appears in a Walkthrough tab on its finding.
 
 ```yaml
 # .fabrica/review-panel/panel.yaml
 walkthroughs:
-  record: blocking   # off (the default), blocking, or all
+  record: blocking   # off (the default), blocking (critical and high findings), or all
 ```
 
 `walkthroughs.md` says how to start the app on its own ports, when it's ready, how to sign in with test data, how to record (Playwright with `video: 'on'` is a good default), and how to stop everything. The Video walkthroughs page in Settings explains the setup and copies a prompt that has your coding agent do it. Unlike the reviewers, a walkthrough runs the change's code with a shell, so the panel never records a pull request from a fork unless you pass `--allow-run`. `--walkthroughs all` overrides the setting for one run. To add videos recorded some other way to a finished run's finding, use `review_panel.py attach RUN_DIR S1 video.mp4 --summary '...'`.
