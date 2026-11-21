@@ -502,6 +502,17 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .dot-ok, .dot-err { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; background: var(--ok); }
 .dot-err { background: var(--block); }
 .mpick-wrap { position: relative; }
+th.hfilter { padding: 0; }
+.hbtn { display: inline-flex; align-items: center; gap: 5px; width: 100%; padding: 8px 10px; background: none; border: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
+.hbtn svg { width: 11px; height: 11px; opacity: 0; color: var(--faint); transition: opacity .12s; }
+.hbtn:hover svg, .hbtn:focus-visible svg, .hbtn[aria-expanded="true"] svg { opacity: 1; }
+.hbtn:hover, .hbtn[aria-expanded="true"] { color: var(--ink); }
+.hbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.hbtn.on { color: var(--accent); }
+.hbtn.on svg { opacity: 1; color: var(--accent); fill: currentColor; }
+th.hfilter .mpop { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--ink); width: 300px; }
+th.hfilter:last-child .mpop { left: auto; right: 0; }
+.mopt .mname.mono { font-family: var(--mono); font-size: 12.5px; }
 .swin .mpick, .fpick .mpick { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 7px; padding: 7px 10px; cursor: pointer; min-width: 0; }
 .swin .mpick:hover { border-color: var(--faint); }
 .swin .mpick:focus-visible, .swin .mpick[aria-expanded="true"] { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
@@ -723,7 +734,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
 const inline = document.getElementById('inline-state').textContent.trim();
 let state = inline ? JSON.parse(inline) : null;
 const ui = {
-  view: '__synthesis', tab: {}, q: '', sev: 'all', cat: 'all', who: 'all', raw: false, archivedView: false,
+  view: '__synthesis', tab: {}, q: '', sev: 'all', cat: 'all', who: 'all', dir: 'all', out: 'all', raw: false, archivedView: false,
   detail: null, picked: new Set(), lostConnection: false, dialog: false, draft: '',
 };
 
@@ -954,29 +965,77 @@ function toast(text, undo) {
 }
 function filtered(rows) {
   const q = ui.q.trim().toLowerCase();
-  const gone = archived();
+  const gone = archived(), folder = folderOf(rows);
   return rows.filter(r => !!gone[r.key] === ui.archivedView && (ui.sev === 'all' || (ui.sev === 'blocks' ? BLOCKING.includes(r.severity) : r.severity === ui.sev))
     && (ui.cat === 'all' || r.category === ui.cat)
     && (ui.who === 'all' || r.reviewers.includes(ui.who))
+    && (ui.dir === 'all' || folder(r) === ui.dir)
+    && (ui.out === 'all' || outcomeKind(r) === ui.out)
     && (!q || [r.id, r.title, r.body, r.fix, r.file, r.reviewers.join(' ')].join(' ').toLowerCase().includes(q)));
 }
 
 /* ---------- the findings table ---------- */
+// Groups findings by the folder where their paths part ways: backend/ and frontend/ in an app, or a skill's
+// scripts/ and assets/ when every path shares a longer prefix. A file at that level is its own group.
+function folderOf(rows) {
+  const dirs = rows.filter(r => r.file).map(r => r.file.split('/').slice(0, -1));
+  let depth = 0;
+  while (dirs.length && dirs.every(d => d.length > depth && d[depth] === dirs[0][depth])) depth++;
+  const group = r => {
+    if (!r.file) return '';
+    const parts = r.file.split('/');
+    return parts.length > depth + 1 ? parts.slice(0, depth + 1).join('/') + '/' : parts.join('/');
+  };
+  group.prefix = dirs.length ? dirs[0].slice(0, depth).map(d => d + '/').join('') : '';
+  return group;
+}
+const outcomeKind = r => r.outcome && r.outcome.startsWith('in ') ? 'merged' : r.outcome === 'dropped' ? 'dropped' : 'kept';
+const sevDot = level => `<span class="sev-dot sev-${level}"></span>`;
+// The choices for one filter, with how many of these rows each would show.
+function filterOptions(rows, field) {
+  const all = label => ({ value: 'all', label, count: rows.length, field });
+  const tally = (value, label, test, icon) => ({ value, label, icon, count: rows.filter(test).length, field });
+  if (field === 'sev') return [all('All severities'), tally('blocks', 'Blocks merge', r => BLOCKING.includes(r.severity), sevDot('critical')),
+    ...SEVERITIES.map(level => tally(level, SEVERITY_WORDS[level][0], r => r.severity === level, sevDot(level)))];
+  if (field === 'cat') return [all('All types'), ...[...new Set(rows.map(r => r.category).filter(Boolean))].map(c => tally(c, words(CATEGORY_WORDS, c)[0], r => r.category === c))];
+  if (field === 'who') return [all('All reviewers'), ...[...new Set(rows.flatMap(r => r.reviewers))].map(w => tally(w, reviewerLabel(w), r => r.reviewers.includes(w), reviewerIcon(w)))];
+  if (field === 'dir') {
+    const folder = folderOf(rows), seen = [...new Set(rows.map(folder).filter(Boolean))].sort();
+    return seen.length < 2 ? [] : [all('All folders'), ...seen.map(d => ({ ...tally(d, d.slice(folder.prefix.length), r => folder(r) === d), mono: true, title: d }))];
+  }
+  if (field === 'out') {
+    const kinds = [tally('merged', 'Merged into a finding', r => outcomeKind(r) === 'merged'), tally('dropped', 'Dropped', r => outcomeKind(r) === 'dropped'),
+      tally('kept', 'Not used yet', r => outcomeKind(r) === 'kept')].filter(o => o.count);
+    return kinds.length < 2 ? [] : [all('Any outcome'), ...kinds];
+  }
+  return [];
+}
+// A filter whose value no longer exists in these rows goes back to showing everything.
+function settleFilters(rows, withReviewer) {
+  for (const field of ['cat', 'who', 'dir', 'out']) if (ui[field] !== 'all' && !filterOptions(rows, field).some(o => o.value === ui[field])) ui[field] = 'all';
+  if (!withReviewer) ui.who = 'all';
+}
 function toolbar(rows, withReviewer) {
-  const cats = [...new Set(rows.map(r => r.category).filter(Boolean))];
-  const who = [...new Set(rows.flatMap(r => r.reviewers))];
-  if (!cats.includes(ui.cat)) ui.cat = 'all';
-  if (!withReviewer || !who.includes(ui.who)) ui.who = 'all';
-  const sevCount = level => rows.filter(r => level === 'blocks' ? BLOCKING.includes(r.severity) : r.severity === level).length;
-  const dot = level => `<span class="sev-dot sev-${level}"></span>`;
+  settleFilters(rows, withReviewer);
   return `<div class="toolbar">
     <input id="search" type="search" placeholder="Search findings" value="${esc(ui.q)}" aria-label="Search findings">
-    ${filterPick('sev', 'Severity', [{ value: 'all', label: 'All severities', count: rows.length }, { value: 'blocks', label: 'Blocks merge', icon: dot('critical'), count: sevCount('blocks') },
-      ...SEVERITIES.map(level => ({ value: level, label: SEVERITY_WORDS[level][0], icon: dot(level), count: sevCount(level) }))], ui.sev)}
-    ${filterPick('cat', 'Type', [{ value: 'all', label: 'All types', count: rows.length }, ...cats.map(c => ({ value: c, label: words(CATEGORY_WORDS, c)[0], count: rows.filter(r => r.category === c).length }))], ui.cat)}
+    ${filterPick('sev', 'Severity', filterOptions(rows, 'sev'), ui.sev)}
+    ${filterPick('cat', 'Type', filterOptions(rows, 'cat'), ui.cat)}
     ${archiveToggle(rows)}
-    ${withReviewer ? filterPick('who', 'Reviewer', [{ value: 'all', label: 'All reviewers', count: rows.length }, ...who.map(w => ({ value: w, label: reviewerLabel(w), icon: reviewerIcon(w), count: rows.filter(r => r.reviewers.includes(w)).length }))], ui.who) : ''}
+    ${withReviewer ? filterPick('who', 'Reviewer', filterOptions(rows, 'who'), ui.who) : ''}
   </div>`;
+}
+// A column header that opens its column's filters: the same choices as the toolbar, plus the folder and outcome.
+const FUNNEL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>';
+function headFilter(id, label, sections, title) {
+  sections = sections.filter(s => s.options.length);
+  if (!sections.length) return `<th${title ? ` title="${esc(title)}"` : ''}>${esc(label)}</th>`;
+  const on = sections.some(s => ui[s.options[0].field] !== 'all');
+  const open = ui.filterOpen === id;
+  const opt = o => `<div class="mopt" role="option" tabindex="0"${o.title ? ` title="${esc(o.title)}"` : ''} aria-selected="${ui[o.field] === o.value}" data-fpick="${esc(o.value)}" data-ffield="${o.field}">
+      ${ui[o.field] === o.value ? CHECK_SVG.replace('class="ck"', 'class="mcheck"') : '<span class="mcheck"></span>'}${o.icon ? `<span class="cicon">${o.icon}</span>` : ''}<span class="mname${o.mono ? ' mono' : ''}">${esc(o.label)}</span><span class="fcount">${o.count}</span></div>`;
+  return `<th class="hfilter"${title ? ` title="${esc(title)}"` : ''}><div class="mpick-wrap fpick"><button type="button" class="hbtn ${on ? 'on' : ''}" id="${id}" data-fopen="${id}" aria-haspopup="listbox" aria-expanded="${open}" aria-label="Filter by ${esc(label.toLowerCase())}${on ? ' (filtered)' : ''}">${esc(label)}${FUNNEL_SVG}</button>
+    ${open ? `<div class="mpop" role="listbox" aria-label="Filter by ${esc(label.toLowerCase())}"><div class="mlist">${sections.map((s, i) => `${s.title ? `${i ? '<div class="mdivider"></div>' : ''}<div class="mgroup">${esc(s.title)}</div>` : ''}${s.options.map(opt).join('')}`).join('')}</div></div>` : ''}</div></th>`;
 }
 function archiveToggle(rows) {
   const gone = archived(), n = rows.filter(r => gone[r.key]).length;
@@ -991,7 +1050,7 @@ function filterPick(id, label, options, value) {
   return `<div class="mpick-wrap fpick"><button type="button" class="mpick" id="${id}" data-fopen="${id}" aria-haspopup="listbox" aria-expanded="${open}" aria-label="${esc(label)}">
       ${current.icon ? `<span class="cicon">${current.icon}</span>` : ''}<span class="mname">${esc(current.label)}</span><span class="mid"></span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>
-    ${open ? `<div class="mpop" role="listbox" aria-label="${esc(label)}"><div class="mlist">${options.map(o => `<div class="mopt" role="option" tabindex="0" aria-selected="${o.value === value}" data-fpick="${esc(o.value)}" data-ffield="${id}">
+    ${open ? `<div class="mpop" role="listbox" aria-label="${esc(label)}"><div class="mlist">${options.map(o => `<div class="mopt" role="option" tabindex="0" aria-selected="${o.value === value}" data-fpick="${esc(o.value)}" data-ffield="${o.field || id}">
         ${o.value === value ? CHECK_SVG.replace('class="ck"', 'class="mcheck"') : '<span class="mcheck"></span>'}${o.icon ? `<span class="cicon">${o.icon}</span>` : ''}<span class="mname">${esc(o.label)}</span><span class="fcount">${o.count}</span></div>`).join('')}</div></div>` : ''}</div>`;
 }
 /* ---------- the finding window ---------- */
@@ -1247,7 +1306,7 @@ function closeDetail() {
 function gotoFinding(key) {
   if (ui.detail) { ui.detail = null; renderDetail(); }
   ui.view = '__synthesis'; ui.tab.__synthesis = 'findings'; ui.raw = false;
-  ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all';
+  ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; ui.dir = 'all'; ui.out = 'all';
   renderChrome(); renderPane(true);
   highlightRow(key);
 }
@@ -1299,7 +1358,7 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
       </tr>`;
   }).join('');
   return `<div class="table-wrap"><table>
-      <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th>#</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Found by</th>' : ''}${outcomeCol ? '<th title="What the synthesis did with this finding">Merged into</th>' : ''}</tr></thead>
+      <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th>#</th>${headFilter('h-sev', 'Severity', [{ options: filterOptions(rows, 'sev') }])}${headFilter('h-finding', 'Finding', [{ title: 'Type', options: filterOptions(rows, 'cat') }, { title: 'Folder', options: filterOptions(rows, 'dir') }])}${reviewerCol ? headFilter('h-who', 'Found by', [{ options: filterOptions(rows, 'who') }]) : ''}${outcomeCol ? headFilter('h-out', 'Merged into', [{ options: filterOptions(rows, 'out') }], 'What the synthesis did with this finding') : ''}</tr></thead>
       <tbody>${body || `<tr><td colspan="${cols}" class="empty">${ui.archivedView ? 'No archived findings match these filters.' : rows.length ? 'No open findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
     </table></div>
     <div class="count-line">${ui.archivedView ? `${plural(shown.length, 'archived finding')}. Open one to unarchive it.` : `${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}${pickedShown ? `, ${pickedShown} selected` : ''}. Click a row to open it; tick the ones to hand off (Shift-click for a range).`}</div>`;
@@ -1670,7 +1729,7 @@ function togglePick(key) { ui.picked.has(key) ? ui.picked.delete(key) : ui.picke
 document.addEventListener('click', async event => {
   const t = event.target;
   const view = t.closest('[data-view]');
-  if (view) { ui.view = view.dataset.view; ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; renderChrome(); renderPane(true); return; }
+  if (view) { ui.view = view.dataset.view; ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; ui.dir = 'all'; ui.out = 'all'; renderChrome(); renderPane(true); return; }
   const tab = t.closest('[data-tab]');
   if (tab) { ui.tab[ui.view] = tab.dataset.tab; renderPane(true); return; }
   // The whole first cell is the checkbox's target, so a near miss ticks it instead of opening the row.
@@ -1689,15 +1748,15 @@ document.addEventListener('click', async event => {
   }
   if (pickCell) return;
   const fopen = t.closest('[data-fopen]');
-  if (fopen) { ui.filterOpen = ui.filterOpen === fopen.dataset.fopen ? null : fopen.dataset.fopen; renderPane(true); document.querySelector(`#pane [data-ffield="${ui.filterOpen}"][aria-selected="true"]`)?.focus(); return; }
+  if (fopen) { ui.filterOpen = ui.filterOpen === fopen.dataset.fopen ? null : fopen.dataset.fopen; renderPane(true); document.querySelector('#pane .mpop [aria-selected="true"]')?.focus(); return; }
   const fpick = t.closest('[data-fpick]');
-  if (fpick) { ui[fpick.dataset.ffield] = fpick.dataset.fpick; ui.filterOpen = null; renderPane(true); return; }
+  if (fpick) { const back = ui.filterOpen; ui[fpick.dataset.ffield] = fpick.dataset.fpick; ui.filterOpen = null; renderPane(true); document.getElementById(back)?.focus(); return; }
   if (ui.filterOpen && !t.closest('.fpick')) { ui.filterOpen = null; renderPane(true); }
   const row = t.closest('tr.row');
   const who = t.closest('[data-reviewer]');
   if (who) {
     if (ui.detail) { ui.detail = null; renderDetail(); }
-    ui.view = who.dataset.reviewer; ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all';
+    ui.view = who.dataset.reviewer; ui.q = ''; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; ui.dir = 'all'; ui.out = 'all';
     ui.tab[ui.view] = 'findings';
     renderChrome(); renderPane(true);
     if (!(who.dataset.ref && highlightRow(who.dataset.ref))) document.querySelector('#nav .navrow.sel')?.focus();
@@ -1733,7 +1792,7 @@ document.addEventListener('click', async event => {
     if (a === 'guide') { openGuide(true); return; }
     if (a === 'guide-close') { openGuide(false); return; }
     if (a === 'handoff') { ui.dialog = true; ui.draft = handoffText(); }
-    if (a === 'show-raw') { ui.tab.__synthesis = 'findings'; ui.raw = true; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; renderPane(true); return; }
+    if (a === 'show-raw') { ui.tab.__synthesis = 'findings'; ui.raw = true; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; ui.dir = 'all'; ui.out = 'all'; renderPane(true); return; }
     if (a === 'close') ui.dialog = false;
     if (a === 'copy') { const area = document.getElementById('handoff-text'); area.select(); await copy(area.value, document.getElementById('copy-note'), act); return; }
     renderHandoff();
