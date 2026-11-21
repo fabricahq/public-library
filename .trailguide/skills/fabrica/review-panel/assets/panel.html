@@ -508,14 +508,21 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .dot-ok, .dot-err { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; background: var(--ok); }
 .dot-err { background: var(--block); }
 .mpick-wrap { position: relative; }
-th.hfilter { padding: 0; }
-.hbtn { display: inline-flex; align-items: center; gap: 5px; width: 100%; padding: 8px 10px; background: none; border: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
-.hbtn svg { width: 11px; height: 11px; opacity: 0; color: var(--faint); transition: opacity .12s; }
-.hbtn:hover svg, .hbtn:focus-visible svg, .hbtn[aria-expanded="true"] svg { opacity: 1; }
-.hbtn:hover, .hbtn[aria-expanded="true"] { color: var(--ink); }
-.hbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.hbtn.on { color: var(--accent); }
-.hbtn.on svg { opacity: 1; color: var(--accent); fill: currentColor; }
+th.hcol { padding: 0; position: relative; }
+.hcell { display: flex; align-items: center; }
+th.hfilter .mpick-wrap { position: static; }
+.hsort, .hfunnel { display: inline-flex; align-items: center; gap: 4px; padding: 8px 10px; background: none; border: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
+.hsort { flex: 0 1 auto; padding-right: 4px; }
+.hfunnel { padding: 6px; border-radius: 5px; }
+.hsort svg, .hfunnel svg { width: 11px; height: 11px; flex: none; color: var(--faint); opacity: 0; transition: opacity .12s, transform .12s; }
+th.hcol:hover .hsort svg, th.hcol:hover .hfunnel svg, .hsort:focus-visible svg, .hfunnel:focus-visible svg, .hfunnel[aria-expanded="true"] svg { opacity: 1; }
+.hsort:hover, .hfunnel:hover, .hfunnel[aria-expanded="true"] { color: var(--ink); }
+.hfunnel:hover, .hfunnel[aria-expanded="true"] { background: var(--active); }
+.hsort:focus-visible, .hfunnel:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.hsort.on { color: var(--ink); }
+.hsort.on svg { opacity: 1; color: var(--ink); }
+.hsort.desc svg { transform: rotate(180deg); }
+.hfunnel.on svg { opacity: 1; color: var(--accent); fill: currentColor; }
 th.hfilter .mpop { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--ink); width: 300px; }
 th.hfilter:last-child .mpop { left: auto; right: 0; }
 th.hfilter .mlist { max-height: min(440px, 60vh); }
@@ -1036,15 +1043,35 @@ function toolbar(rows, withReviewer) {
 }
 // A column header that opens its column's filters: the same choices as the toolbar, plus the folder and outcome.
 const FUNNEL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>';
-function headFilter(id, label, sections, title) {
+// A column header: clicking its name sorts by it (first click ascending, the next descending), and its funnel
+// opens the column's filters.
+const SORT_SVG = '<svg class="sort-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
+function sortButton(col, label) {
+  const on = ui.sort && ui.sort.col === col;
+  const next = on && ui.sort.dir === 'asc' ? 'descending' : 'ascending';
+  return `<button type="button" class="hsort ${on ? `on ${ui.sort.dir}` : ''}" data-sort="${col}" title="Sort by ${esc(label.toLowerCase())}, ${next}">${esc(label)}${SORT_SVG}</button>`;
+}
+const ariaSort = col => ui.sort && ui.sort.col === col ? ` aria-sort="${ui.sort.dir === 'asc' ? 'ascending' : 'descending'}"` : '';
+function headFilter(id, label, sections, title, col) {
   sections = sections.filter(s => s.options.length);
-  if (!sections.length) return `<th${title ? ` title="${esc(title)}"` : ''}>${esc(label)}</th>`;
+  if (!sections.length) return `<th class="hcol"${ariaSort(col)}${title ? ` title="${esc(title)}"` : ''}>${sortButton(col, label)}</th>`;
   const on = sections.some(s => ui[s.options[0].field] !== 'all');
   const open = ui.filterOpen === id;
   const opt = o => `<div class="mopt" role="option" tabindex="0"${o.title ? ` title="${esc(o.title)}"` : ''} aria-selected="${ui[o.field] === o.value}" data-fpick="${esc(o.value)}" data-ffield="${o.field}">
       ${ui[o.field] === o.value ? CHECK_SVG.replace('class="ck"', 'class="mcheck"') : '<span class="mcheck"></span>'}${o.icon ? `<span class="cicon">${o.icon}</span>` : ''}<span class="mname${o.mono ? ' mono' : ''}">${esc(o.label)}</span><span class="fcount">${o.count}</span></div>`;
-  return `<th class="hfilter"${title ? ` title="${esc(title)}"` : ''}><div class="mpick-wrap fpick"><button type="button" class="hbtn ${on ? 'on' : ''}" id="${id}" data-fopen="${id}" aria-haspopup="listbox" aria-expanded="${open}" aria-label="Filter by ${esc(label.toLowerCase())}${on ? ' (filtered)' : ''}">${esc(label)}${FUNNEL_SVG}</button>
-    ${open ? `<div class="mpop" role="listbox" aria-label="Filter by ${esc(label.toLowerCase())}"><div class="mlist">${sections.map((s, i) => `${s.title ? `${i ? '<div class="mdivider"></div>' : ''}<div class="mgroup">${esc(s.title)}</div>` : ''}${s.options.map(opt).join('')}`).join('')}</div></div>` : ''}</div></th>`;
+  return `<th class="hcol hfilter"${ariaSort(col)}${title ? ` title="${esc(title)}"` : ''}><div class="hcell">${sortButton(col, label)}<div class="mpick-wrap fpick"><button type="button" class="hfunnel ${on ? 'on' : ''}" id="${id}" data-fopen="${id}" aria-haspopup="listbox" aria-expanded="${open}" aria-label="Filter by ${esc(label.toLowerCase())}${on ? ' (filtered)' : ''}" title="Filter by ${esc(label.toLowerCase())}">${FUNNEL_SVG}</button>
+    ${open ? `<div class="mpop" role="listbox" aria-label="Filter by ${esc(label.toLowerCase())}"><div class="mlist">${sections.map((s, i) => `${s.title ? `${i ? '<div class="mdivider"></div>' : ''}<div class="mgroup">${esc(s.title)}</div>` : ''}${s.options.map(opt).join('')}`).join('')}</div></div>` : ''}</div></div></th>`;
+}
+// The order a sort uses for each column; ties keep the table's own order.
+const OUTCOME_ORDER = { merged: 0, dropped: 1, kept: 2 };
+function sortRows(shown, rows) {
+  if (!ui.sort) return shown;
+  const num = r => r.key.startsWith('S:') ? Number(r.id.replace(/^S/, '')) || 0 : rows.indexOf(r);
+  const key = { num, sev: r => SEVERITIES.indexOf(r.severity), title: r => String(r.title || '').toLowerCase(),
+    who: r => r.reviewers.map(reviewerLabel).join(', ').toLowerCase(), out: r => OUTCOME_ORDER[outcomeKind(r)] * 1000 + (Number(String(r.outcome || '').replace(/\D/g, '')) || 0) }[ui.sort.col];
+  if (!key) return shown;
+  const sign = ui.sort.dir === 'desc' ? -1 : 1;
+  return shown.map((r, i) => [key(r), i, r]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1]) * (a[0] === b[0] ? 1 : sign)).map(x => x[2]);
 }
 function archiveToggle(rows) {
   const gone = archived(), n = rows.filter(r => gone[r.key]).length;
@@ -1347,7 +1374,7 @@ function walkMark(r) {
   return ` <span class="walk-mark o-${esc(walk.result ? walk.result.outcome : walk.status)}" title="Video walkthrough: ${esc(words)}">${VIDEO_SVG}</span>`;
 }
 function tableHtml(rows, { reviewerCol, outcomeCol }) {
-  const shown = filtered(rows);
+  const shown = sortRows(filtered(rows), rows);
   const cols = 4 + (reviewerCol ? 1 : 0) + (outcomeCol ? 1 : 0);
   const pickedShown = shown.filter(r => ui.picked.has(r.key)).length;
   const allOn = shown.length > 0 && pickedShown === shown.length, someOn = pickedShown > 0 && !allOn;
@@ -1367,7 +1394,7 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
       </tr>`;
   }).join('');
   return `<div class="table-wrap"><table>
-      <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th>#</th>${headFilter('h-sev', 'Severity', [{ options: filterOptions(rows, 'sev') }])}${headFilter('h-finding', 'Finding', [{ title: 'Type', options: filterOptions(rows, 'cat') }, { title: 'Folder', options: filterOptions(rows, 'dir') }])}${reviewerCol ? headFilter('h-who', 'Found by', [{ options: filterOptions(rows, 'who') }]) : ''}${outcomeCol ? headFilter('h-out', 'Merged into', [{ options: filterOptions(rows, 'out') }], 'What the synthesis did with this finding') : ''}</tr></thead>
+      <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th class="hcol"${ariaSort('num')}>${sortButton('num', '#')}</th>${headFilter('h-sev', 'Severity', [{ options: filterOptions(rows, 'sev') }], '', 'sev')}${headFilter('h-finding', 'Finding', [{ title: 'Type', options: filterOptions(rows, 'cat') }, { title: 'Folder', options: filterOptions(rows, 'dir') }], '', 'title')}${reviewerCol ? headFilter('h-who', 'Found by', [{ options: filterOptions(rows, 'who') }], '', 'who') : ''}${outcomeCol ? headFilter('h-out', 'Merged into', [{ options: filterOptions(rows, 'out') }], 'What the synthesis did with this finding', 'out') : ''}</tr></thead>
       <tbody>${body || `<tr><td colspan="${cols}" class="empty">${ui.archivedView ? 'No archived findings match these filters.' : rows.length ? 'No open findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
     </table></div>
     <div class="count-line">${ui.archivedView ? `${plural(shown.length, 'archived finding')}. Open one to unarchive it.` : `${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}${pickedShown ? `, ${pickedShown} selected` : ''}. Click a row to open it; tick the ones to hand off (Shift-click for a range).`}</div>`;
@@ -1756,6 +1783,12 @@ document.addEventListener('click', async event => {
     afterPick(); return;
   }
   if (pickCell) return;
+  const sortBtn = t.closest('[data-sort]');
+  if (sortBtn) {
+    const col = sortBtn.dataset.sort;
+    ui.sort = ui.sort && ui.sort.col === col ? { col, dir: ui.sort.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' };
+    ui.filterOpen = null; renderPane(true); document.querySelector(`#pane [data-sort="${col}"]`)?.focus(); return;
+  }
   const fopen = t.closest('[data-fopen]');
   if (fopen) { ui.filterOpen = ui.filterOpen === fopen.dataset.fopen ? null : fopen.dataset.fopen; renderPane(true); document.querySelector('#pane .mpop [aria-selected="true"]')?.focus(); return; }
   const fpick = t.closest('[data-fpick]');
