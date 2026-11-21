@@ -691,6 +691,24 @@ def serve(args):
         serve_session(args)
 
 
+def settings_context(directory):
+    """What the page's top bar and Settings show: the repository's name now, and the settings that apply once
+    they are read. Organization settings can take a GitHub round trip, so they load in the background and a page
+    opened before then says they are still loading."""
+    root = Path(git_output(['rev-parse', '--show-toplevel'], directory) or directory.resolve())
+    url = git_output(['remote', 'get-url', 'origin'], root) or ''
+    match = re.search(r'github\.com[:/]([^/]+/[^/]+?)(?:\.git)?/?$', url)
+    context = {'repo': match.group(1) if match else root.name, 'settings': None}
+
+    def load():
+        try:
+            context['settings'] = resolve_settings(argparse.Namespace(repo=str(root), org_repo=None))
+        except (ValueError, OSError) as error:
+            context['settings'] = {'status': 'error', 'error': str(error)}
+    threading.Thread(target=load, daemon=True).start()
+    return context
+
+
 def serve_session(args):
     directory = args.session_dir
     with lock(directory):
@@ -707,6 +725,7 @@ def serve_session(args):
             raise ValueError('Invalid server token.')
     prefix = '/s/' + token + '/'
     stream_slots = threading.BoundedSemaphore(8)
+    page_context = settings_context(directory)
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
@@ -735,7 +754,7 @@ def serve_session(args):
             with lock(directory):
                 state = read(directory / 'state.json')
                 if self.path == prefix:
-                    return self.respond(200, html(state['session'], {'base': prefix, 'connection': connection(directory), 'sessionDir': str(directory.resolve())}, {'answerState': state.get('answerState') or update_answer_state({}, state['session']), 'drafts': state.get('drafts', {}), 'draftContexts': state.get('draftContexts', {}), 'pending': pending(state), 'completedRevision': state.get('completedRevision')}), 'text/html')
+                    return self.respond(200, html(state['session'], {'base': prefix, 'connection': connection(directory), 'sessionDir': str(directory.resolve()), **page_context}, {'answerState': state.get('answerState') or update_answer_state({}, state['session']), 'drafts': state.get('drafts', {}), 'draftContexts': state.get('draftContexts', {}), 'pending': pending(state), 'completedRevision': state.get('completedRevision')}), 'text/html')
                 presence = read(directory / 'presence.json') if (directory / 'presence.json').exists() else {}
                 state['listening'] = time.time() - presence.get('at', 0) < LEASE
                 state['connection'] = connection(directory)
@@ -744,6 +763,7 @@ def serve_session(args):
                     receipt = directory / 'deliveries' / (event['id'] + '.json')
                     event['delivery'] = read(receipt) if receipt.exists() else {'status': 'inbox'}
             state['artifacts'] = artifacts(directory)
+            state['settings'] = page_context['settings']
             self.respond(200, state)
 
         def stream_updates(self):

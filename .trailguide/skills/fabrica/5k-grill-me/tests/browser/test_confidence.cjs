@@ -47,7 +47,7 @@ const root=path.resolve(__dirname,'../..'),script=path.join(root,'scripts/grill_
   state=JSON.parse(fs.readFileSync(path.join(dir,'state.json')));assert.deepEqual(state.answerState,before);assert.equal(state.session.nodes[0].answer,'Preserve my reasoning.');
   await page.locator('#confidenceGroups').click();await page.locator('#noConfidenceGroups').click();await page.locator('#includeUnassessed').check();await page.locator('#finishConfidenceGroups').click();await count(1);assert.equal(await page.locator('.confidence-unassessed .matrix-decision').count(),1);
   await page.locator('#resetConfidence').click();
-  await page.locator('#menuButton').click();await page.locator('#appearance').selectOption('dark');await page.keyboard.press('Escape');assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+  await page.locator('#menuButton').click();await page.locator('#openSettings').click();await page.locator('[data-settings-section="appearance"]').click();await page.locator('#appearance').selectOption('dark');await page.keyboard.press('Escape');assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
   await page.setViewportSize({width:390,height:844});await page.locator('#closePanel').click();assert(await page.locator('#matrixView').isVisible());
   assert(await page.locator('.confidence-toolbar').evaluate(e=>e.getBoundingClientRect().right<=innerWidth));
   assert.deepEqual(errors,[]);

@@ -14,6 +14,8 @@ Skills live in `.trailguide/skills/<origin>/`: the library's own in `skills/fabr
 
 `show-me-your-work`, `create-verification-skill`, and `maintain-verification-skill` are local forks recorded under the `pstack` source's `skills.forks`. The verification skills are independently recommended; their mutual follow-up suggestions are not calls. Declare each skill's direct calls in `trailguide-skills-used` so Trail Guide resolves transitive dependencies; do not infer calls from every skill name mentioned in prose. To move the pin, read each curated skill's changes at the new commit against the criteria above, port the changes that fit from each local fork's upstream diff that `trailguide library check` then lists, and update the commit in NOTICE.md. When you add or drop a skill, update the README's skills section and NOTICE.md to match.
 
+The 5K skills (`5k-pr-review`, `5k-code-review`, `5k-grill-me`) share one look: fonts, palette, top bar, ⋯ menu, Settings modal and About dialog. Each page carries its own copy between `/* 5k-shell:start */` and `/* 5k-shell:end */`, generated from `.github/scripts/5k-shell/`. Change the shell there and run `python3 .github/scripts/5k-shell/shell.py sync`; never edit a page's copy. The **Skill scripts** workflow fails when a copy drifts.
+
 ## Change notes
 
 Each rule has its own version, and library releases publish rule changes to projects. Once the library has published its first library release, a `release/1` tag, every new, changed, or retired rule needs a change note in `.trailguide/changes/`. Record it with `trailguide library change` in the same pull request as the rule change:

@@ -105,27 +105,32 @@ const root = path.resolve(__dirname, "../.."),
     await keyboardFocus(page.locator("#includeUnassessed"));
     await clickQuiet(page.locator("#includeUnassessed"));
     await clickQuiet(page.locator("#finishConfidenceGroups"));
-    await clickQuiet(page.locator("#menuButton"));
+    const openAppearance = async () => {
+      await clickQuiet(page.locator("#menuButton"));
+      await clickQuiet(page.locator("#openSettings"));
+      await clickQuiet(page.locator('[data-settings-section="appearance"]'));
+    };
+    await openAppearance();
     const appearance = page.locator("#appearance");
     const dismissAppearancePicker = async () => {
       // selectOption does not close Chromium's native popup on Linux. Escape
-      // dismisses it; on macOS it may instead close the surrounding app menu.
+      // dismisses it; on macOS it may instead close the Settings dialog.
       await page.keyboard.press("Escape");
-      if (!(await page.locator("#menu").isVisible())) {
-        await page.locator("#menuButton").click();
-      }
+      if (!(await page.locator("#settingsDialog").isVisible())) await openAppearance();
     };
     await clickQuiet(appearance);
     await appearance.selectOption("light");
     await dismissAppearancePicker();
-    // Tab into Appearance from the preceding canvas control, as a user would.
-    await page.locator("#zoomIn").focus();
+    // Tab into Appearance from the control before it in Settings, as a user would.
+    await page.locator("#closeSettings").focus();
     await page.keyboard.press("Tab");
     assert(await appearance.evaluate(el => document.activeElement === el));
     assert(await ring(appearance), "Tab must draw a focus ring on Appearance");
     await clickQuiet(appearance);
     await appearance.selectOption("system");
     await dismissAppearancePicker();
+    await clickQuiet(page.locator("#closeSettings"));
+    await clickQuiet(page.locator("#menuButton"));
     await clickQuiet(page.locator("#openAbout"));
     const link = page.locator("#aboutDialog a").first();
     await keyboardFocus(link);

@@ -16,7 +16,7 @@ const root=path.resolve(__dirname,'../..'),script=path.join(root,'scripts/grill_
   await page.goto(url);await page.locator('[data-node="Q2"]').click();
   await page.locator('#customTab').click();await page.locator('#draft').fill('Keep this draft.');
   await page.locator('#menuButton').click();await shot('menu-light');
-  await page.getByRole('button',{name:'About 5K Grill Me',exact:true}).click();
+  await page.getByRole('menuitem',{name:'About 5K Grill Me',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'5K Grill Me',exact:true});await dialog.waitFor();
   assert(await page.locator('#menu').isHidden());
   assert((await dialog.innerText()).includes('5K Grill Me is a skill by Fabrica that brings Matt Pocock'));

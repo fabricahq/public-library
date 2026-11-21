@@ -56,6 +56,17 @@ jobs:
         run: |
           python3 --version
           python3 .trailguide/skills/fabrica/5k-code-review/tests/test_code_review.py
+  # The 5K skills each carry a copy of one shell; this fails when a copy drifts from .github/scripts/5k-shell/.
+  shell-5k:
+    name: 5K shell
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check every 5K page carries the current shell
+        run: python3 .github/scripts/5k-shell/shell.py check
   ratchet-files:
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     defaults:

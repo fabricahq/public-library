@@ -43,6 +43,8 @@ python3 scripts/grill_ui.py settings
 
 `--org-repo owner/name` reads organization settings from another repository, and `--org-repo ''` skips them.
 
+The canvas shows the same in Settings, from its ⋯ menu.
+
 ## Try the canvas
 
 Requires macOS or Linux, Python 3.10+, and a modern browser. The server uses POSIX file locking. From this skill directory:

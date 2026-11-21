@@ -1,6 +1,3 @@
-body > header {
-  height: 52px;
-}
 .confidence-toolbar {
   position: fixed;
   top: 52px;
@@ -249,7 +246,7 @@ body.confidence-matrix .confidence-filter-hint {
   --toolbar-height: 116px;
   --filter-surface: var(--surface);
   --filter-line: var(--line);
-  --title-surface: #e3e9dc;
+  --title-surface: var(--k5-accent-bg);
   --review-warm: #f9e3d1;
   --review-warm-line: #c88d5d;
   --review-next: #fbefdb;
@@ -265,16 +262,6 @@ body.confidence-matrix .confidence-filter-hint {
   background: var(--filter-surface);
   border-bottom: 1px solid var(--filter-line);
   box-shadow: inset 0 1px 0 #fff8;
-}
-body > header {
-  background: var(--title-surface);
-  border-bottom-color: #cbd4c3;
-}
-:root[data-theme="dark"] {
-  --title-surface: #303c31;
-}
-:root[data-theme="dark"] body > header {
-  border-bottom-color: var(--line);
 }
 
 .confidence-summary {
