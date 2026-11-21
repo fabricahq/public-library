@@ -672,7 +672,7 @@ function catalogSetupPrompt() {
     '- Build with the app\'s own build tool, styles and providers, so components look exactly as they do in the app.',
     '- Type-check the catalog with the rest of the code, and add a test that renders every state and fails on an error, so a change to a component that breaks its states fails CI.',
     '- Deploy it with each pull request\'s preview, at a URL that names the PR, so it always shows the PR\'s latest code.', '',
-    'Then turn it on for 5k-pr-review in .5k/pr-review.yaml at the repository root:',
+    'Then turn it on for 5k-pr-review in .fabrica/5k-pr-review/settings.yaml at the repository root:',
     'catalog:', '  enabled: true', '  path: "<folder that holds the catalog\'s entry and fake API>"', '  url: "<the deployed catalog for a PR, with {pr} where the PR number goes>"',
     '  about: "<a few sentences: how a component\'s states file is named and found, what a state holds, and anything a component needs to be catalogued>"', '',
     "Follow the repository's agent instructions (AGENTS.md or CLAUDE.md) and its engineering rules. Start with the components the open pull requests change, and say in your report which components have no states yet."].join('\n');
@@ -708,7 +708,7 @@ function openSettings(section = 'personas') {
       <p class="hint" style="margin-top:8px">A window without that tab opens on its first tab.</p>
       <button class="tool-btn" data-open-all="summary" style="margin-top:12px">Open all on Summary</button></section>`;
   };
-  const settingsFoot = () => { const edited = settingsEdited(); return `<footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.5k/pr-review.yaml</code> in the repository.'}</span>
+  const settingsFoot = () => { const edited = settingsEdited(); return `<footer class="set-foot"><span data-msg>${edited ? 'You have edits in this browser. Copy the settings file and commit it so the next canvas uses them.' : 'Matches <code>.fabrica/5k-pr-review/settings.yaml</code> in the repository.'}</span>
         ${edited ? '<button class="link" data-reset>Undo my edits</button>' : ''}<button class="tool-btn" data-copy-settings>Copy settings file</button></footer>`; };
   let catalogEditing = false;
   const drawCatalog = () => {
@@ -767,8 +767,8 @@ function openSettings(section = 'personas') {
     else if (t.hasAttribute('data-reset')) { personas = filePersonas; catalog = fileCatalog; try { localStorage.removeItem(PERSONA_KEY); localStorage.removeItem(CATALOG_KEY); } catch (x) {} redrawOverview(); editing = null; catalogEditing = false; draw(); }
     else if (t.hasAttribute('data-copy-settings')) {
       const msg = $('[data-msg]', main);
-      try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.5k/pr-review.yaml</code> at the repository root and commit it.'; }
-      catch (x) { msg.innerHTML = `Copy this into <code>.5k/pr-review.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
+      try { await navigator.clipboard.writeText(settingsYaml()); msg.innerHTML = 'Copied. Paste it into <code>.fabrica/5k-pr-review/settings.yaml</code> at the repository root and commit it.'; }
+      catch (x) { msg.innerHTML = `Copy this into <code>.fabrica/5k-pr-review/settings.yaml</code>:<pre class="code">${esc(settingsYaml())}</pre>`; }
     }
   });
 }

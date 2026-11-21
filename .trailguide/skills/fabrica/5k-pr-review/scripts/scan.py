@@ -356,7 +356,7 @@ def main():
     common.add_argument("--repo", required=True)
     common.add_argument("--base"); common.add_argument("--head")
     common.add_argument("--migrations", default="**/migrations/*.sql", help="glob of migration files, relative to the repository")
-    common.add_argument("--catalog", default="", help="the catalog's folder, from .5k/pr-review.yaml")
+    common.add_argument("--catalog", default="", help="the catalog's folder, from .fabrica/5k-pr-review/settings.yaml")
     common.add_argument("--generated", default=r"generated|\.gen\.|/bindings/", help="regex for generated files")
     p = sub.add_parser("changes", parents=[common]); p.add_argument("--since", help="the head the canvas was last built from")
     p = sub.add_parser("checkout", parents=[common]); p.add_argument("--dir", required=True); p.add_argument("--ref", required=True); p.add_argument("--no-install", action="store_true")
