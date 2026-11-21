@@ -36,12 +36,15 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
       "file": "path/from/repo/root.ext",
       "line": "42 or 40-55, or null",
       "body": "What is wrong, a concrete failure scenario, and why it matters. Markdown is fine.",
-      "fix": "The change that would fix it, or null for a policy question"
+      "fix": "The change that would fix it, or null for a policy question",
+      "rule": null
     }
   ],
   "unverified": [ { "claim": "What you could not check", "reason": "Why" } ]
 }
 ```
+
+Set `rule` when a finding breaks one of the repository's written rules: `{"id": "the rule's ID, such as a Trail Guide rule ID", "file": "path/from/repo/root of the rule's file, or null", "quote": "the passage of the rule the change breaks, quoted exactly"}`. Then `body` says what the change does instead, and `fix` the recommended resolution. Leave `rule` null otherwise.
 
 Keep `summary` under 400 characters. The detail belongs in `checks`, one entry for each thing you checked (each acceptance criterion, each rule, each risk you traced), and in `findings`. A check that is `not-met` or `partly` has a finding that explains it.
 

@@ -7,34 +7,38 @@
         "model": "opus",
         "effort": "high"
       },
-      "focus": "focus/check-acceptance-criteria.md"
+      "focus": "focus/check-acceptance-criteria.md",
+      "icon": "list-checks"
     },
     "check-correctness": {
       "summary": "Traces concrete inputs through the new logic to find wrong results",
       "agent": {
         "harness": "codex",
-        "model": "gpt-6-astra",
+        "model": "gpt-6.2-astra",
         "effort": "high"
       },
-      "focus": "focus/check-correctness.md"
+      "focus": "focus/check-correctness.md",
+      "icon": "bug"
     },
     "check-security": {
       "summary": "Checks trust boundaries, secrets, injection, and tenant isolation",
       "agent": {
         "harness": "codex",
-        "model": "gpt-6-astra",
+        "model": "gpt-6.2-astra",
         "effort": "high"
       },
-      "focus": "focus/check-security.md"
+      "focus": "focus/check-security.md",
+      "icon": "shield"
     },
     "check-rules": {
-      "summary": "Checks the change against the repository's own rules and agent instructions",
+      "summary": "Checks the change against the repository's written rules: Trail Guide rules, AGENTS.md, CLAUDE.md, and style guides",
       "agent": {
         "harness": "claude-code",
         "model": "opus",
         "effort": "default"
       },
-      "focus": "focus/check-rules.md"
+      "focus": "focus/check-rules.md",
+      "icon": "scale"
     },
     "check-docs": {
       "summary": "Checks that the docs still match the code after this change",
@@ -43,25 +47,28 @@
         "model": "opus",
         "effort": "default"
       },
-      "focus": "focus/check-docs.md"
+      "focus": "focus/check-docs.md",
+      "icon": "book-open"
     },
     "check-supportability": {
       "summary": "Checks that failures surface, can be traced, and can be recovered",
       "agent": {
         "harness": "codex",
-        "model": "gpt-6.1-sol",
+        "model": "gpt-6.2-sol",
         "effort": "high"
       },
-      "focus": "focus/check-supportability.md"
+      "focus": "focus/check-supportability.md",
+      "icon": "life-buoy"
     },
     "check-performance": {
       "summary": "Flags only bottlenecks too large for the change's real workload",
       "agent": {
         "harness": "codex",
-        "model": "gpt-6.1-sol",
+        "model": "gpt-6.2-sol",
         "effort": "high"
       },
-      "focus": "focus/check-performance.md"
+      "focus": "focus/check-performance.md",
+      "icon": "gauge"
     },
     "check-architecture": {
       "summary": "Judges whether the design is as simple as it could be, and proposes a simpler one",
@@ -70,7 +77,8 @@
         "model": "opus",
         "effort": "high"
       },
-      "focus": "focus/check-architecture.md"
+      "focus": "focus/check-architecture.md",
+      "icon": "blocks"
     }
   },
   "codex_fallback": {
@@ -125,13 +133,23 @@
       "harness": "claude-code"
     },
     {
-      "id": "gpt-6-astra",
-      "name": "GPT-6 Astra",
+      "id": "gpt-6.2-astra",
+      "name": "GPT-6.2 Astra",
       "harness": "codex"
     },
     {
-      "id": "gpt-6.1-sol",
-      "name": "GPT-6.1 Sol",
+      "id": "gpt-6.2-sol",
+      "name": "GPT-6.2 Sol",
+      "harness": "codex"
+    },
+    {
+      "id": "gpt-6.2-terra",
+      "name": "GPT-6.2 Terra",
+      "harness": "codex"
+    },
+    {
+      "id": "gpt-6.2-luna",
+      "name": "GPT-6.2 Luna",
       "harness": "codex"
     }
   ]

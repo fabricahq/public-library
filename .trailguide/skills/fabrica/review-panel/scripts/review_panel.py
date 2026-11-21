@@ -104,6 +104,12 @@ def _check_finding(finding, where, problems):
     for key in ('file', 'line', 'fix'):
         if key in finding:
             _require(finding[key] is None or isinstance(finding[key], str), f'{where}.{key} must be a string or null', problems)
+    rule = finding.get('rule')
+    if rule is not None:
+        _require(isinstance(rule, dict) and isinstance(rule.get('id'), str) and rule['id'].strip()
+                 and isinstance(rule.get('quote'), str) and rule['quote'].strip()
+                 and (rule.get('file') is None or isinstance(rule.get('file'), str)),
+                 f'{where}.rule must be null or an object with id and quote strings and a file string or null', problems)
 
 
 def validate_review(value):
@@ -273,6 +279,38 @@ def summarize_tool_input(name, data):
     return name
 
 
+SIGNED_OUT = ('failed to authenticate', 'oauth', 'not logged in', 'invalid api key', 'please run /login', 'auth login')
+
+
+def claude_failure(event):
+    """Turn a failed `claude -p` result event into one line a person can act on."""
+    detail = str(event.get('result') or '').strip()
+    if any(word in detail.lower() for word in SIGNED_OUT):
+        return 'Claude Code is not signed in; run `claude auth login`, then run the panel again'
+    subtype = event.get('subtype')
+    kind = subtype.replace('_', ' ') if subtype and subtype != 'success' else 'an error'
+    return f'claude ended with {kind}: {detail}' if detail else f'claude ended with {kind}'
+
+
+def claude_signed_in():
+    """Return False only when `claude auth status` clearly reports no sign-in; None when it can't tell."""
+    try:
+        done = subprocess.run(['claude', 'auth', 'status'], capture_output=True, text=True, timeout=10,
+                              stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    text = (done.stdout or '') + (done.stderr or '')
+    try:
+        data = json.loads(done.stdout)
+    except (json.JSONDecodeError, TypeError):
+        data = None
+    if isinstance(data, dict) and 'loggedIn' in data:
+        return bool(data['loggedIn'])
+    if any(word in text.lower() for word in ('not logged in', 'not signed in', 'logged out')):
+        return False
+    return None
+
+
 def claude_event(line, usage):
     """Read one stream-json line from `claude -p`; return (activity, result_text, session_id).
 
@@ -295,7 +333,7 @@ def claude_event(line, usage):
         usage['input'] = sum(int(totals.get(key) or 0) for key in ('input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens'))
         usage['output'] = int(totals.get('output_tokens') or 0)
         if event.get('is_error') or event.get('subtype') not in (None, 'success'):
-            raise RuntimeError(f"claude ended with {event.get('subtype') or 'an error'}: {event.get('result') or ''}".strip())
+            raise RuntimeError(claude_failure(event))
         return None, event.get('result') or '', event.get('session_id')
     return None, None, event.get('session_id')
 
@@ -326,6 +364,18 @@ def codex_event(line, usage):
 
 # ---------------------------------------------------------------------------------------------
 # Run state, shared with the live page.
+
+MAX_STEPS = 500
+
+
+def add_step(entry, seconds, activity):
+    """Record one step of a session for the page's live activity view, keeping the latest MAX_STEPS."""
+    steps = entry.setdefault('steps', [])
+    steps.append({'t': seconds, 'text': activity})
+    if len(steps) > MAX_STEPS:
+        entry['steps_dropped'] = entry.get('steps_dropped', 0) + len(steps) - MAX_STEPS
+        del steps[:len(steps) - MAX_STEPS]
+
 
 class State:
     def __init__(self, path, data):
@@ -690,6 +740,7 @@ class Panel:
         `entry` picks the state entry from the run state. A failure ends this stage only, and is recorded.
         """
         folder.mkdir(parents=True, exist_ok=True)
+        started = time.monotonic()
 
         def report(activity, usage, model=None):
             def change(data):
@@ -697,6 +748,7 @@ class Panel:
                     entry(data)['served_model'] = model
                 if activity:
                     entry(data)['activity'] = activity
+                    add_step(entry(data), round(time.monotonic() - started), activity)
                 if usage is not None:
                     entry(data)['usage'] = usage
             self.state.update(change)
@@ -823,7 +875,7 @@ def apply_repo_config(roster, folder, label):
         if not re.fullmatch(r'[a-z0-9-]+', name):
             raise PanelError(f'{path}: reviewer file names use lowercase letters, digits, and hyphens')
         settings, body = read_prompt_file(path)
-        extra = sorted(set(settings) - {'summary', 'harness', 'model', 'effort', 'mode'})
+        extra = sorted(set(settings) - {'summary', 'harness', 'model', 'effort', 'mode', 'icon'})
         if extra:
             raise PanelError(f"{path}: unknown setting {', '.join(extra)}")
         mode = settings.get('mode', 'replace')
@@ -853,6 +905,10 @@ def apply_repo_config(roster, folder, label):
             raise PanelError(f'{path}: a new reviewer needs a prompt below the front matter')
         if settings.get('summary'):
             spec['summary'] = str(settings['summary'])
+        if settings.get('icon') is not None:
+            if not re.fullmatch(r'[a-z0-9-]+', str(settings['icon'])):
+                raise PanelError(f'{path}: icon is a Lucide icon name, such as credit-card')
+            spec['icon'] = str(settings['icon'])
         spec['agent'] = _agent_with(spec['agent'], settings, str(path))
     chosen = config.get('reviewers')
     if chosen is not None:
@@ -876,6 +932,7 @@ def roster_summary(roster):
         'reviewers': {name: {'summary': spec.get('summary', ''), 'agent': dict(spec['agent']), 'source': spec['source'],
                              'builtin': 'builtin_text' in spec, 'builtin_text': spec.get('builtin_text', ''),
                              'builtin_agent': spec.get('builtin_agent'), 'builtin_summary': spec.get('builtin_summary'),
+                             'icon': spec.get('icon'), 'builtin_icon': spec.get('builtin_icon'),
                              'file': spec.get('file'), 'file_body': spec.get('file_body', ''), 'mode': spec.get('mode', 'replace'),
                              'included': chosen is None or name in chosen}
                       for name, spec in every.items()},
@@ -890,7 +947,7 @@ def load_roster(only, claude_only, repo=None, panel=None, settings_only=False):
     roster = json.loads(ROSTER.read_text())
     for spec in roster['reviewers'].values():
         spec['focus_text'] = spec['builtin_text'] = (SKILL / spec.pop('focus')).read_text().strip()
-        spec['builtin_agent'], spec['builtin_summary'] = dict(spec['agent']), spec['summary']
+        spec['builtin_agent'], spec['builtin_summary'], spec['builtin_icon'] = dict(spec['agent']), spec['summary'], spec.get('icon')
         spec['source'] = 'built-in'
     folder = Path(panel) if panel else (repo / CONFIG_DIR if repo else None)
     if panel and not folder.is_dir():
@@ -915,8 +972,11 @@ def load_roster(only, claude_only, repo=None, panel=None, settings_only=False):
         if spec['agent']['harness'] == 'codex' and (claude_only or not has_codex):
             spec['agent'] = dict(roster['codex_fallback'])
             spec['note'] = 'ran on Claude: ' + ('--claude-only' if claude_only else 'codex is not installed')
-    if not shutil.which('claude') and not settings_only:
-        raise PanelError('the panel needs Claude Code (`claude`) on PATH')
+    if not settings_only:
+        if not shutil.which('claude'):
+            raise PanelError('the panel needs Claude Code (`claude`) on PATH')
+        if claude_signed_in() is False:
+            raise PanelError('Claude Code is not signed in; run `claude auth login`, then run the panel again')
     return roster, reviewers
 
 
@@ -949,7 +1009,12 @@ def report_markdown(state):
         if finding.get('line'):
             where += f":{finding['line']}"
         lines += [f"## {finding['id']} [{finding['severity']}] {finding['title']}",
-                  f"{where} (merges {', '.join(finding.get('merges', []))})", '', finding['body'], '']
+                  f"{where} (merges {', '.join(finding.get('merges', []))})", '']
+        rule = finding.get('rule')
+        if isinstance(rule, dict):
+            lines += [f"Rule {rule.get('id')}" + (f" ({rule['file']})" if rule.get('file') else '') + ':', '',
+                      *['> ' + line for line in str(rule.get('quote', '')).splitlines()], '']
+        lines += [finding['body'], '']
         if finding.get('fix'):
             lines += ['Fix: ' + finding['fix'], '']
     if synthesis.get('questions'):
@@ -1180,7 +1245,7 @@ def initial_state(repo, run_dir, target, stat, roster, reviewers):
         'status': 'running', 'started_at': now(), 'updated_at': now(), 'ended_at': None,
         'repo': str(repo), 'run_dir': str(run_dir), 'target': target, 'diff_stat': stat,
         'reviewers': {name: entry(spec['agent'], focus=spec['summary'], planned=spec['planned'], note=spec.get('note'),
-                                  focus_text=spec['focus_text'], source=spec['source'])
+                                  focus_text=spec['focus_text'], source=spec['source'], icon=spec.get('icon'))
                       for name, spec in reviewers.items()},
         'config': {k: v for k, v in roster.get('config', {}).items() if k != 'panel'}, 'snippets': {},
         'models': roster.get('models', []), 'roster': roster.get('all'),

@@ -44,6 +44,7 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
       "line": "42 or 40-55, or null",
       "body": "What is wrong and a concrete failure scenario. Note whether you confirmed it in the code.",
       "fix": "The change that would fix it, or null",
+      "rule": null,
       "merges": ["check-correctness:F2", "check-security:F1"]
     }
   ],
@@ -51,5 +52,7 @@ End your reply with exactly one JSON object in a ```json fenced block, with thes
   "questions": [ { "question": "The decision the author needs to make", "why": "What depends on it, and the options", "blocking": true } ]
 }
 ```
+
+Carry a merged finding's `rule` object over unchanged when one of its reviewers' findings has one (it names the written rule the change breaks); otherwise set `rule` to null.
 
 Keep `summary` under 600 characters; the findings and questions carry the detail. Number findings S1, S2, and so on, in ranked order. `merges` names only findings from the reports below.

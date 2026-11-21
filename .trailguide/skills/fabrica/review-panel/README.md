@@ -5,12 +5,12 @@ Review a change with a panel of eight focused reviewers instead of one generalis
 | Reviewer | Checks | Runs on |
 | --- | --- | --- |
 | check-acceptance-criteria | Checks the change against the known acceptance criteria and product decisions | Claude Opus, high effort |
-| check-correctness | Traces concrete inputs through the new logic to find wrong results | Codex, GPT-6 Astra, high effort |
-| check-security | Checks trust boundaries, secrets, injection, and tenant isolation | Codex, GPT-6 Astra, high effort |
-| check-rules | Checks the change against the repository's own rules and agent instructions | Claude Opus |
+| check-correctness | Traces concrete inputs through the new logic to find wrong results | Codex, GPT-6.2 Astra, high effort |
+| check-security | Checks trust boundaries, secrets, injection, and tenant isolation | Codex, GPT-6.2 Astra, high effort |
+| check-rules | Checks the change against the repository's written rules: Trail Guide rules, AGENTS.md, CLAUDE.md, and style guides | Claude Opus |
 | check-docs | Checks that the docs still match the code after this change | Claude Opus |
-| check-supportability | Checks that failures surface, can be traced, and can be recovered | Codex, GPT-6.1 Sol, high effort |
-| check-performance | Flags only bottlenecks too large for the change's real workload | Codex, GPT-6.1 Sol, high effort |
+| check-supportability | Checks that failures surface, can be traced, and can be recovered | Codex, GPT-6.2 Sol, high effort |
+| check-performance | Flags only bottlenecks too large for the change's real workload | Codex, GPT-6.2 Sol, high effort |
 | check-architecture | Judges whether the design is as simple as it could be, and proposes a simpler one | Claude Opus, high effort |
 
 Edit `panel.json` to change a reviewer's model or effort, and `focus/` to change what it looks for.

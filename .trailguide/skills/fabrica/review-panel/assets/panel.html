@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Review panel</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22%234d638b%22%3E%3Ccircle%20cx=%223%22%20cy=%2212%22%20r=%221.6%22/%3E%3Ccircle%20cx=%226%22%20cy=%2215%22%20r=%221.6%22/%3E%3Ccircle%20cx=%229%22%20cy=%2218%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2212%22%20cy=%2215%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2212%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2218%22%20cy=%229%22%20r=%221.6%22/%3E%3Ccircle%20cx=%2221%22%20cy=%226%22%20r=%221.6%22/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2216%22%20height=%2216%22%20viewBox=%220%200%2016%2016%22%20fill=%22currentColor%22%3E%3Cstyle%3Esvg%7Bcolor:%234d638b%7D%40media%20%28prefers-color-scheme:dark%29%7Bsvg%7Bcolor:%2393a9d3%7D%7D%3C/style%3E%3Cpath%20d=%22M2%2010L5%2013A2.121%202.121%200%200%200%208%2013L14%207A2.121%202.121%200%200%200%2011%204L6.5%208.5L5%207A2.121%202.121%200%200%200%202%2010Z%22%20fill=%22none%22%20stroke=%22currentColor%22%20stroke-width=%221.15%22%20stroke-linejoin=%22round%22/%3E%3Ccircle%20cx=%223.5%22%20cy=%228.5%22%20r=%220.7%22/%3E%3Ccircle%20cx=%226.5%22%20cy=%2211.5%22%20r=%220.7%22/%3E%3Ccircle%20cx=%229.5%22%20cy=%228.5%22%20r=%220.7%22/%3E%3Ccircle%20cx=%2212.5%22%20cy=%225.5%22%20r=%220.7%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout, after PR 10K: a persistent top bar, a sidebar of the synthesis and reviewers, and the selected view filling the rest. */
@@ -186,8 +186,12 @@ tbody tr:first-child td { border-top: 0; }
 tr.row { cursor: pointer; }
 tr.row:hover td { background: var(--hover); }
 tr.row.picked td { background: var(--accent-bg); }
-td.pick { width: 34px; }
-td.pick input { width: 16px; height: 16px; margin: 2px 0 0; cursor: pointer; accent-color: var(--accent); }
+td.pick, th.pick { width: 44px; padding: 0; cursor: pointer; }
+td.pick, th.pick { text-align: center; }
+td.pick { padding-top: 10px; }
+td.pick input, th.pick input { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: var(--accent); }
+tr.row td.pick:hover { background: var(--accent-bg); }
+tr.row td.pick:hover input { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); outline-offset: 1px; border-radius: 3px; }
 td.fid { font-family: var(--mono); color: var(--muted); font-size: 12px; white-space: nowrap; }
 .ftitle { font-weight: 600; }
 .where { color: var(--muted); font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; margin-top: 2px; }
@@ -215,7 +219,7 @@ tr.row.flash td { animation: flash 2.4s ease-out; }
 .whos { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; font-size: 13px; }
 .linkish.mono { font-family: var(--mono); font-size: 12.5px; }
 .fw-tabs { margin-top: 14px; }
-.finding-window .fw-scroll { border-top: 0; margin-top: 0; padding-top: 14px; }
+.finding-window .fw-scroll { border-top: 0; margin-top: 0; padding-top: 0; }
 .fix-label { font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
 .origin { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
 .origin-head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--hover); border-bottom: 1px solid var(--line); font-weight: 600; font-size: 13px; }
@@ -260,11 +264,23 @@ details.origin .body { margin-top: 8px; font-size: 13px; }
 tr.row:focus-visible, tr.row.flash:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 .body { overflow-wrap: anywhere; max-width: 80ch; }
 .body p { margin: 8px 0; }
+.body > :first-child, .fix > :first-child { margin-top: 0; }
+.body > :last-child, .fix > :last-child { margin-bottom: 0; }
 .body pre { background: var(--code); padding: 10px; border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; }
 .body code { background: var(--code); padding: 0 4px; border-radius: 4px; }
 .body pre code { background: none; padding: 0; }
-.body ul { padding-left: 18px; }
-.fix { margin-top: 10px; padding: 8px 12px; border-left: 3px solid var(--ok); background: var(--ok-bg); border-radius: 0 8px 8px 0; max-width: 80ch; }
+.body ul, .body ol, .fix ul, .fix ol { padding-left: 20px; margin: 6px 0; }
+.body li > ul, .body li > ol, .fix li > ul, .fix li > ol { margin: 2px 0; }
+.rule-box { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin-bottom: 14px; overflow: hidden; }
+.rule-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 8px 12px; background: var(--hover); border-bottom: 1px solid var(--line); }
+.rule-head .rid { font-family: var(--mono); font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
+.rule-head a, .rule-head .path { margin-left: auto; font-size: 12.5px; }
+.rule-head .path { font-family: var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.rule-quote { margin: 6px 14px 12px; padding: 2px 12px; border-left: 3px solid var(--accent); font-size: 14px; }
+.rule-quote > :first-child { margin-top: 0; } .rule-quote > :last-child { margin-bottom: 0; }
+.sect-label { font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.rule-box .sect-label { padding: 10px 14px 0; margin: 0; }
+.fix { margin-top: 16px; padding: 8px 12px; border-left: 3px solid var(--ok); background: var(--ok-bg); border-radius: 0 8px 8px 0; max-width: 80ch; }
 .fix p { margin: 4px 0; }
 details.dupes { margin-top: 12px; }
 details.dupes summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 500; }
@@ -288,6 +304,23 @@ details.dupes li { padding: 8px 10px; border: 1px solid var(--line); border-radi
 .rowline { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .note { color: var(--muted); font-size: 12.5px; }
 a.raw { color: var(--accent); font-size: 12.5px; }
+.live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 6px; vertical-align: 1px; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.watch { font-size: 12.5px; color: var(--accent); font-weight: 500; }
+.act-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 4px 0 10px; font-size: 13px; font-weight: 500; }
+.act-head .toggle { margin-left: auto; font-weight: 400; }
+.files-read { margin-bottom: 10px; font-size: 13px; }
+.files-read summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.files-read ul { margin: 6px 0 0; padding-left: 18px; columns: 2 280px; font-size: 12px; }
+.steps { list-style: none; margin: 0; padding: 4px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); max-height: min(60vh, 640px); overflow-y: auto; }
+.step { display: flex; gap: 12px; padding: 3px 12px; font-size: 13px; line-height: 1.5; }
+.step + .step { border-top: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
+.step .t { flex: none; width: 46px; text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--faint); padding-top: 1px; }
+.step .what { min-width: 0; overflow-wrap: anywhere; }
+.step .verb { color: var(--muted); }
+.step .mono { font-family: var(--mono); font-size: 12px; }
+.step.k-run .mono { color: var(--ink); }
+.step.now { background: var(--accent-bg); }
 
 /* Handoff */
 .handoff-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; background: var(--ink); color: var(--bg); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); max-width: calc(100% - 32px); flex-wrap: wrap; }
@@ -321,7 +354,7 @@ a.raw { color: var(--accent); font-size: 12.5px; }
 
 /* Settings: the PR 10K settings window, with sections on the left and one pane on the right. */
 .sscrim { position: fixed; inset: 0; z-index: 50; background: var(--scrim); display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
-.swin { width: min(1000px, 100%); height: min(720px, calc(100vh - 48px)); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); display: grid; grid-template-columns: 220px minmax(0, 1fr); overflow: hidden; }
+.swin { width: min(1240px, 100%); height: min(900px, calc(100vh - 48px)); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); display: grid; grid-template-columns: 220px minmax(0, 1fr); overflow: hidden; }
 .sside { background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 14px 10px; min-height: 0; }
 .sside-title { font-weight: 600; font-size: 13px; padding: 6px 10px 12px; }
 .sgroup { font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 10px 10px 4px; }
@@ -440,6 +473,32 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .confirm b { font-size: 14px; }
 .confirm p { margin: 0; font-size: 13px; color: var(--ink); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+.swin.max { width: 100%; height: calc(100vh - 24px); }
+.sscrim:has(.swin.max) { padding: 12px; }
+.swin.max textarea { min-height: 52vh; }
+.head-btns { display: flex; gap: 4px; flex: none; }
+button.copied, .ta-copy.copied { color: var(--ok); }
+button svg.ck { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
+.ta-copy svg.ck, .icon-btn svg.ck { margin: 0; }
+.icon-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; }
+.ipick-wrap { position: relative; }
+.swin .ipick { width: 38px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--panel); color: var(--ink); cursor: pointer; }
+.swin .ipick:hover { background: var(--hover); }
+.ipick svg { width: 18px; height: 18px; }
+.ipop { position: absolute; z-index: 6; top: calc(100% + 4px); left: 0; display: grid; grid-template-columns: repeat(8, 34px); gap: 4px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); }
+.iopt { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.iopt:hover { background: var(--hover); color: var(--ink); }
+.iopt.on { background: var(--accent-bg); color: var(--accent); }
+.iopt svg { width: 17px; height: 17px; }
+
+.notice { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--accent-bg); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.5; }
+.notice .sub { display: block; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.notice a { color: var(--accent); }
+
+.mpick .cicon, .mopt .cicon { display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; }
+.mpick .cicon svg, .mopt .cicon svg { width: 15px; height: 15px; }
+.mpick .cicon .claude, .mopt .cicon .claude { color: var(--claude); }
 /* Settings mode switch */
 .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode { all: unset; box-sizing: border-box; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
@@ -478,7 +537,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 1
 <body>
 <div class="app">
 <header class="topbar">
-  <span class="brand"><svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="3" cy="12" r="1.6"/><circle cx="6" cy="15" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="12" cy="15" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="18" cy="9" r="1.6"/><circle cx="21" cy="6" r="1.6"/></svg>Review Panel</span>
+  <span class="brand"><svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.56 14.46L7.2 19.1A2.687 2.687 0 0 0 11 19.1L21.44 8.66A2.687 2.687 0 0 0 17.64 4.86L9.1 13.4L6.36 10.66A2.687 2.687 0 0 0 2.56 14.46Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="4.46" cy="12.56" r="1.05"/><circle cx="7.36" cy="15.46" r="1.05"/><circle cx="10.84" cy="15.46" r="1.05"/><circle cx="13.74" cy="12.56" r="1.05"/><circle cx="16.64" cy="9.66" r="1.05"/><circle cx="19.54" cy="6.76" r="1.05"/></svg>Review Panel</span>
   <span class="tb-div" aria-hidden="true"></span>
   <div class="tb-title"><span class="tb-chip" id="chip"></span><h1 id="title">Review panel</h1></div>
   <div class="sub" id="sub"></div>
@@ -595,11 +654,32 @@ const inlineMd = t => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\
 function md(text) {
   return String(text ?? '').split(/```[a-z]*\n?/).map((block, i) => {
     if (i % 2) return `<pre><code>${esc(block.replace(/\n$/, ''))}</code></pre>`;
-    return block.split(/\n{2,}/).filter(p => p.trim()).map(p => {
-      if (/^\s*[-*] /m.test(p)) return '<ul>' + p.split(/\n\s*[-*] /).map(x => x.replace(/^\s*[-*] /, '')).filter(Boolean).map(x => `<li>${inlineMd(x)}</li>`).join('') + '</ul>';
-      return `<p>${inlineMd(p).replace(/\n/g, '<br>')}</p>`;
-    }).join('');
+    return block.split(/\n{2,}/).filter(p => p.trim()).map(mdBlock).join('');
   }).join('');
+}
+// One paragraph of Markdown: text lines, then any list, with nesting taken from each bullet's indent.
+const BULLET = /^(\s*)([-*]|\d+[.)])\s+(.*)$/;
+function mdBlock(p) {
+  const lines = p.split('\n');
+  const first = lines.findIndex(line => BULLET.test(line));
+  if (first < 0) return `<p>${inlineMd(p).replace(/\n/g, '<br>')}</p>`;
+  const lead = lines.slice(0, first).join('\n').trim();
+  const items = [];
+  for (const line of lines.slice(first)) {
+    const m = line.match(BULLET);
+    if (m) items.push({ indent: m[1].replace(/\t/g, '    ').length, ordered: /\d/.test(m[2]), text: m[3] });
+    else if (items.length) items[items.length - 1].text += ' ' + line.trim();
+  }
+  let html = '', stack = [];
+  for (const item of items) {
+    while (stack.length && item.indent < stack[stack.length - 1].indent) html += `</li></${stack.pop().tag}>`;
+    const top = stack[stack.length - 1];
+    if (!top || item.indent > top.indent) { const tag = item.ordered ? 'ol' : 'ul'; stack.push({ indent: item.indent, tag }); html += `<${tag}>`; }
+    else html += '</li>';
+    html += `<li>${inlineMd(item.text)}`;
+  }
+  while (stack.length) html += `</li></${stack.pop().tag}>`;
+  return (lead ? `<p>${inlineMd(lead).replace(/\n/g, '<br>')}</p>` : '') + html;
 }
 function secs(a, b) {
   if (!a) return '';
@@ -608,7 +688,7 @@ function secs(a, b) {
 }
 const compact = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
 const statusPill = s => `<span class="pill s-${esc(s)}"><span class="dot"></span>${esc(s)}</span>`;
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const plural = (n, word, many) => `${n} ${n === 1 ? word : many || word + 's'}`;
 const terminal = s => ['done', 'failed', 'cancelled'].includes(s);
 function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage is optional */ } }
 function recall(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
@@ -621,20 +701,63 @@ const LOGOS = {
   codex: '<svg class="openai" viewBox="0 0 512 512" role="img" aria-label="OpenAI"><path fill="currentColor" d="M196.4 185.8l0-48.6c0-4.1 1.5-7.2 5.1-9.2l97.8-56.3c13.3-7.7 29.2-11.3 45.6-11.3 61.4 0 100.4 47.6 100.4 98.3 0 3.6 0 7.7-.5 11.8L343.3 111.1c-6.1-3.6-12.3-3.6-18.4 0L196.4 185.8zM424.7 375.2l0-116.2c0-7.2-3.1-12.3-9.2-15.9L287 168.4 329 144.3c3.6-2 6.7-2 10.2 0L437 200.7c28.2 16.4 47.1 51.2 47.1 85 0 38.9-23 74.8-59.4 89.6l0 0zM166.2 272.8l-42-24.6c-3.6-2-5.1-5.1-5.1-9.2l0-112.6c0-54.8 42-96.3 98.8-96.3 21.5 0 41.5 7.2 58.4 20L175.4 108.5c-6.1 3.6-9.2 8.7-9.2 15.9l0 148.5 0 0zm90.4 52.2l-60.2-33.8 0-71.7 60.2-33.8 60.2 33.8 0 71.7-60.2 33.8zm38.7 155.7c-21.5 0-41.5-7.2-58.4-20l100.9-58.4c6.1-3.6 9.2-8.7 9.2-15.9l0-148.5 42.5 24.6c3.6 2 5.1 5.1 5.1 9.2l0 112.6c0 54.8-42.5 96.3-99.3 96.3l0 0zM173.8 366.5L76.1 310.2c-28.2-16.4-47.1-51.2-47.1-85 0-39.4 23.6-74.8 59.9-89.6l0 116.7c0 7.2 3.1 12.3 9.2 15.9l128 74.2-42 24.1c-3.6 2-6.7 2-10.2 0zm-5.6 84c-57.9 0-100.4-43.5-100.4-97.3 0-4.1 .5-8.2 1-12.3l100.9 58.4c6.1 3.6 12.3 3.6 18.4 0l128.5-74.2 0 48.6c0 4.1-1.5 7.2-5.1 9.2l-97.8 56.3c-13.3 7.7-29.2 11.3-45.6 11.3l0 0zm127 60.9c62 0 113.7-44 125.4-102.4 57.3-14.9 94.2-68.6 94.2-123.4 0-35.8-15.4-70.7-43-95.7 2.6-10.8 4.1-21.5 4.1-32.3 0-73.2-59.4-128-128-128-13.8 0-27.1 2-40.4 6.7-23-22.5-54.8-36.9-89.6-36.9-62 0-113.7 44-125.4 102.4-57.3 14.8-94.2 68.6-94.2 123.4 0 35.8 15.4 70.7 43 95.7-2.6 10.8-4.1 21.5-4.1 32.3 0 73.2 59.4 128 128 128 13.8 0 27.1-2 40.4-6.7 23 22.5 54.8 36.9 89.6 36.9z"/></svg>',
 };
 // Reviewer icons: path data from Lucide 0.460.0 (lucide-static), ISC License, https://lucide.dev/license.
-const REVIEWER_ICONS = {
- "check-acceptance-criteria": "<path d=\"m3 17 2 2 4-4\"/><path d=\"m3 7 2 2 4-4\"/><path d=\"M13 6h8\"/><path d=\"M13 12h8\"/><path d=\"M13 18h8\"/>",
- "check-correctness": "<path d=\"m8 2 1.88 1.88\"/><path d=\"M14.12 3.88 16 2\"/><path d=\"M9 7.13v-1a3.003 3.003 0 1 1 6 0v1\"/><path d=\"M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6\"/><path d=\"M12 20v-9\"/><path d=\"M6.53 9C4.6 8.8 3 7.1 3 5\"/><path d=\"M6 13H2\"/><path d=\"M3 21c0-2.1 1.7-3.9 3.8-4\"/><path d=\"M20.97 5c0 2.1-1.6 3.8-3.5 4\"/><path d=\"M22 13h-4\"/><path d=\"M17.2 17c2.1.1 3.8 1.9 3.8 4\"/>",
- "check-security": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/>",
- "check-rules": "<path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/><path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/><path d=\"M7 21h10\"/><path d=\"M12 3v18\"/><path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\"/>",
- "check-docs": "<path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/>",
- "check-supportability": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m4.93 4.93 4.24 4.24\"/><path d=\"m14.83 9.17 4.24-4.24\"/><path d=\"m14.83 14.83 4.24 4.24\"/><path d=\"m9.17 14.83-4.24 4.24\"/><circle cx=\"12\" cy=\"12\" r=\"4\"/>",
- "check-performance": "<path d=\"m12 14 4-4\"/><path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/>",
- "check-architecture": "<rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/><path d=\"M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3\"/>",
- "__synthesis": "<circle cx=\"18\" cy=\"18\" r=\"3\"/><circle cx=\"6\" cy=\"6\" r=\"3\"/><path d=\"M6 21V9a9 9 0 0 0 9 9\"/>",
- "__default": "<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>"
+// Reviewer icons: a curated set of Lucide 0.460.0 icons (ISC), chosen per reviewer with `icon:` in its settings.
+const ICONS = {
+ "list-checks": "<path d=\"m3 17 2 2 4-4\"/> <path d=\"m3 7 2 2 4-4\"/> <path d=\"M13 6h8\"/> <path d=\"M13 12h8\"/> <path d=\"M13 18h8\"/>",
+ "bug": "<path d=\"m8 2 1.88 1.88\"/> <path d=\"M14.12 3.88 16 2\"/> <path d=\"M9 7.13v-1a3.003 3.003 0 1 1 6 0v1\"/> <path d=\"M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6\"/> <path d=\"M12 20v-9\"/> <path d=\"M6.53 9C4.6 8.8 3 7.1 3 5\"/> <path d=\"M6 13H2\"/> <path d=\"M3 21c0-2.1 1.7-3.9 3.8-4\"/> <path d=\"M20.97 5c0 2.1-1.6 3.8-3.5 4\"/> <path d=\"M22 13h-4\"/> <path d=\"M17.2 17c2.1.1 3.8 1.9 3.8 4\"/>",
+ "shield": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/>",
+ "lock": "<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\"/> <path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/>",
+ "key-round": "<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\"/> <circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/>",
+ "scale": "<path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/> <path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\"/> <path d=\"M7 21h10\"/> <path d=\"M12 3v18\"/> <path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\"/>",
+ "book-open": "<path d=\"M12 7v14\"/> <path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/>",
+ "life-buoy": "<circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"m4.93 4.93 4.24 4.24\"/> <path d=\"m14.83 9.17 4.24-4.24\"/> <path d=\"m14.83 14.83 4.24 4.24\"/> <path d=\"m9.17 14.83-4.24 4.24\"/> <circle cx=\"12\" cy=\"12\" r=\"4\"/>",
+ "gauge": "<path d=\"m12 14 4-4\"/> <path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/>",
+ "blocks": "<rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/> <path d=\"M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3\"/>",
+ "database": "<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\"/> <path d=\"M3 5V19A9 3 0 0 0 21 19V5\"/> <path d=\"M3 12A9 3 0 0 0 21 12\"/>",
+ "server": "<rect width=\"20\" height=\"8\" x=\"2\" y=\"2\" rx=\"2\" ry=\"2\"/> <rect width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" ry=\"2\"/> <line x1=\"6\" x2=\"6.01\" y1=\"6\" y2=\"6\"/> <line x1=\"6\" x2=\"6.01\" y1=\"18\" y2=\"18\"/>",
+ "cloud": "<path d=\"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z\"/>",
+ "network": "<rect x=\"16\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\"/> <rect x=\"2\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\"/> <rect x=\"9\" y=\"2\" width=\"6\" height=\"6\" rx=\"1\"/> <path d=\"M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3\"/> <path d=\"M12 12V8\"/>",
+ "globe": "<circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\"/> <path d=\"M2 12h20\"/>",
+ "credit-card": "<rect width=\"20\" height=\"14\" x=\"2\" y=\"5\" rx=\"2\"/> <line x1=\"2\" x2=\"22\" y1=\"10\" y2=\"10\"/>",
+ "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/> <circle cx=\"9\" cy=\"7\" r=\"4\"/> <path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/> <path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>",
+ "accessibility": "<circle cx=\"16\" cy=\"4\" r=\"1\"/> <path d=\"m18 19 1-7-6 1\"/> <path d=\"m5 8 3-3 5.5 3-2.36 3.5\"/> <path d=\"M4.24 14.5a5 5 0 0 0 6.88 6\"/> <path d=\"M13.76 17.5a5 5 0 0 0-6.88-6\"/>",
+ "languages": "<path d=\"m5 8 6 6\"/> <path d=\"m4 14 6-6 2-3\"/> <path d=\"M2 5h12\"/> <path d=\"M7 2h1\"/> <path d=\"m22 22-5-10-5 10\"/> <path d=\"M14 18h6\"/>",
+ "palette": "<circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/> <circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\"/> <path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\"/>",
+ "smartphone": "<rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\"/> <path d=\"M12 18h.01\"/>",
+ "flask-conical": "<path d=\"M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2\"/> <path d=\"M8.5 2h7\"/> <path d=\"M7 16h10\"/>",
+ "test-tube": "<path d=\"M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5c-1.4 0-2.5-1.1-2.5-2.5V2\"/> <path d=\"M8.5 2h7\"/> <path d=\"M14.5 16h-5\"/>",
+ "file-code": "<path d=\"M10 12.5 8 15l2 2.5\"/> <path d=\"m14 12.5 2 2.5-2 2.5\"/> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/> <path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z\"/>",
+ "git-branch": "<line x1=\"6\" x2=\"6\" y1=\"3\" y2=\"15\"/> <circle cx=\"18\" cy=\"6\" r=\"3\"/> <circle cx=\"6\" cy=\"18\" r=\"3\"/> <path d=\"M18 9a9 9 0 0 1-9 9\"/>",
+ "package": "<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\"/> <path d=\"M12 22V12\"/> <path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\"/> <path d=\"m7.5 4.27 9 5.15\"/>",
+ "zap": "<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\"/>",
+ "scroll-text": "<path d=\"M15 12h-5\"/> <path d=\"M15 8h-5\"/> <path d=\"M19 17V5a2 2 0 0 0-2-2H4\"/> <path d=\"M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3\"/>",
+ "brain": "<path d=\"M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z\"/> <path d=\"M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z\"/> <path d=\"M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4\"/> <path d=\"M17.599 6.5a3 3 0 0 0 .399-1.375\"/> <path d=\"M6.003 5.125A3 3 0 0 0 6.401 6.5\"/> <path d=\"M3.477 10.896a4 4 0 0 1 .585-.396\"/> <path d=\"M19.938 10.5a4 4 0 0 1 .585.396\"/> <path d=\"M6 18a4 4 0 0 1-1.967-.516\"/> <path d=\"M19.967 17.484A4 4 0 0 1 18 18\"/>",
+ "eye": "<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/>",
+ "git-merge": "<circle cx=\"18\" cy=\"18\" r=\"3\"/> <circle cx=\"6\" cy=\"6\" r=\"3\"/> <path d=\"M6 21V9a9 9 0 0 0 9 9\"/>",
+ "user-round": "<circle cx=\"12\" cy=\"8\" r=\"5\"/> <path d=\"M20 21a8 8 0 0 0-16 0\"/>"
 };
-const reviewerIcon = name => `<svg class="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${REVIEWER_ICONS[name] || REVIEWER_ICONS.__default}</svg>`;
-// opus → Opus, claude-opus-5-5 → Opus 5.5, gpt-6.1-sol → GPT-6.1 Sol
+const BUILTIN_ICONS = { 'check-acceptance-criteria': 'list-checks', 'check-correctness': 'bug', 'check-security': 'shield', 'check-rules': 'scale',
+  'check-docs': 'book-open', 'check-supportability': 'life-buoy', 'check-performance': 'gauge', 'check-architecture': 'blocks' };
+const PICKABLE_ICONS = Object.keys(ICONS).filter(n => n !== 'git-merge' && n !== 'user-round');
+const iconSvg = icon => `<svg class="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[icon] || ICONS['user-round']}</svg>`;
+function iconFor(name) {
+  if (name === '__synthesis') return 'git-merge';
+  const listed = state && state.roster && state.roster.reviewers[name];
+  const ran = state && state.reviewers && state.reviewers[name];
+  return (listed && listed.icon) || (ran && ran.icon) || BUILTIN_ICONS[name] || 'eye';
+}
+const reviewerIcon = name => iconSvg(iconFor(name));
+// A new reviewer's starting icon, guessed from its name until someone picks one.
+function guessIcon(name) {
+  const rules = [[/pay|bill|charge|invoice|money/, 'credit-card'], [/perf|speed|latency/, 'gauge'], [/secur|auth|secret|perm/, 'lock'],
+    [/db|sql|data|migrat|schema/, 'database'], [/api|http|network|endpoint/, 'network'], [/test|qa/, 'flask-conical'],
+    [/a11y|access/, 'accessibility'], [/i18n|l10n|lang|transl/, 'languages'], [/ui|design|style|css/, 'palette'], [/mobile|ios|android/, 'smartphone'],
+    [/doc|readme/, 'book-open'], [/deploy|infra|ops|server/, 'server'], [/cloud|aws|gcp|azure/, 'cloud'], [/depend|package|license/, 'package'],
+    [/user|customer|ux/, 'users'], [/log|observ|monitor/, 'scroll-text'], [/git|branch|release/, 'git-branch']];
+  const hit = rules.find(([re]) => re.test(name));
+  return hit ? hit[1] : 'eye';
+}
+// opus → Opus, claude-opus-5-5 → Opus 5.5, gpt-6.2-sol → GPT-6.2 Sol
 function modelName(model) {
   const m = String(model || '');
   const listed = state && state.models && state.models.find(entry => entry.id === m);
@@ -674,7 +797,7 @@ function synthesisRows() {
   if (!result) return [];
   return result.findings.map(f => ({
     key: 'S:' + f.id, id: f.id, severity: f.severity, category: f.category, title: f.title, file: f.file, line: f.line,
-    body: f.body, fix: f.fix, reviewers: f.raised_by || [], merges: f.merges || [],
+    body: f.body, fix: f.fix, rule: f.rule || null, reviewers: f.raised_by || [], merges: f.merges || [],
   }));
 }
 function rawRows(only) {
@@ -689,7 +812,7 @@ function rawRows(only) {
       const ref = `${name}:${f.id}`;
       rows.push({
         key: 'R:' + ref, id: f.id, severity: f.severity, category: f.category, title: f.title, file: f.file, line: f.line,
-        body: f.body, fix: f.fix, reviewers: [name], ref,
+        body: f.body, fix: f.fix, rule: f.rule || null, reviewers: [name], ref,
         outcome: mergedInto[ref] ? `in ${mergedInto[ref]}` : dropped[ref] ? 'dropped' : '', droppedReason: dropped[ref],
       });
     }
@@ -761,6 +884,16 @@ function fileLink(file, start, end) {
   const anchor = start ? `#L${start}${end && end !== start ? `-L${end}` : ''}` : '';
   return `https://github.com/${t.github}/blob/${t.head}/${file.split('/').map(encodeURIComponent).join('/')}${anchor}`;
 }
+// A finding that breaks a written rule reads as: the rule, what it says, what the change does, and the resolution.
+function ruleProblem(r) {
+  const rule = r.rule;
+  const link = rule.file ? fileLink(rule.file) : '';
+  const where = rule.file ? (link ? `<a href="${esc(link)}" target="_blank" rel="noopener" title="${esc(rule.file)}">View the rule ↗</a>` : `<span class="path">${esc(rule.file)}</span>`) : '';
+  return `<div class="rule-box"><div class="rule-head"><span class="note">Rule</span><span class="rid">${esc(rule.id)}</span>${where}</div>
+      <div class="sect-label">What the rule says</div><blockquote class="rule-quote">${md(rule.quote)}</blockquote></div>
+    <div class="sect-label">What the change does</div><div class="body">${md(r.body)}</div>
+    ${r.fix ? `<div class="fix"><div class="fix-label">Recommended resolution</div>${md(r.fix)}</div>` : ''}`;
+}
 function codeTab(r) {
   if (!r.file) return '<p class="note">This finding doesn\'t point at a file.</p>';
   const excerpts = (state.snippets || {})[`${r.file}:${r.line}`];
@@ -807,6 +940,7 @@ function detailHtml(r) {
   const picked = ui.picked.has(r.key);
   const tab = ui.fwTab;
   const content = tab === 'code' ? codeTab(r) : tab === 'reviewers' ? reviewersTab(r)
+    : r.rule ? ruleProblem(r)
     : `<div class="body">${md(r.body)}</div>${r.fix ? `<div class="fix"><div class="fix-label">Suggested fix</div>${md(r.fix)}</div>` : ''}`;
   return `<div class="overlay" data-act="detail-close"><div class="dialog finding-window" role="dialog" aria-modal="true" aria-labelledby="fw-title" tabindex="-1">
     <div class="fw-head">
@@ -877,14 +1011,16 @@ function stepDetail(delta) {
 function tableHtml(rows, { reviewerCol, outcomeCol }) {
   const shown = filtered(rows);
   const cols = 4 + (reviewerCol ? 1 : 0) + (outcomeCol ? 1 : 0);
+  const pickedShown = shown.filter(r => ui.picked.has(r.key)).length;
+  const allOn = shown.length > 0 && pickedShown === shown.length, someOn = pickedShown > 0 && !allOn;
   const body = shown.map(r => {
     const where = r.file ? `${r.file.split('/').pop()}${r.line ? `:${r.line}` : ''}` : '';
     const picked = ui.picked.has(r.key);
     const who = r.reviewers.slice(0, 2).map(w => reviewerTag(w, r.merges)).join('') + (r.reviewers.length > 2 ? `<span class="chip more">+${r.reviewers.length - 2}</span>` : '');
-    const num = r.key.startsWith('S:') ? r.id.replace(/^S/, '') : '';
+    const num = r.key.startsWith('S:') ? r.id.replace(/^S/, '') : String(rows.indexOf(r) + 1);
     const outcome = r.outcome && r.outcome.startsWith('in ') ? `<button type="button" class="linkish" data-goto="S:${esc(r.outcome.slice(3))}" title="Show it in the synthesis's findings">Merged into finding ${esc(r.outcome.slice(4))}</button>` : r.outcome === 'dropped' ? 'Dropped' : '';
     return `<tr class="row ${picked ? 'picked' : ''} ${ui.detail === r.key ? 'current' : ''}" data-key="${esc(r.key)}" tabindex="0">
-        <td class="pick"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Add this finding to the handoff"></td>
+        <td class="pick" title="Add to handoff (Space)"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Add this finding to the handoff"></td>
         <td class="fid">${esc(num)}</td>
         <td><span class="pill sev-${esc(r.severity)}">${esc(words(SEVERITY_WORDS, r.severity)[0])}</span></td>
         <td><div class="ftitle">${inlineMd(r.title)}</div>${where ? `<div class="where" title="${esc([r.file, r.line].filter(Boolean).join(':'))}">${esc(where)}</div>` : ''}</td>
@@ -893,10 +1029,10 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
       </tr>`;
   }).join('');
   return `<div class="table-wrap"><table>
-      <thead><tr><th></th><th>#</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Found by</th>' : ''}${outcomeCol ? '<th>Synthesis</th>' : ''}</tr></thead>
+      <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th>#</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Found by</th>' : ''}${outcomeCol ? '<th>Synthesis</th>' : ''}</tr></thead>
       <tbody>${body || `<tr><td colspan="${cols}" class="empty">${rows.length ? 'No findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
     </table></div>
-    <div class="count-line">${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}. Click a row to open it; tick the ones to hand off.</div>`;
+    <div class="count-line">${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}${pickedShown ? `, ${pickedShown} selected` : ''}. Click a row to open it; tick the ones to hand off (Shift-click for a range).</div>`;
 }
 
 /* ---------- views ---------- */
@@ -975,16 +1111,18 @@ function droppedLine(r) {
 function reviewerView(name) {
   const entry = state.reviewers[name];
   const r = entry.result;
-  const tab = ui.tab[name] || 'findings';
+  const tab = ui.tab[name] || (entry.status === 'running' ? 'activity' : 'findings');
   const rows = rawRows(name);
+  const steps = entry.steps || [];
+  const live = entry.status === 'running';
   const logLink = inline ? '' : `<a class="raw" href="log/${esc(name)}" target="_blank" rel="noopener">Raw session log</a>`;
   const head = `<div class="pane-head"><h2>${esc(reviewerLabel(name))}</h2>${statusPill(entry.status)}${r ? severityCounts(r.findings) : ''}</div>
     <p class="pane-desc">${esc(entry.focus)}</p>
-    <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${logLink}</div>
+    <div class="pane-meta">${agentChip(entry)}${statsLine(entry)}${live && tab !== 'activity' ? `<button type="button" class="linkish watch" data-tab="activity"><span class="live-dot"></span>Watch live</button>` : ''}${logLink}</div>
     ${entry.note ? `<div class="fallback">${esc(entry.note)}</div>` : ''}
     ${entry.source && entry.source !== 'built-in' ? `<div class="src-note" title="${esc(entry.source)}">Customized by this repository</div>` : ''}
     ${entry.status === 'failed' || entry.status === 'cancelled' ? `<div class="banner">${esc(entry.error)}</div>` : ''}
-    ${r ? `<p class="summary-line">${inlineMd(r.summary)}</p>` : entry.status === 'running' ? `<p class="note mono">${esc(entry.activity || 'Reading the change…')}</p>` : ''}`;
+    ${r ? `<p class="summary-line">${inlineMd(r.summary)}</p>` : live && tab !== 'activity' ? `<p class="note mono">${esc(entry.activity || 'Reading the change…')}</p>` : ''}`;
   const tabBtn = (id, label, n) => `<button type="button" class="tab ${tab === id ? 'on' : ''}" data-tab="${id}">${label}${n !== undefined ? `<span class="n">${n}</span>` : ''}</button>`;
   const checks = (r && r.checks) || [];
   let body = '';
@@ -992,8 +1130,39 @@ function reviewerView(name) {
   if (tab === 'checks') body = checks.length ? `<div class="checks">${checks.map(c => `<div class="check"><span><span class="pill r-${esc(c.result)}">${esc(c.result.replace('-', ' '))}</span></span><div><div class="what">${inlineMd(c.check)}</div>${c.evidence ? `<div class="why">${inlineMd(c.evidence)}</div>` : ''}</div></div>`).join('')}</div>`
     + ((r && r.unverified) || []).map(u => `<div class="check"><span><span class="pill r-unverified">unverified</span></span><div><div class="what">${inlineMd(u.claim)}</div><div class="why">${inlineMd(u.reason)}</div></div></div>`).join('')
     : `<div class="empty">${r ? 'This reviewer listed no checks.' : 'No checks yet.'}</div>`;
+  if (tab === 'activity') body = activityHtml(entry, steps, live);
   if (tab === 'prompt') body = entry.prompt ? `<div class="rowline"><span class="note">The full prompt this session received: shared reviewer instructions, this reviewer’s focus, then the change.</span><button type="button" class="btn" data-copy="prompt">Copy prompt</button></div><div class="prompt">${esc(entry.prompt)}</div>` : '<div class="empty">The prompt appears when the session starts.</div>';
-  return head + `<div class="tabs" role="tablist">${tabBtn('findings', 'Findings', rows.length)}${tabBtn('checks', 'What it checked', checks.length)}${tabBtn('prompt', 'Prompt')}</div>${body}`;
+  return head + `<div class="tabs" role="tablist">${tabBtn('findings', 'Findings', rows.length)}${tabBtn('checks', 'What it checked', checks.length)}${tabBtn('activity', live ? '<span class="live-dot"></span>Activity' : 'Activity', steps.length || undefined)}${tabBtn('prompt', 'Prompt')}</div>${body}`;
+}
+
+// What a session has looked at so far, step by step, from the runner's record of its tool calls.
+function stepKind(text) {
+  const word = String(text).split(' ')[0];
+  if (word === 'Read') return 'read';
+  if (word === 'Grep' || word === 'Glob') return 'search';
+  if (word === '$' || word === 'Bash') return 'run';
+  return 'other';
+}
+const STEP_WORDS = { read: 'Read', search: 'Searched', run: 'Ran', other: '' };
+function clock(t) { const s = Math.max(0, Number(t) || 0); return `+${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+function stepText(text) {
+  const kind = stepKind(text);
+  const rest = (kind === 'other' ? text : String(text).replace(/^(Read|Grep|Glob|Bash|\$)\s*/, '')).replace(/(^|[\s{,])\.git\/review-panel\/[^/\s]+\/worktree\//g, '$1');
+  return { kind, verb: STEP_WORDS[kind], rest };
+}
+function activityHtml(entry, steps, live) {
+  if (!steps.length) return `<div class="empty">${entry.status === 'queued' ? 'Queued. Its steps appear here as soon as it starts.' : live ? 'Starting the session…' : 'No steps were recorded for this session.'}</div>`;
+  const files = [...new Set(steps.filter(x => stepKind(x.text) === 'read').map(x => stepText(x.text).rest))];
+  const searches = steps.filter(x => stepKind(x.text) === 'search').length;
+  const runs = steps.filter(x => stepKind(x.text) === 'run').length;
+  const rows = steps.map((x, i) => { const p = stepText(x.text); return `<li class="step k-${p.kind} ${live && i === steps.length - 1 ? 'now' : ''}"><span class="t">${clock(x.t)}</span><span class="what">${p.verb ? `<span class="verb">${p.verb}</span> ` : ''}<span class="mono">${esc(p.rest)}</span></span></li>`; }).join('');
+  return `<div class="act-head">
+      <span>${live ? '<span class="live-dot"></span>Live, updates as it works' : 'Finished'}</span>
+      <span class="note">${plural(steps.length, 'step')}${entry.steps_dropped ? ` (latest shown; ${entry.steps_dropped} earlier not kept)` : ''} · ${plural(searches, 'search', 'searches')} · ${plural(runs, 'command')}</span>
+      ${live ? `<label class="toggle"><input type="checkbox" id="follow" ${ui.follow !== false ? 'checked' : ''}> Follow</label>` : ''}
+    </div>
+    ${files.length ? `<details class="files-read"><summary>Files read (${files.length})</summary><ul>${files.map(f => `<li class="mono">${esc(f)}</li>`).join('')}</ul></details>` : ''}
+    <ol class="steps" id="steps">${rows}</ol>`;
 }
 
 /* ---------- nav and header ---------- */
@@ -1059,7 +1228,15 @@ function renderPane(force) {
   if (search) { const s = document.getElementById('search'); s.focus(); s.setSelectionRange(caret, caret); }
   const newPrompt = pane.querySelector('.prompt');
   if (newPrompt) newPrompt.scrollTop = promptScroll;
+  const stepList = document.getElementById('steps');
+  if (stepList && document.getElementById('follow') && ui.follow !== false) stepList.scrollTop = stepList.scrollHeight;
+  else if (stepList) stepList.scrollTop = stepsScroll;
+  syncPickAll();
 }
+let stepsScroll = 0;
+document.addEventListener('scroll', event => { if (event.target.id === 'steps') stepsScroll = event.target.scrollTop; }, true);
+document.addEventListener('change', event => { if (event.target.id === 'follow') { ui.follow = event.target.checked; renderPane(true); } });
+function syncPickAll() { document.querySelectorAll('[data-pickall]').forEach(box => { box.indeterminate = !!box.dataset.some; }); }
 function renderTable() {
   const holder = document.getElementById('table');
   if (!holder) return;
@@ -1069,6 +1246,7 @@ function renderTable() {
   } else {
     holder.innerHTML = tableHtml(rawRows(ui.view), { outcomeCol: !!state.synthesis.result });
   }
+  syncPickAll();
   lastPane = paneHtml();
 }
 
@@ -1094,6 +1272,7 @@ function handoffText(chosen) {
     const where = [r.file, r.line].filter(Boolean).join(':');
     lines.push(`## ${r.ref || r.id}: ${r.title}`, '', `- Severity: ${r.severity}${r.category ? ` (${r.category})` : ''}`);
     if (where) lines.push(`- Location: ${where}`);
+    if (r.rule) lines.push(`- Rule: ${r.rule.id}${r.rule.file ? ` (${r.rule.file})` : ''}`, '', 'What the rule says:', '', ...fence(r.rule.quote));
     lines.push(`- Raised by: ${r.reviewers.join(', ')}`, '', ...fence(r.body), '');
     if (r.fix) lines.push('Suggested fix:', '', ...fence(r.fix), '');
   }
@@ -1115,12 +1294,31 @@ function renderHandoff() {
   holder.innerHTML = html;
 }
 function savePicks() { if (state) store('review-panel:' + state.run_dir, [...ui.picked]); }
-async function copy(text, note) {
-  try { await navigator.clipboard.writeText(text); if (note) note.textContent = 'Copied.'; return true; }
-  catch (e) { if (note) note.textContent = 'Copying isn’t allowed here. The text is selected: press ⌘C or Ctrl+C.'; return false; }
+// Copies, then shows it on the button: a check mark for 1.5 seconds, or a note to copy by hand.
+async function copy(text, note, button) {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (button) copied(button); else if (note) note.textContent = 'Copied.';
+    return true;
+  } catch (e) { if (note) note.textContent = 'Copying isn’t allowed here. Select the text and press ⌘C or Ctrl+C.'; return false; }
+}
+const CHECK_SVG = '<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+function copied(button) {
+  if (button.dataset.copying) return;
+  const was = button.innerHTML;
+  const iconOnly = !button.textContent.trim();
+  button.dataset.copying = '1';
+  button.classList.add('copied');
+  button.innerHTML = iconOnly ? CHECK_SVG : `${CHECK_SVG}Copied`;
+  setTimeout(() => { button.innerHTML = was; button.classList.remove('copied'); delete button.dataset.copying; }, 1500);
 }
 
 /* ---------- events ---------- */
+function afterPick() {
+  savePicks(); renderTable(); renderHandoff();
+  if (ui.detail) document.querySelectorAll('#pane tr.row').forEach(tr => tr.classList.toggle('current', tr.dataset.key === ui.detail));
+}
+function togglePick(key) { ui.picked.has(key) ? ui.picked.delete(key) : ui.picked.add(key); ui.lastPick = key; afterPick(); }
 document.addEventListener('click', async event => {
   const t = event.target;
   const view = t.closest('[data-view]');
@@ -1129,7 +1327,21 @@ document.addEventListener('click', async event => {
   if (tab) { ui.tab[ui.view] = tab.dataset.tab; renderPane(true); return; }
   const sev = t.closest('[data-sev]');
   if (sev) { ui.sev = sev.dataset.sev; document.querySelectorAll('[data-sev]').forEach(b => b.classList.toggle('on', b.dataset.sev === ui.sev)); renderTable(); return; }
-  if (t.matches('[data-pick]')) { t.checked ? ui.picked.add(t.dataset.pick) : ui.picked.delete(t.dataset.pick); savePicks(); renderTable(); renderHandoff(); if (ui.detail) document.querySelectorAll('#pane tr.row').forEach(tr => tr.classList.toggle('current', tr.dataset.key === ui.detail)); return; }
+  // The whole first cell is the checkbox's target, so a near miss ticks it instead of opening the row.
+  const pickCell = t.closest('td.pick, th.pick');
+  const box = pickCell ? pickCell.querySelector('input') : t.matches('[data-pick]') ? t : null;
+  if (box && !box.disabled) {
+    const on = box === t ? box.checked : !box.checked;
+    if (box.matches('[data-pickall]')) { visibleKeys().forEach(k => on ? ui.picked.add(k) : ui.picked.delete(k)); ui.lastPick = null; afterPick(); return; }
+    const key = box.dataset.pick, keys = visibleKeys(), inTable = !!box.closest('tr.row');
+    if (inTable && event.shiftKey && ui.lastPick && keys.includes(ui.lastPick) && keys.includes(key)) {
+      const [a, b] = [keys.indexOf(ui.lastPick), keys.indexOf(key)].sort((x, y) => x - y);
+      keys.slice(a, b + 1).forEach(k => on ? ui.picked.add(k) : ui.picked.delete(k));
+    } else on ? ui.picked.add(key) : ui.picked.delete(key);
+    if (inTable) ui.lastPick = key;
+    afterPick(); return;
+  }
+  if (pickCell) return;
   const row = t.closest('tr.row');
   const who = t.closest('[data-reviewer]');
   if (who) {
@@ -1146,7 +1358,7 @@ document.addEventListener('click', async event => {
   if (fwTab) { ui.fwTab = fwTab.dataset.fwtab; renderDetail(); return; }
   if (row) { openDetail(row.dataset.key); return; }
   const copyBtn = t.closest('[data-copy]');
-  if (copyBtn) { const ok = await copy(state.reviewers[ui.view].prompt); copyBtn.textContent = ok ? 'Copied' : 'Select and copy below'; return; }
+  if (copyBtn) { const ok = await copy(state.reviewers[ui.view].prompt, null, copyBtn); if (!ok) copyBtn.textContent = 'Select and copy below'; return; }
   const act = t.closest('[data-act]');
   if (act) {
     const a = act.dataset.act;
@@ -1157,15 +1369,15 @@ document.addEventListener('click', async event => {
     if (a === 'detail-open') { openDetail(act.dataset.key); return; }
     if (a === 'detail-prev') { stepDetail(-1); return; }
     if (a === 'detail-next') { stepDetail(1); return; }
-    if (a === 'detail-copy') { await copy(handoffText([findRow(ui.detail)]), document.getElementById('fw-note')); return; }
+    if (a === 'detail-copy') { await copy(handoffText([findRow(ui.detail)]), document.getElementById('fw-note'), act); return; }
     if (a === 'settings') { openSettings(true); return; }
-    if (a === 'rerun') { const lbl = act.querySelector('.lbl'), was = lbl.textContent; const ok = await copy(state.target.rerun); lbl.textContent = ok ? 'Command copied' : was; setTimeout(() => { lbl.textContent = was; }, 1800); return; }
+    if (a === 'rerun') { await copy(state.target.rerun, null, act); return; }
     if (a === 'guide') { openGuide(true); return; }
     if (a === 'guide-close') { openGuide(false); return; }
     if (a === 'handoff') { ui.dialog = true; ui.draft = handoffText(); }
     if (a === 'show-raw') { ui.tab.__synthesis = 'findings'; ui.raw = true; ui.sev = 'all'; ui.cat = 'all'; ui.who = 'all'; renderPane(true); return; }
     if (a === 'close') ui.dialog = false;
-    if (a === 'copy') { const area = document.getElementById('handoff-text'); area.select(); await copy(area.value, document.getElementById('copy-note')); return; }
+    if (a === 'copy') { const area = document.getElementById('handoff-text'); area.select(); await copy(area.value, document.getElementById('copy-note'), act); return; }
     renderHandoff();
   }
 });
@@ -1197,6 +1409,7 @@ document.addEventListener('keydown', event => {
     return;
   }
   if (event.key === 'Enter' && event.target.matches('tr.row')) { openDetail(event.target.dataset.key); return; }
+  if (event.key === ' ' && event.target.matches('tr.row')) { event.preventDefault(); const key = event.target.dataset.key; togglePick(key); document.querySelector(`#pane tr.row[data-key="${CSS.escape(key)}"]`)?.focus(); return; }
   if (!document.getElementById('guide').hidden && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) { showGuide(guideAt + (event.key === 'ArrowRight' ? 1 : -1)); return; }
   if (!closeKey) return;
   if (settings.open) { event.preventDefault(); if (settings.editing !== null && event.key === 'Escape' && !event.target.matches('textarea, input, select')) { settings.editing = null; renderSettings(); } else openSettings(false); return; }
@@ -1214,11 +1427,11 @@ const HARNESS_WORDS = { 'claude-code': 'Claude Code', codex: 'Codex' };
 const FALLBACK_MODELS = [
   { id: 'opus', name: 'Opus', harness: 'claude-code', latest: true },
   { id: 'sonnet', name: 'Sonnet', harness: 'claude-code', latest: true },
-  { id: 'gpt-6-astra', name: 'GPT-6 Astra', harness: 'codex' },
-  { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', harness: 'codex' },
+  { id: 'gpt-6.2-astra', name: 'GPT-6.2 Astra', harness: 'codex' },
+  { id: 'gpt-6.2-sol', name: 'GPT-6.2 Sol', harness: 'codex' },
 ];
 const models = () => (state && state.models && state.models.length ? state.models : FALLBACK_MODELS);
-const settings = { open: false, section: 'overview', editing: null, cfg: null, picker: null, saving: false, flash: '', error: '' };
+const settings = { max: !!recall('review-panel:settings-max'), open: false, section: 'overview', editing: null, cfg: null, picker: null, saving: false, flash: '', error: '' };
 const cfgKey = () => 'review-panel:settings:' + state.repo;
 // Runs from before the roster was recorded only know the reviewers they ran.
 function roster() {
@@ -1237,10 +1450,10 @@ function baseConfig() {
   const r = roster();
   return {
     reviewers: Object.entries(r.reviewers).map(([name, e]) => {
-      const original = { summary: e.summary || '', harness: e.agent.harness, model: e.agent.model, effort: e.agent.effort || 'default',
+      const original = { icon: e.icon || BUILTIN_ICONS[name] || 'eye', summary: e.summary || '', harness: e.agent.harness, model: e.agent.model, effort: e.agent.effort || 'default',
         prompt: e.file && e.file_body ? e.file_body : e.builtin_text, mode: e.file ? e.mode : 'replace', included: e.included !== false, removeFile: false };
       return { name, builtin: e.builtin, file: e.file, source: e.source, isNew: false, builtinText: e.builtin_text,
-        builtinAgent: e.builtin_agent, builtinSummary: e.builtin_summary, ...original, original };
+        builtinAgent: e.builtin_agent, builtinSummary: e.builtin_summary, builtinIcon: e.builtin_icon || BUILTIN_ICONS[name], ...original, original };
     }),
     synthesis: { ...r.synthesis, effort: r.synthesis.effort || 'default' },
     originalSynthesis: { ...r.synthesis, effort: r.synthesis.effort || 'default' },
@@ -1254,7 +1467,7 @@ function loadConfig() {
   settings.cfg.basedOn = JSON.stringify(roster());
 }
 function saveConfig() { store(cfgKey(), settings.cfg); }
-const FIELDS = ['summary', 'harness', 'model', 'effort', 'prompt', 'mode'];
+const FIELDS = ['icon', 'summary', 'harness', 'model', 'effort', 'prompt', 'mode'];
 const edited = r => r.isNew || r.removeFile || FIELDS.some(f => r[f] !== r.original[f]);
 const changed = r => edited(r) || r.included !== r.original.included;
 const synthesisChanged = () => ['harness', 'model', 'effort'].some(f => settings.cfg.synthesis[f] !== settings.cfg.originalSynthesis[f]);
@@ -1262,7 +1475,7 @@ const panelChanged = () => settings.cfg.reviewers.some(r => r.builtin && r.inclu
 const yamlString = text => `"${String(text).replace(/"/g, "'").replace(/\n/g, ' ')}"`;
 const configDir = () => (state.config && state.config.dir) || '.fabrica/review-panel';
 function reviewerFile(r) {
-  const lines = ['---', `summary: ${yamlString(r.summary)}`, `harness: ${r.harness}`, `model: ${r.model}`, `effort: ${r.effort}`];
+  const lines = ['---', `summary: ${yamlString(r.summary)}`, ...(r.icon && r.icon !== r.builtinIcon ? [`icon: ${r.icon}`] : []), `harness: ${r.harness}`, `model: ${r.model}`, `effort: ${r.effort}`];
   // A built-in reviewer whose prompt is untouched gets front matter only, so it keeps getting the skill's prompt.
   if (r.builtin && r.prompt.trim() === r.builtinText.trim()) return lines.concat('---', '').join('\n');
   if (r.builtin && r.mode === 'append') lines.push('mode: append');
@@ -1391,6 +1604,30 @@ const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 // Deleting asks first, in the page: the viewer's frame refuses confirm().
+// In built-in mode the editors are read-only; say why, and point to the config file first.
+function builtinNotice() {
+  return `<div class="notice">Built-in settings, shown read-only. To change them, switch to <button type="button" class="linkish" data-mode="config">Config file</button> in Overview.
+    <span class="sub">Improvements everyone would benefit from are welcome as a contribution to <a href="https://github.com/fabricahq/public-library" target="_blank" rel="noopener">fabricahq/public-library</a>. Forking the skill is the last resort.</span></div>`;
+}
+// Rich dropdowns for Runs on and Effort, matching the model picker: the harness's logo beside its name.
+const CHOICES = {
+  harness: () => [{ value: 'claude-code', label: 'Claude Code', icon: LOGOS['claude-code'] }, { value: 'codex', label: 'Codex', icon: LOGOS.codex }],
+  effort: () => EFFORTS.map(e => ({ value: e, label: e === 'default' ? 'Default' : e[0].toUpperCase() + e.slice(1), hint: e === 'default' ? 'the harness decides' : '' })),
+};
+function choiceButton(scope, field, value) {
+  const options = CHOICES[field]();
+  const current = options.find(o => o.value === value) || { label: value };
+  const id = `${scope}-${field}`;
+  const open = settings.choice === id;
+  return `<div class="mpick-wrap"><button type="button" class="mpick" id="${id}" data-choice="${id}" aria-haspopup="listbox" aria-expanded="${open}">
+      ${current.icon ? `<span class="cicon">${current.icon}</span>` : ''}<span class="mname">${esc(current.label)}</span><span class="mid"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>
+    ${open ? `<div class="mpop" role="listbox"><div class="mlist">${options.map(o => `<div class="mopt" role="option" tabindex="0" aria-selected="${o.value === value}" data-chosen="${esc(o.value)}" data-scope="${scope}" data-field="${field}">
+        ${o.value === value ? CHECK_SVG.replace('class="ck"', 'class="mcheck"') : '<span class="mcheck"></span>'}${o.icon ? `<span class="cicon">${o.icon}</span>` : ''}<span class="mname">${esc(o.label)}${o.hint ? `<span class="mnote">${esc(o.hint)}</span>` : ''}</span></div>`).join('')}</div></div>` : ''}</div>`;
+}
+function iconGrid(current) {
+  return `<div class="ipop" role="listbox" aria-label="Icons">${PICKABLE_ICONS.map(n => `<button type="button" class="iopt ${n === current ? 'on' : ''}" role="option" aria-selected="${n === current}" data-ichoose="${n}" title="${n}">${iconSvg(n)}</button>`).join('')}</div>`;
+}
 function deleteConfirm(r) {
   const what = r.isNew ? 'It hasn’t been saved, so it’s simply discarded.'
     : r.builtin ? 'It won’t run in this repository’s panel. The skill keeps its built-in version, so you can restore it later.'
@@ -1405,14 +1642,17 @@ function deleteConfirm(r) {
 function reviewerEditor(r, index) {
   const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
   return `<div class="edit ${canEdit() ? '' : 'locked'}" data-index="${index}">
-    <div class="source-note ${r.file || r.isNew ? 'repo' : ''}">${canEdit() ? sourceLine(r) : 'Built-in settings, shown read-only. To change them, switch to <button type="button" class="linkish" data-mode="config">Config file</button> in Overview.'}</div>
+    ${canEdit() ? `<div class="source-note ${r.file || r.isNew ? 'repo' : ''}">${sourceLine(r)}</div>` : ''}
     <fieldset ${canEdit() ? '' : 'disabled'}>
     ${r.isNew ? `<div class="field"><label for="cfg-name">Name</label><input id="cfg-name" data-cfg="name" value="${esc(r.name)}" spellcheck="false" pattern="[a-z0-9-]+"><span class="hint">Lowercase letters, digits, and hyphens. The file is reviewers/${esc(r.name)}.md.</span></div>` : ''}
-    <div class="field"><label for="cfg-summary">Summary</label><input id="cfg-summary" data-cfg="summary" value="${esc(r.summary)}" placeholder="Checks … in one line"></div>
+    <div class="icon-summary">
+      <div class="field"><label for="cfg-icon">Icon</label><div class="ipick-wrap"><button type="button" class="ipick" id="cfg-icon" data-ipick aria-haspopup="listbox" aria-expanded="${!!settings.iconPicker}" title="Choose an icon">${iconSvg(r.icon)}</button>${settings.iconPicker ? iconGrid(r.icon) : ''}</div></div>
+      <div class="field"><label for="cfg-summary">Summary</label><input id="cfg-summary" data-cfg="summary" value="${esc(r.summary)}" placeholder="Checks … in one line"></div>
+    </div>
     <div class="fields-3">
-      <div class="field"><label for="cfg-harness">Runs on</label><select id="cfg-harness" data-cfg="harness">${option('claude-code', 'Claude Code', r.harness)}${option('codex', 'Codex', r.harness)}</select></div>
+      <div class="field"><label for="cfg-harness">Runs on</label>${choiceButton('cfg', 'harness', r.harness)}</div>
       <div class="field"><label for="cfg-model">Model</label>${modelButton('cfg', r.model)}</div>
-      <div class="field"><label for="cfg-effort">Effort</label><select id="cfg-effort" data-cfg="effort">${EFFORTS.map(e => option(e, e, r.effort)).join('')}</select></div>
+      <div class="field"><label for="cfg-effort">Effort</label>${choiceButton('cfg', 'effort', r.effort)}</div>
     </div>
     ${r.builtin ? `<div class="field"><label for="cfg-mode">Prompt</label><select id="cfg-mode" data-cfg="mode">${option('replace', 'Replace the built-in prompt with the text below', r.mode)}${option('append', 'Keep the built-in prompt and add the text below', r.mode)}</select></div>` : ''}
     <div class="field"><label for="cfg-prompt">${r.builtin && r.mode === 'append' ? 'Text to add' : 'Focus prompt'}</label><div class="ta-wrap"><textarea id="cfg-prompt" data-cfg="prompt" spellcheck="false" rows="12">${esc(r.prompt)}</textarea>
@@ -1436,12 +1676,13 @@ function reviewersPane() {
   const cfg = settings.cfg;
   const rows = cfg.reviewers.map((r, i) => `
     <div class="srow ${r.included ? '' : 'out'}" data-index="${i}" tabindex="0" role="button" aria-expanded="${settings.editing === i}">
-      <span class="av">${reviewerIcon(r.name)}</span>
+      <span class="av">${iconSvg(r.icon)}</span>
       <span class="who"><b>${esc(reviewerLabel(r.name))}</b><span>${esc(r.summary || 'No summary yet')}</span></span>
       <span class="meta">${r.included ? '' : '<span class="chip">deleted</span>'}${sourceChip(r)}<span class="model">${LOGOS[r.harness] || ''}${esc(findModel(r.model) ? findModel(r.model).name : modelName(r.model))}${r.effort !== 'default' ? ` · ${esc(r.effort)}` : ''}</span></span>
     </div>${settings.editing === i ? reviewerEditor(r, i) : ''}`).join('');
   return `<div class="spane-head"><div><h2>Reviewers</h2><p>Every reviewer on the panel, and where its settings come from. Open one to read its prompt or change it.</p></div>${closeBtn()}</div>
     <div class="sbody">
+      ${canEdit() ? '' : builtinNotice()}
       <div class="group-head"><span class="n">${plural(cfg.reviewers.filter(r => r.included).length, 'reviewer')} on the panel</span>${canEdit() ? '<button type="button" class="linkish add" data-sact="add">+ Add reviewer</button>' : ''}</div>
       <div class="slist">${rows}</div>
     </div>`;
@@ -1452,12 +1693,12 @@ function synthesisPane() {
   const option = (value, label, current) => `<option value="${esc(value)}" ${value === current ? 'selected' : ''}>${esc(label)}</option>`;
   const fromRepo = !sameAgent(cfg.originalSynthesis, cfg.builtinSynthesis);
   return `<div class="spane-head"><div><h2>Synthesis</h2><p>The last step: checks every reviewer finding against the code, merges duplicates, drops false positives, and gives the verdict.</p></div>${closeBtn()}</div>
-    <div class="sbody"><div class="slist"><div class="edit" style="border-top:0;padding-left:14px">
-      <div class="source-note ${fromRepo || synthesisChanged() ? 'repo' : ''}">${!canEdit() ? 'Built-in settings, shown read-only. To change them, switch to <button type="button" class="linkish" data-mode="config">Config file</button> in Overview.' : synthesisChanged() ? `Saving writes these to <code>${esc(configDir())}/panel.yaml</code>.` : fromRepo ? `Set by <code>${esc(configDir())}/panel.yaml</code>.` : 'Built-in settings. Change one and saving writes it to panel.yaml.'}</div>
+    <div class="sbody">${canEdit() ? '' : builtinNotice()}<div class="slist"><div class="edit" style="border-top:0;padding-left:14px">
+      ${!canEdit() ? '' : `<div class="source-note ${fromRepo || synthesisChanged() ? 'repo' : ''}">${synthesisChanged() ? `Saving writes these to <code>${esc(configDir())}/panel.yaml</code>.` : fromRepo ? `Set by <code>${esc(configDir())}/panel.yaml</code>.` : 'Built-in settings. Change one and saving writes it to panel.yaml.'}</div>`}
       <fieldset ${canEdit() ? '' : 'disabled'}><div class="fields-3">
-        <div class="field"><label for="syn-harness">Runs on</label><select id="syn-harness" data-syn="harness">${option('claude-code', 'Claude Code', s.harness)}${option('codex', 'Codex', s.harness)}</select></div>
+        <div class="field"><label for="syn-harness">Runs on</label>${choiceButton('syn', 'harness', s.harness)}</div>
         <div class="field"><label for="syn-model">Model</label>${modelButton('syn', s.model)}</div>
-        <div class="field"><label for="syn-effort">Effort</label><select id="syn-effort" data-syn="effort">${EFFORTS.map(e => option(e, e, s.effort)).join('')}</select></div>
+        <div class="field"><label for="syn-effort">Effort</label>${choiceButton('syn', 'effort', s.effort)}</div>
       </div></fieldset>
       <span class="hint">The synthesis prompt itself lives in the skill, at <code>prompts/synthesize.md</code>.</span>
     </div></div></div>`;
@@ -1537,7 +1778,9 @@ function overviewPane() {
       <div class="mode-detail">${detail}</div>
     </div>`;
 }
-const closeBtn = () => '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+const MAX_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>';
+const MIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>';
+const closeBtn = () => `<span class="head-btns"><button type="button" class="icon-btn" data-sact="maximize" aria-label="${settings.max ? 'Restore size' : 'Maximize'}" title="${settings.max ? 'Restore size' : 'Maximize'}">${settings.max ? MIN_SVG : MAX_SVG}</button>` + '<button type="button" class="icon-btn" data-sact="close" aria-label="Close settings" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>';
 function footer() {
   if (!canEdit()) return '';
   const { count } = pendingChanges();
@@ -1563,7 +1806,7 @@ function renderSettings() {
   const focusId = active && holder.contains(active) ? active.id : null;
   const caret = focusId && 'selectionStart' in active ? [active.selectionStart, active.selectionEnd] : null;
   const scroll = holder.querySelector('.sbody') ? holder.querySelector('.sbody').scrollTop : 0;
-  holder.innerHTML = `<div class="sscrim" data-sact="close-scrim"><div class="swin" role="dialog" aria-modal="true" aria-label="Settings">
+  holder.innerHTML = `<div class="sscrim" data-sact="close-scrim"><div class="swin ${settings.max ? 'max' : ''}" role="dialog" aria-modal="true" aria-label="Settings">
     <div class="sside">
       <div class="sside-title">Settings</div>
       <div class="snav">${nav('overview', 'Overview')}</div>
@@ -1616,6 +1859,23 @@ async function saveSettings(extra) {
 document.getElementById('settings').addEventListener('click', async event => {
   const t = event.target;
   if (settings.picker && !t.closest('.mpick-wrap')) { settings.picker = null; renderSettings(); if (!t.closest('[data-sact], [data-sect], .srow')) return; }
+  const chosen = t.closest('[data-chosen]');
+  if (chosen) {
+    const target = chosen.dataset.scope === 'syn' ? settings.cfg.synthesis : settings.cfg.reviewers[settings.editing];
+    target[chosen.dataset.field] = chosen.dataset.chosen;
+    if (chosen.dataset.field === 'harness') harnessChanged(target);
+    if (chosen.dataset.scope !== 'syn') target.removeFile = false;
+    const id = settings.choice; settings.choice = null; saveConfig(); renderSettings();
+    const b = document.getElementById(id); if (b) b.focus();
+    return;
+  }
+  const choice = t.closest('[data-choice]');
+  if (choice) { settings.choice = settings.choice === choice.dataset.choice ? null : choice.dataset.choice; renderSettings(); return; }
+  if (settings.choice && !t.closest('.mpop')) settings.choice = null;
+  const ichoose = t.closest('[data-ichoose]');
+  if (ichoose) { const r = settings.cfg.reviewers[settings.editing]; r.icon = ichoose.dataset.ichoose; r.iconPicked = true; settings.iconPicker = false; saveConfig(); renderSettings(); document.getElementById('cfg-icon').focus(); return; }
+  if (t.closest('[data-ipick]')) { settings.iconPicker = !settings.iconPicker; renderSettings(); return; }
+  if (settings.iconPicker && !t.closest('.ipop')) settings.iconPicker = false;
   const choose = t.closest('[data-mchoose]');
   if (choose) { choosePicker(choose.dataset.mchoose); return; }
   const mpick = t.closest('[data-mpick]');
@@ -1640,7 +1900,7 @@ document.getElementById('settings').addEventListener('click', async event => {
     case 'add': {
       let n = 1; while (cfg.reviewers.some(x => x.name === `check-custom-${n}`)) n += 1;
       const first = modelsFor('claude-code')[0];
-      const blank = { summary: '', harness: 'claude-code', model: first ? first.id : 'opus', effort: 'high', prompt: '', mode: 'replace', included: true, removeFile: false };
+      const blank = { icon: guessIcon(`check-custom-${n}`), summary: '', harness: 'claude-code', model: first ? first.id : 'opus', effort: 'high', prompt: '', mode: 'replace', included: true, removeFile: false };
       cfg.reviewers.push({ name: `check-custom-${n}`, builtin: false, file: null, source: 'new', isNew: true, ...blank, original: blank });
       settings.editing = cfg.reviewers.length - 1;
       settings.section = 'reviewers';
@@ -1659,11 +1919,12 @@ document.getElementById('settings').addEventListener('click', async event => {
     case 'use-builtin': if (r) Object.assign(r, { summary: r.builtinSummary || r.summary, harness: r.builtinAgent.harness, model: r.builtinAgent.model, effort: r.builtinAgent.effort || 'default', prompt: r.builtinText, mode: 'replace', removeFile: true }); break;
     case 'discard': settings.cfg = null; store(cfgKey(), null); loadConfig(); settings.editing = null; break;
     case 'save': await saveSettings(); return;
-    case 'copy-file': if (r && await copy(reviewerFile(r), document.getElementById('cfg-note'))) { act.innerHTML = ICON_CHECK; act.classList.add('done'); setTimeout(() => { act.innerHTML = ICON_COPY; act.classList.remove('done'); }, 1500); } return;
-    case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note')); return;
-    case 'copy-prompt': await copy(setupPrompt(), document.getElementById('prompt-note')); return;
-    case 'copy-command': await copy(state.config.command, document.getElementById('command-note')); return;
-    case 'copy-remove': await copy(`git rm -r ${configDir()}`, document.getElementById('remove-note')); return;
+    case 'copy-file': if (r) await copy(reviewerFile(r), document.getElementById('cfg-note'), act); return;
+    case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note'), act); return;
+    case 'copy-prompt': await copy(setupPrompt(), document.getElementById('prompt-note'), act); return;
+    case 'copy-command': await copy(state.config.command, document.getElementById('command-note'), act); return;
+    case 'copy-remove': await copy(`git rm -r ${configDir()}`, document.getElementById('remove-note'), act); return;
+    case 'maximize': settings.max = !settings.max; store('review-panel:settings-max', settings.max); break;
     case 'create-folder': await saveSettings({ 'panel.yaml': panelFile() }); return;
   }
   saveConfig();
@@ -1685,6 +1946,7 @@ document.getElementById('settings').addEventListener('input', event => {
   if (t.dataset.cfg && settings.editing !== null) {
     const r = settings.cfg.reviewers[settings.editing];
     r[t.dataset.cfg] = t.dataset.cfg === 'name' ? t.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : t.value;
+    if (t.dataset.cfg === 'name' && !r.iconPicked) { r.icon = guessIcon(r.name); const b = document.querySelector('#settings .ipick'); if (b) b.innerHTML = iconSvg(r.icon); }
     if (t.dataset.cfg === 'harness') harnessChanged(r);
     r.removeFile = false;
     saveConfig();
@@ -1703,6 +1965,8 @@ document.getElementById('settings').addEventListener('input', event => {
 });
 document.getElementById('settings').addEventListener('keydown', event => {
   const t = event.target;
+  if ((settings.choice || settings.iconPicker) && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); settings.choice = null; settings.iconPicker = false; renderSettings(); return; }
+  if (t.matches && t.matches('[data-chosen]') && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); t.click(); return; }
   if (settings.picker && t.id === 'mpick-search') {
     const options = pickerMatches();
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

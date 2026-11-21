@@ -34,6 +34,9 @@ FAKE_CLAUDE = textwrap.dedent('''\
     if sys.argv[1:] == ['--help']:
         print('  --restricted  Restricted mode\\n  --tools <tools...>\\n  choices: "dontAsk"')
         sys.exit(0)
+    if sys.argv[1:] == ['auth', 'status']:
+        print(json.dumps({'loggedIn': not os.environ.get('FAKE_SIGNED_OUT')}))
+        sys.exit(0)
     prompt = sys.stdin.read()
     with open(os.environ['FAKE_LOG'], 'a') as log:
         log.write(json.dumps(['claude'] + sys.argv[1:]) + '\\n')
@@ -375,6 +378,23 @@ class PureHelpers(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'quota'):
             review_panel.codex_event(json.dumps({'type': 'turn.failed', 'error': {'message': 'quota'}}), {})
 
+    def test_a_finding_may_name_the_rule_it_breaks(self):
+        rule = {'id': 'local:techs/ts/extract-logic', 'file': '.trailguide/rules/techs/ts/extract-logic.md', 'quote': 'Keep logic in plain modules.'}
+        review = {**REVIEW, 'findings': [{**REVIEW['findings'][0], 'rule': rule}]}
+        self.assertEqual(review_panel.validate_review(review), [])
+        bad = {**REVIEW, 'findings': [{**REVIEW['findings'][0], 'rule': {'id': 'x'}}]}
+        self.assertTrue(any('rule must be' in p for p in review_panel.validate_review(bad)))
+
+    def test_signed_out_claude_result_says_to_sign_in(self):
+        event = {'type': 'result', 'subtype': 'success', 'is_error': True,
+                 'result': 'Failed to authenticate. API Error: 401 OAuth session expired'}
+        with self.assertRaisesRegex(RuntimeError, r'not signed in; run `claude auth login`'):
+            review_panel.claude_event(json.dumps(event), {})
+
+    def test_other_claude_failures_keep_their_detail(self):
+        message = review_panel.claude_failure({'subtype': 'error_max_turns', 'result': ''})
+        self.assertEqual(message, 'claude ended with error max turns')
+
 
 class PanelRun(unittest.TestCase):
     def setUp(self):
@@ -415,6 +435,16 @@ class PanelRun(unittest.TestCase):
 
     def calls(self):
         return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def test_run_refuses_to_start_when_claude_is_signed_out(self):
+        self.install('claude', FAKE_CLAUDE)
+        environment = {**os.environ, 'PATH': f"{self.bin}:{os.path.dirname(sys.executable)}:/usr/bin:/bin",
+                       'FAKE_LOG': str(self.log), 'FAKE_SIGNED_OUT': '1'}
+        result = subprocess.run([sys.executable, str(SCRIPT), 'run', '--base', 'main', '--no-serve', '--claude-only'],
+                                cwd=self.repo, env=environment, capture_output=True, text=True, timeout=60)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('claude auth login', result.stderr + result.stdout)
+        self.assertFalse(self.log.exists())
 
     def test_panel_runs_claude_and_codex_reviewers_then_synthesizes(self):
         self.install('claude', FAKE_CLAUDE)
@@ -525,7 +555,7 @@ class PanelRun(unittest.TestCase):
         self.assertEqual(state['synthesis']['status'], 'skipped')
 
     def test_a_session_past_its_timeout_is_stopped(self):
-        self.install('claude', '#!/bin/sh\n[ "$1" = --help ] && exit 0\nexec sleep 30\n')
+        self.install('claude', '#!/bin/sh\n[ "$1" = --help ] && exit 0\n[ "$1" = auth ] && exit 0\nexec sleep 30\n')
         started = time.monotonic()
         result, state, _ = self.run_panel('--only', 'check-docs', '--timeout', '1')
         self.assertLess(time.monotonic() - started, 20)
