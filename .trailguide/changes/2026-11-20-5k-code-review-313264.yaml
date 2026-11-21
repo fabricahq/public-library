@@ -1,0 +1,3 @@
+summary: Adds 5k-code-review, which reviews a change with eight focused Claude Code and Codex reviewer sessions in parallel, synthesizes their findings into one verified, ranked list, and shows progress on a live local page.
+skills:
+  skills/5k-code-review: new

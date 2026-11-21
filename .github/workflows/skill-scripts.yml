@@ -40,6 +40,22 @@ jobs:
         run: |
           npm test
           npm run test:browser
+  # A job id must start with a letter, so the 5k-code-review skill's job names itself.
+  code-review-5k:
+    name: 5k-code-review
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Fake claude and codex commands stand in for real sessions, so no model is called.
+      - name: Test the panel runner with fake sessions
+        run: |
+          python3 --version
+          python3 .trailguide/skills/fabrica/5k-code-review/tests/test_code_review.py
   ratchet-files:
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     defaults:

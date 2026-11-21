@@ -1,0 +1,178 @@
+{
+  "reviewers": {
+    "check-acceptance-criteria": {
+      "summary": "Checks the change against the known acceptance criteria and product decisions",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "high"
+      },
+      "focus": "focus/check-acceptance-criteria.md",
+      "icon": "list-checks"
+    },
+    "check-correctness": {
+      "summary": "Traces concrete inputs through the new logic to find wrong results",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6.2-astra",
+        "effort": "high"
+      },
+      "focus": "focus/check-correctness.md",
+      "icon": "bug"
+    },
+    "check-security": {
+      "summary": "Checks trust boundaries, secrets, injection, and tenant isolation",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6.2-astra",
+        "effort": "high"
+      },
+      "focus": "focus/check-security.md",
+      "icon": "shield"
+    },
+    "check-rules": {
+      "summary": "Checks the change against the repository's written rules: Trail Guide rules, AGENTS.md, CLAUDE.md, and style guides",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "default"
+      },
+      "focus": "focus/check-rules.md",
+      "icon": "scale"
+    },
+    "check-docs": {
+      "summary": "Checks that the docs still match the code after this change",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "default"
+      },
+      "focus": "focus/check-docs.md",
+      "icon": "book-open"
+    },
+    "check-supportability": {
+      "summary": "Checks that failures surface, can be traced, and can be recovered",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6.2-sol",
+        "effort": "high"
+      },
+      "focus": "focus/check-supportability.md",
+      "icon": "life-buoy"
+    },
+    "check-performance": {
+      "summary": "Flags only bottlenecks too large for the change's real workload",
+      "agent": {
+        "harness": "codex",
+        "model": "gpt-6.2-sol",
+        "effort": "high"
+      },
+      "focus": "focus/check-performance.md",
+      "icon": "gauge"
+    },
+    "check-architecture": {
+      "summary": "Judges whether the design is as simple as it could be, and proposes a simpler one",
+      "agent": {
+        "harness": "claude-code",
+        "model": "opus",
+        "effort": "high"
+      },
+      "focus": "focus/check-architecture.md",
+      "icon": "blocks"
+    }
+  },
+  "codex_fallback": {
+    "harness": "claude-code",
+    "model": "opus",
+    "effort": "high"
+  },
+  "synthesize": {
+    "agent": {
+      "harness": "claude-code",
+      "model": "opus",
+      "effort": "high"
+    }
+  },
+  "walkthroughs": {
+    "record": "off",
+    "agent": {
+      "harness": "claude-code",
+      "model": "opus",
+      "effort": "default"
+    }
+  },
+  "retention": {
+    "days": 14
+  },
+  "models": [
+    {
+      "id": "opus",
+      "name": "Opus",
+      "harness": "claude-code",
+      "latest": true
+    },
+    {
+      "id": "sonnet",
+      "name": "Sonnet",
+      "harness": "claude-code",
+      "latest": true
+    },
+    {
+      "id": "haiku",
+      "name": "Haiku",
+      "harness": "claude-code",
+      "latest": true
+    },
+    {
+      "id": "claude-fable-5-2",
+      "name": "Fable 5.2",
+      "harness": "claude-code"
+    },
+    {
+      "id": "claude-opus-5-5",
+      "name": "Opus 5.5",
+      "harness": "claude-code"
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "name": "Sonnet 5.5",
+      "harness": "claude-code"
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "name": "Haiku 5.5",
+      "harness": "claude-code"
+    },
+    {
+      "id": "gpt-6.2-astra",
+      "name": "GPT-6.2 Astra",
+      "harness": "codex",
+      "price": {
+        "input": 8.0,
+        "cached_input": 0.4,
+        "output": 40.0
+      }
+    },
+    {
+      "id": "gpt-6.2-sol",
+      "name": "GPT-6.2 Sol",
+      "harness": "codex",
+      "price": {
+        "input": 2.0,
+        "cached_input": 0.1,
+        "output": 10.0
+      }
+    },
+    {
+      "id": "gpt-6.2-terra",
+      "name": "GPT-6.2 Terra",
+      "harness": "codex"
+    },
+    {
+      "id": "gpt-6.2-luna",
+      "name": "GPT-6.2 Luna",
+      "harness": "codex"
+    }
+  ],
+  "prices_as_of": "2026-11-20"
+}
