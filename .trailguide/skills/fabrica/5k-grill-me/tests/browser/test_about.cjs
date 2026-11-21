@@ -16,10 +16,10 @@ const root=path.resolve(__dirname,'../..'),script=path.join(root,'scripts/grill_
   await page.goto(url);await page.locator('[data-node="Q2"]').click();
   await page.locator('#customTab').click();await page.locator('#draft').fill('Keep this draft.');
   await page.locator('#menuButton').click();await shot('menu-light');
-  await page.getByRole('button',{name:'About Grill Me UI',exact:true}).click();
-  const dialog=page.getByRole('dialog',{name:'Grill Me UI',exact:true});await dialog.waitFor();
+  await page.getByRole('button',{name:'About 5K Grill Me',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'5K Grill Me',exact:true});await dialog.waitFor();
   assert(await page.locator('#menu').isHidden());
-  assert((await dialog.innerText()).includes('Grill Me UI is a skill by Fabrica that brings Matt Pocock'));
+  assert((await dialog.innerText()).includes('5K Grill Me is a skill by Fabrica that brings Matt Pocock'));
   assert((await dialog.innerText()).includes('Matt Pocock'));
   assert((await dialog.innerText()).includes('Fred Brooks'));
   assert.equal(await dialog.getByRole('link',{name:'grill-me',exact:true}).getAttribute('href'),'https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md');

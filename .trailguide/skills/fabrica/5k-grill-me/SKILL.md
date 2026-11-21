@@ -1,14 +1,14 @@
 ---
-name: grill-me-ui
+name: 5k-grill-me
 description: Run a visual grilling session on a quiet design-tree canvas. Use when the user wants to explore a plan visually, inspect answered and open questions, or answer and clarify decisions inside a UI while the agent continues the interview.
 metadata:
   trailguide-skill-type: playbook
-  display-name: Grill Me UI
+  display-name: 5K Grill Me
   short-description: Explore and answer a design tree on a quiet canvas
-  default-prompt: Use $grill-me-ui to explore this design with me on an interactive canvas.
+  default-prompt: Use $5k-grill-me to explore this design with me on an interactive canvas.
 ---
 
-# Grill Me UI
+# 5K Grill Me
 
 Use Matt Pocock's `grill-with-docs` workflow through the bundled canvas: `grilling` plus `domain-modeling`. Read those skills when available; the rules below preserve their essential behavior when they are not installed. The UI changes presentation and answer transport, not who makes decisions or when implementation is authorized. When inherited grilling instructions describe frontier rounds or withholding blocked questions, the one-answer-at-a-time workflow below takes precedence.
 
@@ -20,7 +20,7 @@ Conduct the interview through the bundled canvas. The canvas is the interview su
 
 ## Start or resume
 
-1. Read [references/session.md](references/session.md) for the snapshot contract and commands, and [references/design-tree.md](references/design-tree.md) before producing or enriching the shared design-tree artifact. Locate the skill directory from this file's installed path. Use a session directory inside the current workspace, separate from the skill. Reuse a session only when its subject matches this conversation.
+1. Read [references/session.md](references/session.md) for the snapshot contract and commands, and [references/design-tree.md](references/design-tree.md) before producing or enriching the shared design-tree artifact. Locate the skill directory from this file's installed path. Run `python3 SKILL_DIR/scripts/grill_ui.py settings` from the workspace to read the project's settings: the organization's from its `.fabrica` repository, then the repository's own `.fabrica/5k-grill-me/`. Follow each `guidance` entry as part of these instructions, the repository's over the organization's where they conflict; neither overrides the one-answer-at-a-time workflow or who decides. Mention an organization status of `cached` or `unreachable` to the user once. Use a session directory inside the current workspace, separate from the skill: under `settings.sessions.path` when it is set. Reuse a session only when its subject matches this conversation.
 2. Map the design into questions with stable IDs. Start with the main design elements as separate top-level nodes; never add a generic "Explore the design" root. A parent decision is a prerequisite, not a decorative category. Record only user-submitted answers. Show known downstream questions even while blocked; recommendations remain proposals. Look up environmental facts yourself. If no subject can be inferred, ask for it in chat.
 3. Read [question help](references/question-help.md) and prepare both explanation levels and a scenario walkthrough for every question. Validate and publish the snapshot with `--require-help` using the bundled Python script. Start its loopback server as a tracked foreground tool process, open its reported URL in the browser, and retain its process/session handle. Never use Lavish. Use a standalone rendered HTML file with copy/paste if a local server or active wait cannot be supported.
 4. Bind the canvas to the exact calling agent session using the reference's `bind` command. In Codex, use the runtime's `CODEX_THREAD_ID`; in Claude Code, use the session ID supplied by that session's runtime or hook. Never infer the newest session from a folder or store the runtime binding in CLAUDE.md/AGENTS.md. Use `--transport auto` to verify the exact chat is loaded in the shared Codex host before selecting direct delivery. Otherwise use the local inbox and explain the fallback. Do not create a second runner for an already active desktop or Claude session.

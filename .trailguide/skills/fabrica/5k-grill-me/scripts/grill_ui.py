@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Local canvas and durable reply inbox for the agent running grill-me-ui."""
+"""Local canvas and durable reply inbox for the agent running 5k-grill-me."""
 import argparse
+import base64
 import contextlib
 import errno
 import fcntl
@@ -24,6 +25,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ASSET = Path(__file__).resolve().parent.parent / 'assets' / 'canvas.html'
 LIMIT = 2_000_000
 LEASE = 75
+# Settings live in the same layout in two places: the organization's settings repository (<owner>/.fabrica unless
+# --org-repo names another) at 5k-grill-me/, and the repository's own .fabrica/5k-grill-me/, which wins.
+SETTINGS_DIR = Path('.fabrica') / '5k-grill-me'
+ORG_SETTINGS_PATH = '5k-grill-me'
+ORG_REPO_NAME = '.fabrica'
+ORG_CACHE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / '5k-grill-me' / 'org'
+SETTINGS_FILES = ('settings.yaml', 'guidance.md')
+SETTINGS_KEYS = ('sessions',)
 
 
 def read(path):
@@ -539,7 +548,7 @@ def bind(args):
 
 
 def delivery_prompt(directory, event):
-    intro = (f'Continue the grill-me-ui interview in this existing session. '
+    intro = (f'Continue the 5k-grill-me interview in this existing session. '
              f'Read {Path(__file__).resolve().parent.parent / "SKILL.md"}. '
              f'The canvas session directory is {directory.resolve()}. '
              f'First run python3 {shlex.quote(str(Path(__file__).resolve()))} receive --session-dir {shlex.quote(str(directory.resolve()))} --event {event["id"]} to confirm receipt, then read state.json. ')
@@ -893,6 +902,139 @@ def wait(args):
         time.sleep(min(0.1, max(0, deadline - time.monotonic())))
 
 
+def parse_settings(text, where):
+    """Read settings.yaml: flat `key: value` lines only, so the skill needs nothing beyond the standard library."""
+    data = {}
+    for number, raw in enumerate(text.splitlines(), 1):
+        line = re.sub(r'(^|\s)#.*$', '', raw).rstrip()
+        if not line.strip():
+            continue
+        key, sep, value = line.partition(':')
+        key, value = key.strip(), value.strip()
+        if not sep or line[0] in ' \t' or not re.fullmatch(r'[a-z_]+', key) or not value:
+            raise ValueError(f'{where}:{number}: expected "key: value"')
+        if key not in SETTINGS_KEYS:
+            raise ValueError(f'{where}:{number}: unknown setting {key}; settings.yaml takes {", ".join(SETTINGS_KEYS)}')
+        if len(value) > 1 and value[0] == value[-1] and value[0] in '"\'':
+            value = value[1:-1]
+        data[key] = value
+    return data
+
+
+def git_output(arguments, cwd):
+    try:
+        result = subprocess.run(['git', *arguments], cwd=cwd, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def gh_api(path):
+    """GET a GitHub API path with the gh CLI's login. Returns (data, None), or (None, 'missing' | a reason)."""
+    if not shutil.which('gh'):
+        return None, 'the GitHub CLI (gh) is not installed'
+    try:
+        result = subprocess.run(['gh', 'api', path], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return None, f'gh api failed: {error}'
+    if result.returncode != 0:
+        if 'HTTP 404' in result.stderr or 'Not Found' in result.stderr:
+            return None, 'missing'
+        return None, (result.stderr.strip().splitlines() or ['gh api failed'])[-1]
+    try:
+        return json.loads(result.stdout), None
+    except ValueError:
+        return None, 'gh api returned something other than JSON'
+
+
+def fetch_org_settings(name):
+    """Copy 5k-grill-me/ from the head of name's default branch into a cache keyed by commit.
+
+    Returns (folder or None, commit or None, status, note). Status is found; missing (no repository this login can
+    read, or no settings in it); cached (GitHub couldn't be reached, so the last copy is used); or unreachable."""
+    cache = ORG_CACHE / name.replace('/', '__')
+
+    def last_copy(reason):
+        try:
+            commit = (cache / 'latest').read_text().strip()
+            if (cache / commit / '.complete').exists():
+                return cache / commit, commit, 'cached', f'could not reach GitHub ({reason}); using the copy from commit {commit[:7]}'
+        except OSError:
+            pass
+        return None, None, 'unreachable', f'could not read {name} ({reason}), and there is no earlier copy'
+
+    head, error = gh_api(f'repos/{name}/commits/HEAD')
+    if error == 'missing':
+        return None, None, 'missing', f'no repository {name}, or this GitHub login cannot read it'
+    if error:
+        return last_copy(error)
+    commit = head.get('sha', '') if isinstance(head, dict) else ''
+    if not re.fullmatch(r'[0-9a-f]{40}', commit):
+        return last_copy('unexpected reply for the head commit')
+    folder = cache / commit
+    if not (folder / '.complete').exists():
+        files = {}
+        for file in SETTINGS_FILES:
+            blob, error = gh_api(f'repos/{name}/contents/{ORG_SETTINGS_PATH}/{file}?ref={commit}')
+            if error == 'missing':
+                continue
+            if error:
+                return last_copy(error)
+            files[file] = base64.b64decode(blob.get('content', '') if isinstance(blob, dict) else '')
+        if not files:
+            return None, commit, 'missing', f'{name} has no {ORG_SETTINGS_PATH}/settings.yaml or {ORG_SETTINGS_PATH}/guidance.md'
+        shutil.rmtree(folder, ignore_errors=True)
+        folder.mkdir(parents=True)
+        for file, content in files.items():
+            (folder / file).write_bytes(content)
+        (folder / '.complete').write_text('')
+        (cache / 'latest').write_text(commit)
+    return folder, commit, 'found', None
+
+
+def resolve_settings(args):
+    """The settings for an interview in this repository: built-in defaults, then the organization's, then the
+    repository's. Guidance from both layers applies, the organization's first; a repository setting replaces the
+    organization's."""
+    start = Path(args.repo).resolve()
+    root = Path(git_output(['rev-parse', '--show-toplevel'], start) or start)
+    url = git_output(['remote', 'get-url', 'origin'], root) or ''
+    match = re.search(r'github\.com[:/]([^/]+)/[^/]+?(?:\.git)?/?$', url)
+    if args.org_repo is not None:
+        name = args.org_repo.strip()
+        if name and not re.fullmatch(r'[A-Za-z0-9-]+/[A-Za-z0-9._-]+', name):
+            raise ValueError('--org-repo looks like owner/name, such as fabricahq/.fabrica, or is empty to skip organization settings')
+    else:
+        name = f'{match.group(1)}/{ORG_REPO_NAME}' if match else ''
+    if name:
+        folder, commit, status, note = fetch_org_settings(name)
+        org = {'repo': name, 'status': status, 'note': note, 'commit': commit,
+               'url': f'https://github.com/{name}/tree/{commit or "HEAD"}/{ORG_SETTINGS_PATH}'}
+    else:
+        folder = None
+        org = {'repo': None, 'status': 'off',
+               'note': 'skipped with --org-repo' if args.org_repo is not None else 'origin is not a GitHub repository, so there is no organization to read'}
+    layers = [('organization', folder, org['url'] if folder else None), ('repository', root / SETTINGS_DIR, str(root / SETTINGS_DIR))]
+    values, guidance = {}, []
+    for source, directory, where in layers:
+        if directory is None or not directory.is_dir():
+            continue
+        if (directory / 'settings.yaml').exists():
+            for key, value in parse_settings((directory / 'settings.yaml').read_text(), f'{where}/settings.yaml').items():
+                values[key] = {'value': value, 'source': source}
+        if (directory / 'guidance.md').exists():
+            text = (directory / 'guidance.md').read_text().strip()
+            if text:
+                guidance.append({'source': source, 'path': f'{where}/guidance.md', 'text': text})
+    if 'sessions' in values:
+        sessions = Path(values['sessions']['value'])
+        if sessions.is_absolute() or '..' in sessions.parts:
+            raise ValueError(f'sessions must be a folder inside the repository, not {sessions}')
+        values['sessions']['path'] = str(root / sessions)
+    return {'status': 'settings', 'repository': str(root), 'organization': org,
+            'repositorySettings': str(root / SETTINGS_DIR), 'settings': values, 'guidance': guidance}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -928,9 +1070,14 @@ def main():
     cmd.add_argument('--session-dir', required=True, type=Path)
     cmd.add_argument('--file', required=True, type=Path)
     cmd.add_argument('--title')
+    cmd = commands.add_parser('settings', help="Show this repository's settings and guidance, with where each comes from.")
+    cmd.add_argument('--repo', type=Path, default=Path.cwd(), help='A folder in the repository (default: the current folder).')
+    cmd.add_argument('--org-repo', help="Read organization settings from this owner/name instead of <owner>/.fabrica; empty skips them.")
     args = parser.parse_args()
     try:
-        if args.command == 'validate':
+        if args.command == 'settings':
+            result = resolve_settings(args)
+        elif args.command == 'validate':
             snapshot, app, exported = read_artifact(read(args.snapshot))
             if args.require_help:
                 # Raw snapshots lack history; publication checks against the live session.
