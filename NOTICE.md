@@ -181,8 +181,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Grill Me UI
+## 5K skills' fonts
 
-Fabrica's `grill-me-ui` skill provides a canvas and local reply transport for Matt Pocock's [grill-me](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md), [grilling](https://github.com/mattpocock/skills/blob/main/skills/productivity/grilling/SKILL.md), and [grill-with-docs](https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md) workflow. The bundle retains [his MIT notice](.trailguide/skills/fabrica/grill-me-ui/references/Matt-Pocock-MIT-LICENSE.txt). Its design-tree approach also draws on Fred Brooks' *The Design of Design*.
+The 5K skills' pages (`5k-pr-review`, `5k-code-review` and `5k-grill-me`) each embed [Inter](https://github.com/rsms/inter) and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) under the SIL Open Font License 1.1, with copies of both licenses in each skill's `references/`, such as [Inter-OFL.txt](.trailguide/skills/fabrica/5k-code-review/references/Inter-OFL.txt) and [JetBrainsMono-OFL.txt](.trailguide/skills/fabrica/5k-code-review/references/JetBrainsMono-OFL.txt). The fonts keep their own license; the library's MIT license does not replace it.
 
-The canvas embeds JetBrains Mono under the [SIL Open Font License 1.1](.trailguide/skills/fabrica/grill-me-ui/references/JetBrainsMono-OFL.txt), and Font Awesome Free 7.2.0 brand icon paths under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/grill-me-ui/references/icon-attribution.md). These assets retain their own licenses; the library's MIT license does not replace them.
+## 5K Grill Me
+
+Fabrica's `5k-grill-me` skill provides a canvas and local reply transport for Matt Pocock's [grill-me](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md), [grilling](https://github.com/mattpocock/skills/blob/main/skills/productivity/grilling/SKILL.md), and [grill-with-docs](https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md) workflow. The bundle retains [his MIT notice](.trailguide/skills/fabrica/5k-grill-me/references/Matt-Pocock-MIT-LICENSE.txt). Its design-tree approach also draws on Fred Brooks' *The Design of Design*.
+
+The canvas embeds Font Awesome Free 7.2.0 brand icon paths under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/5k-grill-me/references/icon-attribution.md). These marks retain their own license; the library's MIT license does not replace it.
+
+## 5K Code Review
+
+Fabrica's `5k-code-review` skill embeds Font Awesome Free 7.2.0 brand icon paths for Claude and OpenAI under CC BY 4.0, with [source links and attribution](.trailguide/skills/fabrica/5k-code-review/references/icon-attribution.md). These marks keep their own license; the library's MIT license does not replace it. The architecture reviewer's focus draws on John Ousterhout's *A Philosophy of Software Design*.

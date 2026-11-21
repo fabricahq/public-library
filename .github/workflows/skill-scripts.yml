@@ -11,7 +11,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  grill-me-ui:
+  grill-me:
+    name: 5k-grill-me
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     timeout-minutes: 10
     env:
@@ -23,22 +24,49 @@ jobs:
       - name: Test the canvas server and session contracts
         run: |
           python3 --version
-          for test in .trailguide/skills/fabrica/grill-me-ui/tests/test_*.py; do
+          for test in .trailguide/skills/fabrica/5k-grill-me/tests/test_*.py; do
             python3 "$test"
           done
       - name: Install browser test dependencies
-        working-directory: .github/scripts/grill-me-ui
+        working-directory: .github/scripts/5k-grill-me
         run: |
           node --version
           npm ci --no-audit --no-fund
           npx playwright install --with-deps chromium webkit
       - name: Test canvas behavior and browser journeys
-        working-directory: .github/scripts/grill-me-ui
+        working-directory: .github/scripts/5k-grill-me
         env:
-          NODE_PATH: ${{ github.workspace }}/.github/scripts/grill-me-ui/node_modules
+          NODE_PATH: ${{ github.workspace }}/.github/scripts/5k-grill-me/node_modules
         run: |
           npm test
           npm run test:browser
+  # A job id must start with a letter, so the 5k-code-review skill's job names itself.
+  code-review-5k:
+    name: 5k-code-review
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Fake claude and codex commands stand in for real sessions, so no model is called.
+      - name: Test the panel runner with fake sessions
+        run: |
+          python3 --version
+          python3 .trailguide/skills/fabrica/5k-code-review/tests/test_code_review.py
+  # The 5K skills each carry a copy of one shell; this fails when a copy drifts from .github/scripts/5k-shell/.
+  shell-5k:
+    name: 5K shell
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check every 5K page carries the current shell
+        run: python3 .github/scripts/5k-shell/shell.py check
   ratchet-files:
     runs-on: ${{ fromJSON(vars.CI_RUNNERS_PUBLIC).linux }}
     defaults:

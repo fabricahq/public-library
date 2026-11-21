@@ -1,0 +1,3 @@
+summary: Adds 5k-grill-me, formerly grill-me-ui, which also reads interview guidance and a sessions folder from the organization .fabrica repository and the repository .fabrica/5k-grill-me/ folder.
+skills:
+  skills/5k-grill-me: new

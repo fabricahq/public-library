@@ -1,0 +1,1299 @@
+{
+  "schemaVersion": 1,
+  "personas": [
+    {
+      "id": "freelancer",
+      "name": "Freelancer",
+      "group": "Our customers",
+      "about": "Runs a one-person business and sends invoices for their work."
+    },
+    {
+      "id": "bookkeeper",
+      "name": "Bookkeeper",
+      "group": "Our customers",
+      "about": "Keeps a freelancer's books and chases late payments."
+    },
+    {
+      "id": "client",
+      "name": "Client",
+      "group": "Their customers",
+      "about": "Receives an invoice and pays it from a link, without an account."
+    }
+  ],
+  "pr": {
+    "repo": "example-org/tally",
+    "number": 128,
+    "title": "Let clients pay an invoice in installments",
+    "url": "https://github.com/example-org/tally/pull/128",
+    "base": "main",
+    "head": "installment-plans",
+    "headSha": "4c1d9e2",
+    "state": "open",
+    "stack": [
+      "#128"
+    ],
+    "stats": {
+      "files": 41,
+      "additions": 1876,
+      "deletions": 312,
+      "commits": 14,
+      "tests": 286,
+      "generated": 140
+    },
+    "generatedAt": "2026-11-18"
+  },
+  "scan": {
+    "head": "4c1d9e2",
+    "base": "9a03b71"
+  },
+  "people": {
+    "b7e2c4a0-0000-4000-8000-000000000001": "Ana Ruiz",
+    "b7e2c4a0-0000-4000-8000-000000000002": "Jon Park (bookkeeper)",
+    "cl_01HX4M2Q8Z": "Northwind Studio (client)",
+    "b7e2c4a0-0000-4000-8000-0000000000aa": "Ana Ruiz Design (account)"
+  },
+  "overview": {
+    "headline": "Let clients pay an invoice in installments",
+    "capabilities": [
+      {
+        "group": "Invoices",
+        "icon": "task",
+        "subgroups": [
+          {
+            "group": "Split an invoice into installments",
+            "items": [
+              "Pick 2 to 12 installments and how often they fall due: weekly, every two weeks or monthly.",
+              "Amounts split evenly, and the last installment takes any leftover cents."
+            ]
+          },
+          {
+            "group": "Track what is still owed",
+            "items": [
+              "An invoice shows `draft`, `sent`, `partly paid`, `paid` or `void` instead of a paid checkbox.",
+              "Each installment shows its due date and whether it is paid."
+            ]
+          },
+          {
+            "group": "Change a plan after sending",
+            "items": [
+              "Move an unpaid installment to a new date. The client gets a fresh link."
+            ]
+          }
+        ]
+      },
+      {
+        "group": "Payments",
+        "icon": "status",
+        "subgroups": [
+          {
+            "group": "Pay one installment at a time",
+            "items": [
+              "The client's payment link opens on the next installment due, not the whole amount.",
+              "Paying the last installment marks the invoice `paid`."
+            ]
+          },
+          {
+            "group": "Get reminded before a due date",
+            "items": [
+              "Clients get an email three days before each installment is due."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "database": {
+    "summary": "Two new tables (a payment plan and its installments), a status column that replaces the paid checkbox, and one rename on invoices. Migrations 031 to 034.",
+    "tables": [
+      {
+        "id": "invoices",
+        "name": "invoices",
+        "status": "changed",
+        "x": 470,
+        "y": 40,
+        "row": "One invoice, sent to one client.",
+        "explain": [
+          "`paid` is gone. `status` says where the invoice stands, and `partly_paid` is new.",
+          "`amount` is renamed `total_cents`, so the unit is in the name.",
+          "An invoice has at most one payment plan. Without one, it is paid in full as before.",
+          "Migration 033 sets `status` from the old `paid` and `sent_at` columns."
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "text",
+            "status": "same",
+            "note": "inv_ prefix"
+          },
+          {
+            "name": "account_id",
+            "type": "uuid",
+            "status": "same",
+            "note": ""
+          },
+          {
+            "name": "client_id",
+            "type": "text",
+            "status": "same",
+            "note": "",
+            "ref": "clients"
+          },
+          {
+            "name": "number",
+            "type": "text",
+            "status": "same",
+            "note": "unique per account"
+          },
+          {
+            "name": "total_cents",
+            "type": "bigint",
+            "status": "renamed",
+            "from": "amount",
+            "note": "The invoice total, in cents."
+          },
+          {
+            "name": "currency",
+            "type": "text",
+            "status": "same",
+            "note": ""
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "status": "new",
+            "note": "Where the invoice stands.",
+            "values": [
+              "draft",
+              "sent",
+              "partly_paid",
+              "paid",
+              "void"
+            ],
+            "valuesRule": "invoices_status_check"
+          },
+          {
+            "name": "paid",
+            "type": "boolean",
+            "status": "removed",
+            "note": "Replaced by `status`."
+          },
+          {
+            "name": "due_on",
+            "type": "date",
+            "status": "changed",
+            "note": "Now null when a plan sets the dates."
+          },
+          {
+            "name": "sent_at",
+            "type": "timestamptz",
+            "status": "same",
+            "note": ""
+          },
+          {
+            "name": "paid_at",
+            "type": "timestamptz",
+            "status": "new",
+            "note": "When the last payment landed."
+          }
+        ],
+        "constraints": [
+          {
+            "name": "invoices_status_check",
+            "plain": "`status` is one of `draft`, `sent`, `partly_paid`, `paid` or `void`."
+          },
+          {
+            "name": "invoices_paid_has_paid_at",
+            "plain": "An invoice is `paid` exactly when `paid_at` is set."
+          }
+        ],
+        "policies": [
+          {
+            "name": "invoices_owner_access",
+            "plain": "Only members of the account can read or change its invoices."
+          }
+        ],
+        "migrations": [
+          "033",
+          "034"
+        ],
+        "examples": [
+          {
+            "id": "inv_01HX5A7K2P",
+            "account_id": "b7e2c4a0-0000-4000-8000-0000000000aa",
+            "client_id": "cl_01HX4M2Q8Z",
+            "number": "2026-041",
+            "total_cents": 360000,
+            "currency": "USD",
+            "status": "partly_paid",
+            "due_on": null,
+            "sent_at": "2026-11-02T16:20:00+00:00",
+            "paid_at": null
+          },
+          {
+            "id": "inv_01HX5B1C9D",
+            "account_id": "b7e2c4a0-0000-4000-8000-0000000000aa",
+            "client_id": "cl_01HX4M2Q8Z",
+            "number": "2026-042",
+            "total_cents": 85000,
+            "currency": "USD",
+            "status": "sent",
+            "due_on": "2026-12-01",
+            "sent_at": "2026-11-15T09:00:00+00:00",
+            "paid_at": null
+          }
+        ]
+      },
+      {
+        "id": "payment_plans",
+        "name": "payment_plans",
+        "status": "new",
+        "x": 0,
+        "y": 40,
+        "row": "How one invoice is split into installments.",
+        "explain": [
+          "New table. One row per invoice that is paid in installments.",
+          "It records how the invoice was split, so changing one date does not lose the original plan.",
+          "Deleting the invoice deletes its plan."
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "text",
+            "status": "new",
+            "note": "pln_ prefix"
+          },
+          {
+            "name": "invoice_id",
+            "type": "text",
+            "status": "new",
+            "note": "unique: one plan per invoice",
+            "ref": "invoices"
+          },
+          {
+            "name": "installment_count",
+            "type": "smallint",
+            "status": "new",
+            "note": "2 to 12"
+          },
+          {
+            "name": "interval",
+            "type": "text",
+            "status": "new",
+            "note": "How far apart installments fall due.",
+            "values": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ],
+            "valuesRule": "payment_plans_interval_check"
+          },
+          {
+            "name": "first_due_on",
+            "type": "date",
+            "status": "new",
+            "note": ""
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "status": "new",
+            "note": "Set to null when that user is deleted.",
+            "ref": "users"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "status": "new",
+            "note": ""
+          }
+        ],
+        "constraints": [
+          {
+            "name": "payment_plans_count_range",
+            "plain": "A plan has 2 to 12 installments."
+          },
+          {
+            "name": "payment_plans_interval_check",
+            "plain": "`interval` is one of `weekly`, `biweekly` or `monthly`."
+          }
+        ],
+        "policies": [
+          {
+            "name": "payment_plans_owner_access",
+            "plain": "Readable and writable by members of the invoice's account."
+          }
+        ],
+        "migrations": [
+          "031"
+        ],
+        "examples": [
+          {
+            "id": "pln_01HX5A9R3M",
+            "invoice_id": "inv_01HX5A7K2P",
+            "installment_count": 3,
+            "interval": "monthly",
+            "first_due_on": "2026-11-15",
+            "created_by": "b7e2c4a0-0000-4000-8000-000000000001",
+            "created_at": "2026-11-02T16:18:00+00:00"
+          }
+        ]
+      },
+      {
+        "id": "installments",
+        "name": "installments",
+        "status": "new",
+        "x": 0,
+        "y": 520,
+        "row": "One payment the client owes on a plan.",
+        "explain": [
+          "New table. A plan has one row per installment, numbered from 1.",
+          "The amounts on a plan always add up to the invoice total. A check runs when the plan is saved.",
+          "Moving a due date changes `due_on` and keeps `original_due_on`."
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint identity",
+            "status": "new",
+            "note": ""
+          },
+          {
+            "name": "plan_id",
+            "type": "text",
+            "status": "new",
+            "note": "FK to payment_plans, cascade delete",
+            "ref": "payment_plans"
+          },
+          {
+            "name": "seq",
+            "type": "smallint",
+            "status": "new",
+            "note": "1, 2, 3 … unique per plan"
+          },
+          {
+            "name": "amount_cents",
+            "type": "bigint",
+            "status": "new",
+            "note": ""
+          },
+          {
+            "name": "due_on",
+            "type": "date",
+            "status": "new",
+            "note": ""
+          },
+          {
+            "name": "original_due_on",
+            "type": "date",
+            "status": "new",
+            "note": "The date before anyone moved it."
+          },
+          {
+            "name": "paid_at",
+            "type": "timestamptz",
+            "status": "new",
+            "note": "null until paid"
+          },
+          {
+            "name": "payment_ref",
+            "type": "text",
+            "status": "new",
+            "note": "The payment provider's charge id."
+          }
+        ],
+        "constraints": [
+          {
+            "name": "installments_positive_amount",
+            "plain": "Every installment is for more than zero cents."
+          },
+          {
+            "name": "installments_paid_has_ref",
+            "plain": "A paid installment always has a `payment_ref`."
+          }
+        ],
+        "policies": [
+          {
+            "name": "installments_owner_access",
+            "plain": "Readable by members of the invoice's account and by the payment link's signed token."
+          }
+        ],
+        "migrations": [
+          "032"
+        ],
+        "examples": [
+          {
+            "id": 1,
+            "plan_id": "pln_01HX5A9R3M",
+            "seq": 1,
+            "amount_cents": 120000,
+            "due_on": "2026-11-15",
+            "original_due_on": "2026-11-15",
+            "paid_at": "2026-11-14T20:11:00+00:00",
+            "payment_ref": "ch_3Pq81"
+          },
+          {
+            "id": 2,
+            "plan_id": "pln_01HX5A9R3M",
+            "seq": 2,
+            "amount_cents": 120000,
+            "due_on": "2026-12-22",
+            "original_due_on": "2026-12-15",
+            "paid_at": null,
+            "payment_ref": null
+          },
+          {
+            "id": 3,
+            "plan_id": "pln_01HX5A9R3M",
+            "seq": 3,
+            "amount_cents": 120000,
+            "due_on": "2027-01-15",
+            "original_due_on": "2027-01-15",
+            "paid_at": null,
+            "payment_ref": null
+          }
+        ]
+      },
+      {
+        "id": "clients",
+        "name": "clients",
+        "status": "context",
+        "x": 940,
+        "y": 40,
+        "row": "One client a freelancer bills.",
+        "explain": [
+          "Shown for context. Invoices point here.",
+          "Unchanged by this PR."
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "text",
+            "status": "same",
+            "note": ""
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "status": "same",
+            "note": ""
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "status": "same",
+            "note": "where reminders go"
+          }
+        ],
+        "constraints": [],
+        "policies": [],
+        "migrations": [],
+        "examples": [
+          {
+            "id": "cl_01HX4M2Q8Z",
+            "name": "Northwind Studio",
+            "email": "billing@northwind.example"
+          }
+        ]
+      },
+      {
+        "id": "users",
+        "name": "users",
+        "status": "context",
+        "x": 470,
+        "y": 520,
+        "row": "One person who signs in.",
+        "explain": [
+          "Shown for context. `payment_plans.created_by` points here.",
+          "Unchanged by this PR."
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "status": "same",
+            "note": ""
+          },
+          {
+            "name": "display_name",
+            "type": "text",
+            "status": "same",
+            "note": ""
+          }
+        ],
+        "constraints": [],
+        "policies": [],
+        "migrations": []
+      }
+    ],
+    "relations": [
+      {
+        "from": "payment_plans",
+        "fromCol": "invoice_id",
+        "to": "invoices",
+        "toCol": "id",
+        "label": "cascade"
+      },
+      {
+        "from": "installments",
+        "fromCol": "plan_id",
+        "to": "payment_plans",
+        "toCol": "id",
+        "label": "cascade"
+      },
+      {
+        "from": "invoices",
+        "fromCol": "client_id",
+        "to": "clients",
+        "toCol": "id",
+        "label": ""
+      },
+      {
+        "from": "payment_plans",
+        "fromCol": "created_by",
+        "to": "users",
+        "toCol": "id",
+        "label": "set null"
+      }
+    ],
+    "migrations": [
+      {
+        "id": "031",
+        "title": "payment_plans",
+        "summary": "New table, one plan per invoice."
+      },
+      {
+        "id": "032",
+        "title": "installments",
+        "summary": "New table, numbered installments per plan."
+      },
+      {
+        "id": "033",
+        "title": "invoice_status",
+        "summary": "Add `status` and `paid_at`, fill them from `paid` and `sent_at`, then drop `paid`."
+      },
+      {
+        "id": "034",
+        "title": "invoice_total_cents",
+        "summary": "Rename `amount` to `total_cents`."
+      }
+    ],
+    "dataMigration": {
+      "table": "invoices",
+      "title": "What migrations 031 to 034 do to an invoice stored before this PR",
+      "explain": [
+        "Starts from a paid invoice with `paid` set to true.",
+        "`paid` becomes `status` `paid`, and `paid_at` is copied from the last payment.",
+        "`amount` is renamed `total_cents`. The value does not change.",
+        "No plan is created. Old invoices stay paid in full."
+      ],
+      "before": {
+        "id": "inv_01HV9T2B7C",
+        "number": "2026-007",
+        "amount": 240000,
+        "currency": "USD",
+        "paid": true,
+        "due_on": "2026-03-01",
+        "sent_at": "2026-02-01T10:00:00+00:00"
+      },
+      "after": {
+        "id": "inv_01HV9T2B7C",
+        "number": "2026-007",
+        "total_cents": 240000,
+        "currency": "USD",
+        "status": "paid",
+        "due_on": "2026-03-01",
+        "sent_at": "2026-02-01T10:00:00+00:00",
+        "paid_at": "2026-02-20T14:32:00+00:00"
+      }
+    }
+  },
+  "backend": {
+    "summary": "The billing module gains payment plans. Splitting, paying and rescheduling go through one `PaymentPlan` type, and invoice status is worked out in one place.",
+    "groups": [
+      {
+        "title": "Plans and installments",
+        "items": [
+          {
+            "id": "PaymentPlan",
+            "title": "PaymentPlan",
+            "kind": "struct",
+            "status": "new",
+            "file": "server/billing/plan.ts",
+            "summary": "How an invoice is split, and the installments that result.",
+            "properties": [
+              {
+                "name": "installments",
+                "type": "Installment[]",
+                "status": "new",
+                "desc": "In due order. Amounts add up to the invoice total."
+              },
+              {
+                "name": "interval",
+                "type": "PlanInterval",
+                "status": "new",
+                "desc": "`weekly`, `biweekly` or `monthly`."
+              },
+              {
+                "name": "nextDue()",
+                "type": "Installment | null",
+                "status": "new",
+                "desc": "The first unpaid installment, or null when all are paid."
+              }
+            ],
+            "example": {
+              "lang": "json",
+              "code": {
+                "id": "pln_01HX5A9R3M",
+                "invoiceId": "inv_01HX5A7K2P",
+                "interval": "monthly",
+                "installments": [
+                  {
+                    "seq": 1,
+                    "amountCents": 120000,
+                    "dueOn": "2026-11-15",
+                    "paidAt": "2026-11-14T20:11:00Z"
+                  },
+                  {
+                    "seq": 2,
+                    "amountCents": 120000,
+                    "dueOn": "2026-12-22",
+                    "paidAt": null
+                  },
+                  {
+                    "seq": 3,
+                    "amountCents": 120000,
+                    "dueOn": "2027-01-15",
+                    "paidAt": null
+                  }
+                ]
+              }
+            },
+            "notes": [
+              "Built only by `splitInvoice`, so a plan whose amounts do not add up cannot exist."
+            ]
+          },
+          {
+            "id": "splitInvoice",
+            "title": "splitInvoice",
+            "kind": "api",
+            "status": "new",
+            "file": "server/billing/split.ts",
+            "summary": "Turns an invoice total, a count and an interval into installments.",
+            "properties": [
+              {
+                "name": "count",
+                "type": "number",
+                "status": "new",
+                "desc": "2 to 12."
+              },
+              {
+                "name": "firstDueOn",
+                "type": "Date",
+                "status": "new",
+                "desc": "Later dates follow the interval. A monthly date that does not exist, such as the 31st, moves to the last day of the month."
+              }
+            ],
+            "example": {
+              "lang": "text",
+              "code": "splitInvoice(100000 cents, 3, monthly, 2026-01-31)\n→ 33333 on 2026-01-31, 33333 on 2026-02-28, 33334 on 2026-03-31"
+            },
+            "notes": []
+          }
+        ]
+      },
+      {
+        "title": "Invoice model",
+        "items": [
+          {
+            "id": "Invoice",
+            "title": "Invoice",
+            "kind": "struct",
+            "status": "changed",
+            "file": "server/billing/invoice.ts",
+            "summary": "An invoice, as the app and the payment page see it.",
+            "properties": [
+              {
+                "name": "totalCents",
+                "type": "number",
+                "status": "renamed",
+                "from": "amount",
+                "desc": "The invoice total, in cents."
+              },
+              {
+                "name": "status",
+                "type": "InvoiceStatus",
+                "status": "new",
+                "desc": "Replaces `paid`."
+              },
+              {
+                "name": "paid",
+                "type": "boolean",
+                "status": "removed",
+                "desc": "Read `status` instead."
+              },
+              {
+                "name": "plan",
+                "type": "PaymentPlan | null",
+                "status": "new",
+                "desc": "null when paid in full."
+              }
+            ],
+            "example": null,
+            "notes": []
+          },
+          {
+            "id": "InvoiceStatus",
+            "title": "InvoiceStatus",
+            "kind": "enum",
+            "status": "new",
+            "file": "server/billing/status.ts",
+            "summary": "Where an invoice stands. Worked out from its plan and payments, never set by hand except `void`.",
+            "properties": [
+              {
+                "name": "draft | sent | partly_paid | paid | void",
+                "type": "",
+                "status": "new",
+                "desc": "`partly_paid` means at least one installment is paid and at least one is not."
+              }
+            ],
+            "example": null,
+            "notes": []
+          }
+        ]
+      },
+      {
+        "title": "Reminders",
+        "items": [
+          {
+            "id": "installment-reminders",
+            "title": "installment-reminders job",
+            "kind": "rule",
+            "status": "new",
+            "file": "server/jobs/installment-reminders.ts",
+            "summary": "Daily job that emails clients about installments due in three days.",
+            "properties": [],
+            "example": null,
+            "notes": [
+              "Sends at most one reminder per installment, tracked by `installment_id` in the email log."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "frontend": {
+    "summary": "The invoice page gets a payment plan editor and a status pill, and the client payment page pays one installment at a time.",
+    "groups": [
+      {
+        "title": "Invoice page",
+        "items": [
+          {
+            "id": "PlanEditor",
+            "title": "PlanEditor",
+            "kind": "component",
+            "status": "new",
+            "file": "web/invoices/plan-editor.tsx",
+            "summary": "Choose the number of installments, the interval and the first due date, with a live preview of each amount.",
+            "properties": [
+              {
+                "name": "invoice",
+                "type": "Invoice",
+                "status": "new",
+                "desc": ""
+              }
+            ],
+            "example": null,
+            "notes": [
+              "Shows on: a draft invoice, and a sent invoice with a plan"
+            ]
+          },
+          {
+            "id": "StatusPill",
+            "title": "StatusPill",
+            "kind": "component",
+            "status": "changed",
+            "file": "web/invoices/status-pill.tsx",
+            "summary": "Shows the invoice status. Partly paid reads \"2 of 3 paid\".",
+            "properties": [
+              {
+                "name": "status",
+                "type": "InvoiceStatus",
+                "status": "changed",
+                "desc": "Was a `paid` boolean."
+              }
+            ],
+            "example": null,
+            "notes": []
+          }
+        ]
+      },
+      {
+        "title": "Client payment page",
+        "items": [
+          {
+            "id": "PayPage",
+            "title": "PayPage",
+            "kind": "view",
+            "status": "changed",
+            "file": "web/pay/pay-page.tsx",
+            "summary": "Opens on the next installment due, with the rest of the schedule below it.",
+            "properties": [],
+            "example": null,
+            "notes": []
+          }
+        ]
+      }
+    ]
+  },
+  "architecture": {
+    "summary": "The decisions below change how billing is shaped, not just what it does.",
+    "decisions": [
+      {
+        "id": "A1",
+        "title": "Invoice status is derived, not stored by callers",
+        "before": "Callers set `paid` to true when a payment landed.",
+        "after": "Recording a payment updates the installment, and one function works out the invoice status in the same transaction.",
+        "why": "A partly paid invoice has many paths to `paid`, and only one place decides.",
+        "tradeoff": "The status is stored for queries, so the function and the column must agree. A test checks every combination.",
+        "source": "PR description",
+        "significance": "foundational",
+        "diagram": {
+          "before": [
+            [
+              "Caller",
+              "→ sets",
+              {
+                "label": "`paid = true`",
+                "tone": "removed"
+              }
+            ]
+          ],
+          "after": [
+            [
+              "Record a payment",
+              "→",
+              "Installment `paid_at`",
+              "→ `invoiceStatus()`",
+              {
+                "label": "`status`",
+                "sub": "same transaction",
+                "tone": "new"
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "id": "A3",
+        "title": "Money is whole cents everywhere",
+        "before": "`amount` held cents, but the name did not say so.",
+        "after": "`total_cents` and `amount_cents`. Splitting never uses floating point.",
+        "why": "Splitting must add up to the total exactly.",
+        "tradeoff": "A rename that touches every reader of `amount`.",
+        "source": "Commit 1e7c440",
+        "significance": "foundational",
+        "diagram": {
+          "before": [
+            [
+              {
+                "label": "`amount`",
+                "sub": "cents, but the name does not say so"
+              }
+            ]
+          ],
+          "after": [
+            [
+              {
+                "label": "`total_cents`",
+                "sub": "100000",
+                "tone": "changed"
+              },
+              "→ `splitInvoice`",
+              {
+                "stack": [
+                  "`amount_cents` 33333",
+                  "`amount_cents` 33333",
+                  {
+                    "label": "`amount_cents` 33334",
+                    "sub": "takes the leftover cent",
+                    "tone": "new"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "id": "A2",
+        "title": "A plan keeps its original schedule",
+        "before": "No plans.",
+        "after": "Moving a date writes `due_on` and keeps `original_due_on`.",
+        "why": "Bookkeepers asked to see which installments were moved.",
+        "tradeoff": "Two dates per installment, and the page has to explain which one shows.",
+        "source": "Commit 9b02f7a",
+        "significance": "significant",
+        "diagram": {
+          "before": [
+            [
+              {
+                "label": "No plans",
+                "tone": "muted"
+              }
+            ]
+          ],
+          "after": [
+            [
+              {
+                "label": "Installment 2",
+                "sub": "`due_on` 2026-12-22",
+                "tone": "changed"
+              },
+              "→ keeps",
+              {
+                "label": "`original_due_on`",
+                "sub": "2026-12-15",
+                "tone": "new"
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "principles": {
+    "source": "A Philosophy of Software Design, 2nd edition, John Ousterhout. The 16 principles are the book's own summary list; the red flags are its summary of symptoms.",
+    "method": "Each principle is read against what this PR changed. This is a design assessment from the diff and the commit history, not a bug review.",
+    "items": [
+      {
+        "n": 1,
+        "title": "Complexity is incremental: sweat the small stuff",
+        "page": "p. 11",
+        "rating": "strong",
+        "verdict": "Small, focused PR.",
+        "evidence": [
+          "41 files, 14 commits, one feature."
+        ]
+      },
+      {
+        "n": 2,
+        "title": "Working code isn't enough",
+        "page": "p. 14",
+        "rating": "strong",
+        "verdict": "Replaced the paid flag instead of adding a second one.",
+        "evidence": [
+          "`paid` is dropped in migration 033, not kept beside `status`."
+        ]
+      },
+      {
+        "n": 3,
+        "title": "Make continual small investments in design",
+        "page": "p. 15",
+        "rating": "strong",
+        "verdict": "Renamed `amount` while touching it.",
+        "evidence": [
+          "Migration 034 and commit 1e7c440."
+        ]
+      },
+      {
+        "n": 4,
+        "title": "Modules should be deep",
+        "page": "p. 23",
+        "rating": "strong",
+        "verdict": "`splitInvoice` hides rounding and month ends behind three arguments.",
+        "evidence": [
+          "server/billing/split.ts"
+        ]
+      },
+      {
+        "n": 5,
+        "title": "Make the common case simple",
+        "page": "p. 27",
+        "rating": "strong",
+        "verdict": "An invoice without a plan works exactly as before.",
+        "evidence": [
+          "`plan` is null and no new step is needed to send."
+        ]
+      },
+      {
+        "n": 6,
+        "title": "A simple interface matters more than a simple implementation",
+        "page": "p. 61",
+        "rating": "strong",
+        "verdict": "Callers record a payment; status follows.",
+        "evidence": [
+          "Decision A1."
+        ]
+      },
+      {
+        "n": 7,
+        "title": "General-purpose modules are deeper",
+        "page": "p. 39",
+        "rating": "mixed",
+        "verdict": "Plans only fit invoices.",
+        "evidence": [
+          "A subscription feature would need its own split logic."
+        ]
+      },
+      {
+        "n": 8,
+        "title": "Separate general-purpose and special-purpose code",
+        "page": "p. 45",
+        "rating": "strong",
+        "verdict": "Date math lives in a shared helper.",
+        "evidence": [
+          "`addInterval` in server/lib/dates.ts."
+        ]
+      },
+      {
+        "n": 9,
+        "title": "Different layers should have different abstractions",
+        "page": "p. 51",
+        "rating": "strong",
+        "verdict": "Storage speaks rows; the page speaks \"2 of 3 paid\".",
+        "evidence": [
+          "StatusPill maps status to words."
+        ]
+      },
+      {
+        "n": 10,
+        "title": "Pull complexity downward",
+        "page": "p. 61",
+        "rating": "strong",
+        "verdict": "The pay page asks for `nextDue()`, not the schedule.",
+        "evidence": [
+          "web/pay/pay-page.tsx"
+        ]
+      },
+      {
+        "n": 11,
+        "title": "Define errors out of existence",
+        "page": "p. 81",
+        "rating": "strong",
+        "verdict": "A missing month-end date moves to the last day instead of failing.",
+        "evidence": [
+          "`splitInvoice` example."
+        ]
+      },
+      {
+        "n": 12,
+        "title": "Design it twice",
+        "page": "p. 91",
+        "rating": "mixed",
+        "verdict": "One alternative noted, not compared.",
+        "evidence": [
+          "The description mentions storing installments as JSON on the invoice, without a reason for rejecting it."
+        ]
+      },
+      {
+        "n": 13,
+        "title": "Comments should describe what isn't obvious",
+        "page": "p. 101",
+        "rating": "strong",
+        "verdict": "Comments explain the leftover-cents rule.",
+        "evidence": [
+          "server/billing/split.ts"
+        ]
+      },
+      {
+        "n": 14,
+        "title": "Design for ease of reading",
+        "page": "p. 151",
+        "rating": "strong",
+        "verdict": "Units are in the names.",
+        "evidence": [
+          "`total_cents`, `amount_cents`."
+        ]
+      },
+      {
+        "n": 15,
+        "title": "Increments should be abstractions, not features",
+        "page": "p. 156",
+        "rating": "strong",
+        "verdict": "The PR adds a `PaymentPlan` abstraction that the feature uses.",
+        "evidence": [
+          "server/billing/plan.ts"
+        ]
+      },
+      {
+        "n": 16,
+        "title": "Separate what matters from what doesn't",
+        "page": "p. 171",
+        "rating": "mixed",
+        "verdict": "The pay page leads with the next amount due, but the editor shows every option at once.",
+        "evidence": [
+          "PlanEditor shows interval, count and date with equal weight."
+        ]
+      }
+    ],
+    "redFlags": [
+      {
+        "name": "Information leakage",
+        "seen": true,
+        "where": "The status list is in the CHECK constraint and in `InvoiceStatus`, held together by a test.",
+        "issue": [
+          [
+            "The list of statuses",
+            "→ copied into",
+            {
+              "stack": [
+                {
+                  "label": "CHECK constraint",
+                  "tone": "changed"
+                },
+                {
+                  "label": "`InvoiceStatus`",
+                  "tone": "changed"
+                }
+              ]
+            }
+          ]
+        ],
+        "fix": {
+          "text": "Generate the CHECK constraint from `InvoiceStatus` in the migration helper, so the list exists once.",
+          "diagram": [
+            [
+              {
+                "label": "`InvoiceStatus`",
+                "sub": "the one list",
+                "tone": "new"
+              },
+              "→ generates",
+              "CHECK constraint"
+            ]
+          ]
+        }
+      },
+      {
+        "name": "Shallow module",
+        "seen": false,
+        "where": ""
+      },
+      {
+        "name": "Pass-through method",
+        "seen": false,
+        "where": ""
+      },
+      {
+        "name": "Vague name",
+        "seen": false,
+        "where": ""
+      }
+    ]
+  },
+  "verification": {
+    "agentNote": "This canvas was made in the same session that built the PR, so the verify runs are its own.",
+    "verifySkill": {
+      "name": "verify-tally",
+      "journeys": "journeys/billing.md (3 journeys added: split an invoice, pay an installment, move a date)",
+      "walked": true,
+      "detail": "All three journeys walked in a local build, as a freelancer and as a client."
+    },
+    "runs": [
+      {
+        "name": "npm test",
+        "group": "Tests",
+        "result": "pass",
+        "detail": "286 pass"
+      },
+      {
+        "name": "Migration test against a copy of seed data",
+        "group": "Tests",
+        "result": "pass",
+        "detail": ""
+      },
+      {
+        "name": "Production build",
+        "group": "Builds and demos",
+        "result": "pass",
+        "detail": ""
+      },
+      {
+        "name": "Email preview",
+        "group": "Builds and demos",
+        "result": "warn",
+        "detail": "Reminder email checked in the preview tool only, not a real inbox."
+      }
+    ],
+    "foundAndFixed": [
+      {
+        "found": "Splitting 1000.00 into 3 lost a cent.",
+        "by": "Unit test",
+        "fix": "The last installment takes the leftover cents.",
+        "ref": "7a3f0c1"
+      },
+      {
+        "found": "A plan starting on January 31 skipped February.",
+        "by": "verify-tally journey",
+        "fix": "Month-end dates move to the last day of the month.",
+        "ref": "c82d5e9"
+      }
+    ],
+    "gaps": [
+      "Refunds on a partly paid invoice are not handled yet.",
+      "Reminder time zones use the account, not the client."
+    ],
+    "canvasChecks": [
+      "Every table and column on the Database view comes from the migrated schema.",
+      "Every example row loads into that schema and passes its constraints."
+    ]
+  },
+  "media": {
+    "note": "Screenshots and recordings are optional.",
+    "items": [
+      {
+        "kind": "link",
+        "title": "Preview build",
+        "url": "https://example.com/tally/pr-128",
+        "detail": "Seeded with one invoice on a three-installment plan."
+      }
+    ]
+  },
+  "deadCode": {
+    "summary": "Unused code at the head, compared with the base. This PR left one unused helper behind; one older finding is unchanged.",
+    "groups": [
+      {
+        "title": "Left by this PR",
+        "note": "Unused at the head, used at the base.",
+        "items": [
+          {
+            "id": "markPaid",
+            "name": "markInvoicePaid",
+            "status": "new",
+            "where": "src/billing/invoices.ts:88",
+            "finding": "The old way to mark a whole invoice paid has no callers.",
+            "why": "Recording a payment now works out the invoice status (A1), so nothing sets it directly.",
+            "fix": "Delete it and its test.",
+            "tool": "knip, from the app entry and every test."
+          }
+        ]
+      },
+      {
+        "title": "Already unused before this PR",
+        "note": "Unused at the base too.",
+        "items": [
+          {
+            "id": "legacyCsv",
+            "name": "exportLegacyCsv",
+            "status": "existing",
+            "where": "src/reports/csv.ts:12",
+            "finding": "A CSV export no screen offers.",
+            "fix": "Delete it, or link it from Reports.",
+            "tool": "knip."
+          }
+        ]
+      }
+    ],
+    "scans": [
+      {
+        "tool": "knip",
+        "language": "TypeScript",
+        "result": "pass",
+        "scope": "Unused files, exports and types from the app entry, routes and tests.",
+        "counts": "1 at the base, 2 at the head.",
+        "limits": "Code reached only by string can look unused.",
+        "command": "npx knip --reporter json"
+      }
+    ]
+  }
+}
