@@ -262,7 +262,13 @@ tr.row.flash td { animation: flash 2.4s ease-out; }
 .origins { gap: 12px !important; }
 .code-file { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 10px; }
 .code-file .path { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
-.code-file a { margin-left: auto; font-size: 13px; }
+.code-file .code-tools { margin-left: auto; display: inline-flex; align-items: baseline; gap: 12px; }
+.code-file a { font-size: 13px; }
+.wrap-btn { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font: 500 12px/1.5 var(--sans); color: var(--muted); cursor: pointer; align-self: center; }
+.wrap-btn svg { width: 13px; height: 13px; }
+.wrap-btn:hover { color: var(--ink); background: var(--hover); }
+.wrap-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.excerpt.wrap .src-table td.src { white-space: pre-wrap; overflow-wrap: anywhere; }
 .excerpt { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
 .excerpt-head { display: flex; justify-content: space-between; gap: 8px; padding: 5px 10px; background: var(--side); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .excerpt-scroll { overflow-x: auto; }
@@ -768,6 +774,7 @@ let state = inline ? JSON.parse(inline) : null;
 const ui = {
   view: '__synthesis', tab: {}, q: '', sev: 'all', cat: 'all', who: 'all', dir: 'all', out: 'all', raw: false, archivedView: false,
   detail: null, picked: new Set(), lostConnection: false, dialog: false, draft: '',
+  wrapCode: false,  // Wrap long lines in the Code tab; each viewer's choice is remembered in their browser.
 };
 
 /* ---------- helpers ---------- */
@@ -1255,11 +1262,13 @@ function ruleProblem(r) {
     <div class="sect-label">What the change does</div><div class="body">${md(r.body)}</div>
     ${r.fix ? `<div class="fix"><div class="fix-label">Recommended resolution</div>${md(r.fix)}</div>` : ''}`;
 }
+const WRAP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M3 12h15a3 3 0 1 1 0 6h-4"/><path d="m16 16-2 2 2 2"/><path d="M3 18h7"/></svg>';
 function codeTab(r) {
   if (!r.file) return '<p class="note">This finding doesn\'t point at a file.</p>';
   const excerpts = (state.snippets || {})[`${r.file}:${r.line}`];
   const link = fileLink(r.file);
-  const head = `<div class="code-file"><span class="path">${esc(r.file)}</span>${r.line ? `<span class="note">${esc(lineLabel(r.line))}</span>` : ''}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open on GitHub ↗</a>` : ''}</div>`;
+  const wrap = excerpts && excerpts.length ? `<button type="button" class="wrap-btn" data-act="wrap-code" aria-pressed="${ui.wrapCode}" title="${ui.wrapCode ? 'Show each line on one row' : 'Wrap long lines to fit the window'}">${WRAP_SVG}Wrap lines</button>` : '';
+  const head = `<div class="code-file"><span class="path">${esc(r.file)}</span>${r.line ? `<span class="note">${esc(lineLabel(r.line))}</span>` : ''}<span class="code-tools">${wrap}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open on GitHub ↗</a>` : ''}</span></div>`;
   if (!excerpts || !excerpts.length) return head + `<p class="note">${state.status === 'running' ? 'The code excerpt appears once the reviewer reports.' : 'This run didn\'t save an excerpt of this code.'}</p>`;
   return head + excerpts.map(x => {
     const [a, b] = x.focus;
@@ -1268,7 +1277,7 @@ function codeTab(r) {
       const n = x.start + i;
       return `<tr class="${n >= a && n <= b ? 'hit' : ''}"><td class="ln">${n}</td><td class="src">${esc(text) || ' '}</td></tr>`;
     }).join('');
-    return `<div class="excerpt"><div class="excerpt-head"><span>${esc(lineLabel(a === b ? a : `${a}-${b}`))}</span>${gh ? `<a href="${esc(gh)}" target="_blank" rel="noopener">GitHub ↗</a>` : ''}</div><div class="excerpt-scroll"><table class="src-table">${rows}</table></div></div>`;
+    return `<div class="excerpt${ui.wrapCode ? ' wrap' : ''}"><div class="excerpt-head"><span>${esc(lineLabel(a === b ? a : `${a}-${b}`))}</span>${gh ? `<a href="${esc(gh)}" target="_blank" rel="noopener">GitHub ↗</a>` : ''}</div><div class="excerpt-scroll"><table class="src-table">${rows}</table></div></div>`;
   }).join('');
 }
 function reviewersTab(r) {
@@ -1875,6 +1884,7 @@ document.addEventListener('click', async event => {
     if (a === 'cancel-ask') { ui.confirmCancel = !ui.confirmCancel; renderChrome(); if (ui.confirmCancel) document.getElementById('cancel-run')?.focus(); return; }
     if (a === 'cancel-keep') { ui.confirmCancel = false; renderChrome(); document.querySelector('[data-act="cancel-ask"]')?.focus(); return; }
     if (a === 'cancel-run') { await cancelRun(); return; }
+    if (a === 'wrap-code') { ui.wrapCode = !ui.wrapCode; store('review-panel:wrap-code', ui.wrapCode); renderDetail(); document.querySelector('[data-act="wrap-code"]')?.focus(); return; }
     if (a === 'settings') { openSettings(true); return; }
     if (a === 'copy-session') { await copy(act.dataset.command, null, act); return; }
     if (a === 'cost') { ui.costOpen = true; renderCost(); document.querySelector('#cost .btn[data-act="cost-close"]')?.focus(); return; }
@@ -2724,7 +2734,7 @@ function adopt(next) {
   const first = !state;
   upgradeSeverities(next);
   state = next;
-  if (first) { const saved = recall('review-panel:' + state.run_dir); if (Array.isArray(saved)) saved.forEach(k => ui.picked.add(k)); }
+  if (first) { ui.wrapCode = !!recall('review-panel:wrap-code'); const saved = recall('review-panel:' + state.run_dir); if (Array.isArray(saved)) saved.forEach(k => ui.picked.add(k)); }
 }
 let failedPolls = 0;
 async function poll() {
