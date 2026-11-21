@@ -169,6 +169,10 @@ nav .section-title { margin: 0; padding: 10px 8px 4px; font-weight: 400; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 10px; }
 .toolbar input[type=search] { flex: 1 1 220px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .toolbar select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.toolbar .fpick .mpick { min-width: 150px; }
+.toolbar .fpick .mpop { width: max(100%, 300px); right: 0; left: auto; }
+.fpick .mopt .mname { white-space: nowrap; }
+.mopt .fcount { font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { background: var(--bg); border: 0; padding: 6px 10px; cursor: pointer; font-size: 13px; }
 .seg button + button { border-left: 1px solid var(--line); }
@@ -198,7 +202,7 @@ td.fid { font-family: var(--mono); color: var(--muted); font-size: 12px; white-s
 .chips { display: flex; gap: 4px; flex-wrap: wrap; }
 .chip { background: var(--code); color: var(--muted); border-radius: 6px; padding: 0 6px; font-size: 11.5px; font-family: var(--mono); white-space: nowrap; }
 .chip.more { background: var(--accent-bg); color: var(--accent); }
-.outcome { font-size: 12.5px; color: var(--muted); }
+.outcome { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 tr.row.current td { background: var(--accent-bg); }
 tr.row.flash td { animation: flash 2.4s ease-out; }
 @keyframes flash { 0%, 40% { background: var(--adv-bg); } 100% { background: transparent; } }
@@ -271,6 +275,25 @@ tr.row:focus-visible, tr.row.flash:focus { outline: 2px solid var(--accent); out
 .body pre code { background: none; padding: 0; }
 .body ul, .body ol, .fix ul, .fix ol { padding-left: 20px; margin: 6px 0; }
 .body li > ul, .body li > ol, .fix li > ul, .fix li > ol { margin: 2px 0; }
+.walk-mark { display: inline-flex; vertical-align: -2px; color: var(--accent); }
+.walk-mark svg { width: 15px; height: 15px; }
+.walk-mark.o-reproduced { color: var(--block); }
+.retention { font-size: 12.5px; margin: 4px 0 0; }
+.walk-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.pill.o-reproduced { background: var(--block-bg); color: var(--block); }
+.pill.o-not-reproduced { background: var(--ok-bg); color: var(--ok); }
+.pill.o-not-reachable { background: var(--code); color: var(--muted); }
+.walk-video { margin: 14px 0; }
+.walk-video figcaption { font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.walk-video video { width: 100%; max-height: 60vh; border-radius: 10px; border: 1px solid var(--line); background: #000; }
+.walk-steps { margin: 4px 0 0; padding-left: 22px; font-size: 13.5px; }
+.walk-setup { margin: 14px 0 6px; font-size: 13.5px; }
+.walk-setup summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.walk-setup ol { padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
+.hint.warn { color: var(--adv); }
+.with-unit { display: inline-flex; align-items: center; gap: 8px; }
+.swin .with-unit input { width: 90px; flex: none; }
+.lead-p { margin: 0 0 12px; font-size: 13.5px; max-width: 70ch; }
 .rule-box { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin-bottom: 14px; overflow: hidden; }
 .rule-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 8px 12px; background: var(--hover); border-bottom: 1px solid var(--line); }
 .rule-head .rid { font-family: var(--mono); font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
@@ -433,7 +456,7 @@ pre.setup-prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 1
 .dot-ok, .dot-err { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; background: var(--ok); }
 .dot-err { background: var(--block); }
 .mpick-wrap { position: relative; }
-.swin .mpick { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 7px; padding: 7px 10px; cursor: pointer; min-width: 0; }
+.swin .mpick, .fpick .mpick { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 7px; padding: 7px 10px; cursor: pointer; min-width: 0; }
 .swin .mpick:hover { border-color: var(--faint); }
 .swin .mpick:focus-visible, .swin .mpick[aria-expanded="true"] { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 .mpick .mname { flex: none; white-space: nowrap; }
@@ -843,9 +866,19 @@ function toolbar(rows, withReviewer) {
   return `<div class="toolbar">
     <input id="search" type="search" placeholder="Search findings" value="${esc(ui.q)}" aria-label="Search findings">
     <span class="seg" role="group" aria-label="Severity">${seg('all', 'All')}${seg('blocking', 'Blocks merge')}${seg('advisory', 'Advisory')}</span>
-    <select id="cat" aria-label="Type"><option value="all">All types</option>${cats.map(c => `<option value="${esc(c)}" ${ui.cat === c ? 'selected' : ''}>${esc(words(CATEGORY_WORDS, c)[0])}</option>`).join('')}</select>
-    ${withReviewer ? `<select id="who" aria-label="Reviewer"><option value="all">All reviewers</option>${who.map(w => `<option value="${esc(w)}" ${ui.who === w ? 'selected' : ''}>${esc(reviewerLabel(w))}</option>`).join('')}</select>` : ''}
+    ${filterPick('cat', 'Type', [{ value: 'all', label: 'All types', count: rows.length }, ...cats.map(c => ({ value: c, label: words(CATEGORY_WORDS, c)[0], count: rows.filter(r => r.category === c).length }))], ui.cat)}
+    ${withReviewer ? filterPick('who', 'Reviewer', [{ value: 'all', label: 'All reviewers', count: rows.length }, ...who.map(w => ({ value: w, label: reviewerLabel(w), icon: reviewerIcon(w), count: rows.filter(r => r.reviewers.includes(w)).length }))], ui.who) : ''}
   </div>`;
+}
+// The toolbar's filters use the same rich dropdown as the settings' pickers: icon, name, and a count.
+function filterPick(id, label, options, value) {
+  const current = options.find(o => o.value === value) || options[0];
+  const open = ui.filterOpen === id;
+  return `<div class="mpick-wrap fpick"><button type="button" class="mpick" id="${id}" data-fopen="${id}" aria-haspopup="listbox" aria-expanded="${open}" aria-label="${esc(label)}">
+      ${current.icon ? `<span class="cicon">${current.icon}</span>` : ''}<span class="mname">${esc(current.label)}</span><span class="mid"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>
+    ${open ? `<div class="mpop" role="listbox" aria-label="${esc(label)}"><div class="mlist">${options.map(o => `<div class="mopt" role="option" tabindex="0" aria-selected="${o.value === value}" data-fpick="${esc(o.value)}" data-ffield="${id}">
+        ${o.value === value ? CHECK_SVG.replace('class="ck"', 'class="mcheck"') : '<span class="mcheck"></span>'}${o.icon ? `<span class="cicon">${o.icon}</span>` : ''}<span class="mname">${esc(o.label)}</span><span class="fcount">${o.count}</span></div>`).join('')}</div></div>` : ''}</div>`;
 }
 /* ---------- the finding window ---------- */
 // The rows in the table as it's filtered now, so the window's Previous and Next follow what the user sees.
@@ -883,6 +916,30 @@ function fileLink(file, start, end) {
   if (t.kind !== 'pr' || !t.github || !t.head) return '';
   const anchor = start ? `#L${start}${end && end !== start ? `-L${end}` : ''}` : '';
   return `https://github.com/${t.github}/blob/${t.head}/${file.split('/').map(encodeURIComponent).join('/')}${anchor}`;
+}
+// The finding's video walkthrough: what the agent saw, the video when the page can reach it, and its steps.
+const OUTCOME_WORDS = {
+  reproduced: ['Reproduced', 'The video shows the problem happening in the running app.'],
+  'not-reproduced': ['Didn’t reproduce', 'The agent followed the scenario and the problem didn’t happen.'],
+  'not-reachable': ['Not shown in the app', 'The problem can’t be seen from the UI, so there is no video.'],
+};
+function walkthroughTab(r, walk) {
+  const result = walk.result;
+  if (!result) {
+    if (walk.status === 'queued') return '<p class="note">Queued. Walkthroughs record one at a time after the synthesis.</p>';
+    if (walk.status === 'running') return `<div class="act-head"><span><span class="live-dot"></span>Recording now</span></div>${activityHtml(walk, walk.steps || [], true)}`;
+    return `<div class="banner">The walkthrough ${esc(walk.status)}${walk.error ? `: ${esc(walk.error)}` : ''}</div>`;
+  }
+  const [word, hint] = OUTCOME_WORDS[result.outcome] || [result.outcome, ''];
+  const videos = result.videos && result.videos.length ? result.videos : result.video ? [{ file: result.video, title: '' }] : [];
+  const src = file => `walkthroughs/${encodeURIComponent(r.id)}/${encodeURIComponent(file)}`;
+  // The live page serves the videos, and report.html opened from the run folder finds them beside it; a copy of
+  // the page anywhere else can only say where they are.
+  const player = inline && location.protocol !== 'file:' ? (videos.length ? `<p class="note">The video${videos.length > 1 ? 's are' : ' is'} in the run folder, at ${videos.map(v => `<code>walkthroughs/${esc(r.id)}/${esc(v.file)}</code>`).join(', ')}. Open the run’s report.html to watch here.</p>` : '')
+    : videos.map(v => `<figure class="walk-video">${v.title ? `<figcaption>${esc(v.title)}</figcaption>` : ''}<video controls preload="metadata" src="${esc(src(v.file))}"></video></figure>`).join('');
+  const steps = (result.steps || []).length ? `<div class="sect-label">Steps</div><ol class="walk-steps">${result.steps.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>` : '';
+  return `<div class="walk-head"><span class="pill o-${esc(result.outcome)}" title="${esc(hint)}">${esc(word)}</span>${result.attached ? '<span class="note">Recorded outside the panel and attached to this run.</span>' : agentChip(walk)}</div>
+    <div class="body">${md(result.summary)}</div>${player}${steps}`;
 }
 // A finding that breaks a written rule reads as: the rule, what it says, what the change does, and the resolution.
 function ruleProblem(r) {
@@ -925,6 +982,8 @@ function detailHtml(r) {
   const at = keys.indexOf(r.key);
   const isRaw = r.key.startsWith('R:');
   const tabs = [['problem', 'Problem'], ['code', 'Code']];
+  const walk = !isRaw && state.walkthroughs && state.walkthroughs.items ? state.walkthroughs.items[r.id] : null;
+  if (walk) tabs.push(['walkthrough', `${walk.status === 'running' ? '<span class="live-dot"></span>' : ''}Walkthrough`]);
   if (!isRaw && r.merges.length) tabs.push(['reviewers', r.merges.length > 1 ? `Reviewers <span class="n">${r.merges.length}</span>` : 'Reviewer']);
   if (!tabs.some(([id]) => id === ui.fwTab)) ui.fwTab = 'problem';
   const [sevWord, sevHint] = words(SEVERITY_WORDS, r.severity);
@@ -939,7 +998,7 @@ function detailHtml(r) {
   const where = r.file ? `<button type="button" class="linkish mono" data-fwtab="code" title="Show the code">${esc(r.file.split('/').pop())}${r.line ? `:${esc(r.line)}` : ''}</button>` : '';
   const picked = ui.picked.has(r.key);
   const tab = ui.fwTab;
-  const content = tab === 'code' ? codeTab(r) : tab === 'reviewers' ? reviewersTab(r)
+  const content = tab === 'code' ? codeTab(r) : tab === 'reviewers' ? reviewersTab(r) : tab === 'walkthrough' ? walkthroughTab(r, walk)
     : r.rule ? ruleProblem(r)
     : `<div class="body">${md(r.body)}</div>${r.fix ? `<div class="fix"><div class="fix-label">Suggested fix</div>${md(r.fix)}</div>` : ''}`;
   return `<div class="overlay" data-act="detail-close"><div class="dialog finding-window" role="dialog" aria-modal="true" aria-labelledby="fw-title" tabindex="-1">
@@ -1008,6 +1067,13 @@ function stepDetail(delta) {
   const next = keys[keys.indexOf(ui.detail) + delta];
   if (next) openDetail(next);
 }
+const VIDEO_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>';
+function walkMark(r) {
+  const walk = r.key.startsWith('S:') && state.walkthroughs && state.walkthroughs.items ? state.walkthroughs.items[r.id] : null;
+  if (!walk) return '';
+  const words = walk.result ? (OUTCOME_WORDS[walk.result.outcome] || [walk.result.outcome])[0] : walk.status === 'running' ? 'Recording now' : walk.status;
+  return ` <span class="walk-mark o-${esc(walk.result ? walk.result.outcome : walk.status)}" title="Video walkthrough: ${esc(words)}">${VIDEO_SVG}</span>`;
+}
 function tableHtml(rows, { reviewerCol, outcomeCol }) {
   const shown = filtered(rows);
   const cols = 4 + (reviewerCol ? 1 : 0) + (outcomeCol ? 1 : 0);
@@ -1018,29 +1084,37 @@ function tableHtml(rows, { reviewerCol, outcomeCol }) {
     const picked = ui.picked.has(r.key);
     const who = r.reviewers.slice(0, 2).map(w => reviewerTag(w, r.merges)).join('') + (r.reviewers.length > 2 ? `<span class="chip more">+${r.reviewers.length - 2}</span>` : '');
     const num = r.key.startsWith('S:') ? r.id.replace(/^S/, '') : String(rows.indexOf(r) + 1);
-    const outcome = r.outcome && r.outcome.startsWith('in ') ? `<button type="button" class="linkish" data-goto="S:${esc(r.outcome.slice(3))}" title="Show it in the synthesis's findings">Merged into finding ${esc(r.outcome.slice(4))}</button>` : r.outcome === 'dropped' ? 'Dropped' : '';
+    const outcome = r.outcome && r.outcome.startsWith('in ') ? `<button type="button" class="linkish" data-goto="S:${esc(r.outcome.slice(3))}" title="Merged into the synthesis's finding ${esc(r.outcome.slice(4))}; click to show it">→ Finding ${esc(r.outcome.slice(4))}</button>` : r.outcome === 'dropped' ? `<span title="${esc(r.droppedReason || '')}">Dropped</span>` : '';
     return `<tr class="row ${picked ? 'picked' : ''} ${ui.detail === r.key ? 'current' : ''}" data-key="${esc(r.key)}" tabindex="0">
         <td class="pick" title="Add to handoff (Space)"><input type="checkbox" data-pick="${esc(r.key)}" ${picked ? 'checked' : ''} aria-label="Add this finding to the handoff"></td>
         <td class="fid">${esc(num)}</td>
         <td><span class="pill sev-${esc(r.severity)}">${esc(words(SEVERITY_WORDS, r.severity)[0])}</span></td>
-        <td><div class="ftitle">${inlineMd(r.title)}</div>${where ? `<div class="where" title="${esc([r.file, r.line].filter(Boolean).join(':'))}">${esc(where)}</div>` : ''}</td>
+        <td><div class="ftitle">${inlineMd(r.title)}${walkMark(r)}</div>${where ? `<div class="where" title="${esc([r.file, r.line].filter(Boolean).join(':'))}">${esc(where)}</div>` : ''}</td>
         ${reviewerCol ? `<td><div class="whos">${who}</div></td>` : ''}
         ${outcomeCol ? `<td class="outcome">${outcome}</td>` : ''}
       </tr>`;
   }).join('');
   return `<div class="table-wrap"><table>
-      <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th>#</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Found by</th>' : ''}${outcomeCol ? '<th>Synthesis</th>' : ''}</tr></thead>
+      <thead><tr><th class="pick" title="Select all shown"><input type="checkbox" data-pickall ${allOn ? 'checked' : ''} data-some="${someOn ? 1 : ''}" aria-label="Select all shown findings" ${shown.length ? '' : 'disabled'}></th><th>#</th><th>Severity</th><th>Finding</th>${reviewerCol ? '<th>Found by</th>' : ''}${outcomeCol ? '<th title="What the synthesis did with this finding">Merged into</th>' : ''}</tr></thead>
       <tbody>${body || `<tr><td colspan="${cols}" class="empty">${rows.length ? 'No findings match these filters.' : 'No findings.'}</td></tr>`}</tbody>
     </table></div>
     <div class="count-line">${shown.length === rows.length ? plural(rows.length, 'finding') : `${shown.length} of ${plural(rows.length, 'finding')}`}${pickedShown ? `, ${pickedShown} selected` : ''}. Click a row to open it; tick the ones to hand off (Shift-click for a range).</div>`;
 }
 
 /* ---------- views ---------- */
+// When this run's files go away: the panel prunes runs whose review is over each time it starts.
+function retentionLine() {
+  const t = state.target || {}, days = state.retention_days;
+  if (!days) return '';
+  const over = t.kind === 'pr' ? `PR #${t.number} merges or closes` : `${t.branch ? `<code>${esc(t.branch)}</code>` : 'the branch'} merges or is deleted`;
+  return `<p class="retention note" title="Runs live in .git/review-panel/ and are never committed. The panel deletes finished runs when it next starts.">This run’s files${Object.keys((state.walkthroughs || {}).items || {}).length ? ', videos included,' : ''} are deleted after ${over}, or after ${days} days.</p>`;
+}
 function synthesisView() {
   const syn = state.synthesis;
   const pending = Object.values(state.reviewers).filter(r => r.status === 'queued' || r.status === 'running').length;
   const head = `<div class="pane-head"><h2>Synthesis</h2>${syn.result ? `<span class="pill v-${esc(syn.result.verdict)}">${esc(syn.result.verdict)}</span>${severityCounts(syn.result.findings)}` : statusPill(syn.status)}</div>
     <p class="pane-desc">Verifies, merges, and ranks the reviewers’ findings.</p>
+    ${retentionLine()}
     <div class="pane-meta">${agentChip(syn)}${statsLine(syn)}</div>`;
   if (!syn.result) {
     let message = pending ? `Waiting for ${plural(pending, 'reviewer')} to finish.` : 'Checking, merging, and ranking the reviewers’ findings…';
@@ -1342,6 +1416,11 @@ document.addEventListener('click', async event => {
     afterPick(); return;
   }
   if (pickCell) return;
+  const fopen = t.closest('[data-fopen]');
+  if (fopen) { ui.filterOpen = ui.filterOpen === fopen.dataset.fopen ? null : fopen.dataset.fopen; renderPane(true); document.querySelector(`#pane [data-ffield="${ui.filterOpen}"][aria-selected="true"]`)?.focus(); return; }
+  const fpick = t.closest('[data-fpick]');
+  if (fpick) { ui[fpick.dataset.ffield] = fpick.dataset.fpick; ui.filterOpen = null; renderPane(true); return; }
+  if (ui.filterOpen && !t.closest('.fpick')) { ui.filterOpen = null; renderPane(true); }
   const row = t.closest('tr.row');
   const who = t.closest('[data-reviewer]');
   if (who) {
@@ -1387,12 +1466,16 @@ document.addEventListener('input', event => {
 });
 document.addEventListener('change', event => {
   const t = event.target;
-  if (t.id === 'cat') { ui.cat = t.value; renderTable(); }
-  if (t.id === 'who') { ui.who = t.value; renderTable(); }
   if (t.id === 'raw') { ui.raw = t.checked; renderPane(true); }
 });
 document.addEventListener('keydown', event => {
   // Option-W types a character on a Mac, so match the physical key. Cmd-W belongs to the browser.
+  if (event.target.matches && event.target.matches('[data-fpick]') && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.target.click(); return; }
+  if (ui.filterOpen && event.key === 'Escape') { event.preventDefault(); const id = ui.filterOpen; ui.filterOpen = null; renderPane(true); document.getElementById(id)?.focus(); return; }
+  if (ui.filterOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+    const opts = [...document.querySelectorAll('#pane [data-fpick]')]; const at = opts.indexOf(document.activeElement);
+    event.preventDefault(); opts[Math.max(0, Math.min(opts.length - 1, at + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus(); return;
+  }
   const closeKey = event.key === 'Escape' || (event.altKey && event.code === 'KeyW');
   if (ui.detail) {
     if (closeKey) { event.preventDefault(); closeDetail(); return; }
@@ -1459,8 +1542,18 @@ function baseConfig() {
     originalSynthesis: { ...r.synthesis, effort: r.synthesis.effort || 'default' },
     builtinSynthesis: r.builtin_synthesis || r.synthesis,
     codexFallback: r.panel_codex_fallback || null,
+    walkthroughs: walkConfig(r), originalWalkthroughs: walkConfig(r),
+    builtinWalkthroughs: { record: 'off', ...(r.builtin_walkthroughs && r.builtin_walkthroughs.agent ? r.builtin_walkthroughs.agent : { model: 'opus', effort: 'default' }) },
+    retention: (r.retention && r.retention.days) || 14, originalRetention: (r.retention && r.retention.days) || 14,
   };
 }
+function walkConfig(r) {
+  const w = r.walkthroughs || {};
+  const agent = w.agent || { harness: 'claude-code', model: 'opus', effort: 'default' };
+  return { record: w.record || 'off', harness: 'claude-code', model: agent.model, effort: agent.effort || 'default', instructions: w.instructions || '', file: w.file || null };
+}
+// The settings object a picker or dropdown in the given scope edits.
+const scopeTarget = scope => scope === 'syn' ? settings.cfg.synthesis : scope === 'walk' ? settings.cfg.walkthroughs : settings.cfg.reviewers[settings.editing];
 function loadConfig() {
   const saved = recall(cfgKey());
   settings.cfg = saved && saved.basedOn === JSON.stringify(roster()) && Array.isArray(saved.reviewers) ? saved : baseConfig();
@@ -1471,7 +1564,10 @@ const FIELDS = ['icon', 'summary', 'harness', 'model', 'effort', 'prompt', 'mode
 const edited = r => r.isNew || r.removeFile || FIELDS.some(f => r[f] !== r.original[f]);
 const changed = r => edited(r) || r.included !== r.original.included;
 const synthesisChanged = () => ['harness', 'model', 'effort'].some(f => settings.cfg.synthesis[f] !== settings.cfg.originalSynthesis[f]);
-const panelChanged = () => settings.cfg.reviewers.some(r => r.builtin && r.included !== r.original.included) || synthesisChanged();
+const walkChanged = () => ['record', 'model', 'effort'].some(f => settings.cfg.walkthroughs[f] !== settings.cfg.originalWalkthroughs[f]);
+const walkGuideChanged = () => settings.cfg.walkthroughs.instructions.trim() !== settings.cfg.originalWalkthroughs.instructions.trim();
+const retentionChanged = () => Number(settings.cfg.retention) !== Number(settings.cfg.originalRetention);
+const panelChanged = () => settings.cfg.reviewers.some(r => r.builtin && r.included !== r.original.included) || synthesisChanged() || walkChanged() || retentionChanged();
 const yamlString = text => `"${String(text).replace(/"/g, "'").replace(/\n/g, ' ')}"`;
 const configDir = () => (state.config && state.config.dir) || '.fabrica/review-panel';
 function reviewerFile(r) {
@@ -1494,6 +1590,13 @@ function panelFile() {
   if (!sameAgent(s, cfg.builtinSynthesis)) lines.push('', 'synthesis:', `  harness: ${s.harness}`, `  model: ${s.model}`, `  effort: ${s.effort}`);
   const f = cfg.codexFallback;
   if (f) lines.push('', 'codex_fallback:', ...['harness', 'model', 'effort'].filter(k => f[k]).map(k => `  ${k}: ${f[k]}`));
+  const w = cfg.walkthroughs, bw = cfg.builtinWalkthroughs;
+  if (w.record !== 'off' || w.model !== bw.model || w.effort !== bw.effort) {
+    lines.push('', '# Record a video walkthrough of these findings after the synthesis: off, blocking, or all.', '# walkthroughs.md tells the agent how to start the app and record it.', 'walkthroughs:', `  record: ${w.record}`);
+    if (w.model !== bw.model) lines.push(`  model: ${w.model}`);
+    if (w.effort !== bw.effort) lines.push(`  effort: ${w.effort}`);
+  }
+  if (Number(cfg.retention) !== 14) lines.push('', '# Delete a finished run this many days after it ran, even if its PR is still open.', 'retention:', `  days: ${Number(cfg.retention)}`);
   return lines.join('\n') + '\n';
 }
 // What Save would do: files to write and files to delete, as paths inside the config folder.
@@ -1501,6 +1604,7 @@ function pendingChanges() {
   const cfg = settings.cfg;
   const files = {}, remove = [];
   if (panelChanged()) files['panel.yaml'] = panelFile();
+  if (walkGuideChanged()) { if (cfg.walkthroughs.instructions.trim()) files['walkthroughs.md'] = cfg.walkthroughs.instructions.trim() + '\n'; else if (cfg.walkthroughs.file) remove.push('walkthroughs.md'); }
   for (const r of cfg.reviewers) {
     if (r.removeFile) { if (r.file) remove.push(`reviewers/${r.name}.md`); continue; }
     if (edited(r)) files[`reviewers/${r.name}.md`] = reviewerFile(r);
@@ -1573,7 +1677,7 @@ function pickerPopover() {
     </div>`;
 }
 function openPicker(scope, q = '') {
-  const target = scope === 'syn' ? settings.cfg.synthesis : settings.cfg.reviewers[settings.editing];
+  const target = scopeTarget(scope);
   settings.picker = { scope, q, active: 0, value: target.model, harness: target.harness };
   const options = pickerMatches();
   settings.picker.active = Math.max(0, options.findIndex(o => o.id === target.model));
@@ -1590,7 +1694,7 @@ function closePicker(focusButton) {
 }
 function choosePicker(id) {
   const p = settings.picker;
-  if (p.scope === 'syn') settings.cfg.synthesis.model = id; else settings.cfg.reviewers[settings.editing].model = id;
+  scopeTarget(p.scope).model = id;
   saveConfig();
   closePicker(true);
 }
@@ -1612,6 +1716,7 @@ function builtinNotice() {
 // Rich dropdowns for Runs on and Effort, matching the model picker: the harness's logo beside its name.
 const CHOICES = {
   harness: () => [{ value: 'claude-code', label: 'Claude Code', icon: LOGOS['claude-code'] }, { value: 'codex', label: 'Codex', icon: LOGOS.codex }],
+  record: () => [{ value: 'off', label: 'Off', hint: 'no videos' }, { value: 'blocking', label: 'Blocking findings', hint: 'one video each' }, { value: 'all', label: 'All findings', hint: 'slower; one session each' }],
   effort: () => EFFORTS.map(e => ({ value: e, label: e === 'default' ? 'Default' : e[0].toUpperCase() + e.slice(1), hint: e === 'default' ? 'the harness decides' : '' })),
 };
 function choiceButton(scope, field, value) {
@@ -1701,6 +1806,66 @@ function synthesisPane() {
         <div class="field"><label for="syn-effort">Effort</label>${choiceButton('syn', 'effort', s.effort)}</div>
       </div></fieldset>
       <span class="hint">The synthesis prompt itself lives in the skill, at <code>prompts/synthesize.md</code>.</span>
+    </div></div></div>`;
+}
+function walkthroughsPane() {
+  const cfg = settings.cfg, w = cfg.walkthroughs;
+  const dir = configDir();
+  const needsGuide = w.record !== 'off' && !w.instructions.trim();
+  return `<div class="spane-head"><div><h2>Video walkthroughs</h2><p>After the synthesis, an agent runs the app and records a short video of each chosen finding, so you can see what it looks like and how much it matters. Each one shows up in a Walkthrough tab on its finding.</p></div>${closeBtn()}</div>
+    <div class="sbody">${canEdit() ? '' : builtinNotice()}<div class="slist"><div class="edit" style="border-top:0;padding-left:14px">
+      <fieldset ${canEdit() ? '' : 'disabled'}>
+      <div class="fields-3">
+        <div class="field"><label for="walk-record">Record</label>${choiceButton('walk', 'record', w.record)}</div>
+        <div class="field"><label for="walk-model">Model</label>${modelButton('walk', w.model)}</div>
+        <div class="field"><label for="walk-effort">Effort</label>${choiceButton('walk', 'effort', w.effort)}</div>
+      </div>
+      <div class="field"><label for="walk-guide">How to run and record the app <span class="note">${esc(dir)}/walkthroughs.md</span></label>
+        <textarea id="walk-guide" data-walk="instructions" rows="10" spellcheck="false" placeholder="${esc(WALK_PLACEHOLDER)}">${esc(w.instructions)}</textarea>
+        ${needsGuide ? '<span class="hint warn">Recording needs these instructions; without them the panel skips walkthroughs and says why.</span>' : ''}</div>
+      </fieldset>
+      <details class="walk-setup" ${w.instructions.trim() ? '' : 'open'}><summary>Setting up a repository for walkthroughs</summary>
+        <ol>
+          <li>Add a browser driver that records video. Playwright does: <code>npm i -D @playwright/test &amp;&amp; npx playwright install chromium</code>, then <code>video: 'on'</code> in its config.</li>
+          <li>Give the agent one command that starts the app on its own ports, and a URL that answers once it’s ready.</li>
+          <li>Seed predictable test data, and a test account if the app needs a login, kept in the repository’s own fixtures.</li>
+          <li>Write those steps in <code>walkthroughs.md</code> above: where the app’s pages are, how to sign in, and how to stop everything afterward.</li>
+        </ol>
+        <div class="rowline"><span class="note">Or hand the setup to your coding agent:</span><button type="button" class="btn" data-sact="copy-walk-prompt">Copy setup prompt</button></div>
+      </details>
+      <span class="hint">Walkthroughs run the change’s code with a shell, unlike the read-only reviewers, so the panel never records a pull request from a fork unless you pass <code>--allow-run</code>. Each video is one more agent session, a few minutes each.</span>
+    </div></div></div>`;
+}
+const WALK_PLACEHOLDER = `For example:
+Start the app with \`bun run e2e:stack\` (ports 17126 and 17127); it is ready when http://127.0.0.1:17126/healthz answers.
+Sign in as demo@example.com through /dev/login.
+Record with Playwright: write a spec under test/e2e/, run \`bunx playwright test <spec> --video=on\`, and copy the video from test-results/.
+Stop the stack with \`bun run e2e:stack:down\` when you are done.`;
+function walkSetupPrompt() {
+  const dir = configDir();
+  return `Set up this repository so the review-panel skill can record video walkthroughs of review findings.
+
+The panel reads ${dir}/walkthroughs.md and gives it to an agent that runs the change in a temporary checkout, drives the app in a browser with video on, and saves the video. Make that possible, then write the file:
+
+1. Make sure a browser driver that records video is set up. Playwright is a good default (\`@playwright/test\`, with \`video: 'on'\` available per run). Reuse an existing end-to-end setup if there is one.
+2. Find or add one command that starts the app on its own ports without disturbing a developer's running copy, and a URL that answers when it is ready. Note any database or services it needs and how they start and stop.
+3. Make sure there is predictable test data and, if the app needs a login, a test account, kept in the repository's own fixtures. Never use real credentials.
+4. Write ${dir}/walkthroughs.md: how to start the app, the readiness URL, how to sign in, where the main pages are, how to write and run a recording spec and where its video lands, and how to stop everything afterward.
+5. Turn recording on in ${dir}/panel.yaml:
+
+walkthroughs:
+  record: blocking
+
+Commit the changes and summarize what you set up.`;
+}
+function cleanupPane() {
+  const cfg = settings.cfg;
+  return `<div class="spane-head"><div><h2>Cleanup</h2><p>Each run keeps its files, including any videos, under <code>.git/review-panel/</code>, which is never committed or pushed. They’re review artifacts, so the panel deletes them once the review is over.</p></div>${closeBtn()}</div>
+    <div class="sbody">${canEdit() ? '' : builtinNotice()}<div class="slist"><div class="edit" style="border-top:0;padding-left:14px">
+      <p class="lead-p">Every time the panel starts, it deletes finished runs whose pull request merged or closed, and local runs whose branch merged into its base or no longer exists. When GitHub can’t be reached, a run is kept rather than guessed about.</p>
+      <fieldset ${canEdit() ? '' : 'disabled'}><div class="field narrow"><label for="cfg-retention">Also delete runs older than</label>
+        <span class="with-unit"><input id="cfg-retention" type="number" min="1" step="1" data-ret value="${esc(cfg.retention)}"> days</span></div></fieldset>
+      <span class="hint">To clean up now, run <code>review_panel.py prune</code>; add <code>--dry-run</code> to see what it would delete. <code>--keep-runs</code> skips the cleanup for one run.</span>
     </div></div></div>`;
 }
 function setupPrompt() {
@@ -1801,7 +1966,8 @@ function renderSettings() {
   if (!settings.open) { holder.innerHTML = ''; return; }
   const cfg = settings.cfg;
   const nav = (id, label, count) => `<button type="button" data-sect="${id}" ${settings.section === id ? 'aria-current="page"' : ''}>${label}${count !== undefined ? `<span class="count">${count}</span>` : ''}</button>`;
-  const pane = settings.section === 'synthesis' ? synthesisPane() : settings.section === 'reviewers' ? reviewersPane() : overviewPane();
+  const pane = settings.section === 'synthesis' ? synthesisPane() : settings.section === 'reviewers' ? reviewersPane()
+    : settings.section === 'walkthroughs' ? walkthroughsPane() : settings.section === 'cleanup' ? cleanupPane() : overviewPane();
   const active = document.activeElement;
   const focusId = active && holder.contains(active) ? active.id : null;
   const caret = focusId && 'selectionStart' in active ? [active.selectionStart, active.selectionEnd] : null;
@@ -1811,7 +1977,7 @@ function renderSettings() {
       <div class="sside-title">Settings</div>
       <div class="snav">${nav('overview', 'Overview')}</div>
       <div class="sgroup">Review panel</div>
-      <div class="snav">${nav('reviewers', 'Reviewers', cfg.reviewers.filter(r => r.included).length)}${nav('synthesis', 'Synthesis')}</div>
+      <div class="snav">${nav('reviewers', 'Reviewers', cfg.reviewers.filter(r => r.included).length)}${nav('synthesis', 'Synthesis')}${nav('walkthroughs', 'Video walkthroughs')}${nav('cleanup', 'Cleanup')}</div>
     </div>
     <div class="spane">${pane}${footer()}</div>
   </div></div>`;
@@ -1861,10 +2027,10 @@ document.getElementById('settings').addEventListener('click', async event => {
   if (settings.picker && !t.closest('.mpick-wrap')) { settings.picker = null; renderSettings(); if (!t.closest('[data-sact], [data-sect], .srow')) return; }
   const chosen = t.closest('[data-chosen]');
   if (chosen) {
-    const target = chosen.dataset.scope === 'syn' ? settings.cfg.synthesis : settings.cfg.reviewers[settings.editing];
+    const target = scopeTarget(chosen.dataset.scope);
     target[chosen.dataset.field] = chosen.dataset.chosen;
     if (chosen.dataset.field === 'harness') harnessChanged(target);
-    if (chosen.dataset.scope !== 'syn') target.removeFile = false;
+    if (chosen.dataset.scope !== 'syn' && chosen.dataset.scope !== 'walk') target.removeFile = false;
     const id = settings.choice; settings.choice = null; saveConfig(); renderSettings();
     const b = document.getElementById(id); if (b) b.focus();
     return;
@@ -1922,6 +2088,7 @@ document.getElementById('settings').addEventListener('click', async event => {
     case 'copy-file': if (r) await copy(reviewerFile(r), document.getElementById('cfg-note'), act); return;
     case 'copy-setup': await copy(setupScript(), document.getElementById('setup-note'), act); return;
     case 'copy-prompt': await copy(setupPrompt(), document.getElementById('prompt-note'), act); return;
+    case 'copy-walk-prompt': await copy(walkSetupPrompt(), null, act); return;
     case 'copy-command': await copy(state.config.command, document.getElementById('command-note'), act); return;
     case 'copy-remove': await copy(`git rm -r ${configDir()}`, document.getElementById('remove-note'), act); return;
     case 'maximize': settings.max = !settings.max; store('review-panel:settings-max', settings.max); break;
@@ -1957,6 +2124,8 @@ document.getElementById('settings').addEventListener('input', event => {
       if (row) { row.querySelector('.who b').textContent = reviewerLabel(r.name); row.querySelector('.who span').textContent = r.summary || 'No summary yet'; }
     }
   }
+  if (t.dataset.walk) { settings.cfg.walkthroughs[t.dataset.walk] = t.value; saveConfig(); refreshFooter(); return; }
+  if (t.dataset.ret !== undefined && t.id === 'cfg-retention') { settings.cfg.retention = Math.max(1, parseInt(t.value, 10) || 1); saveConfig(); refreshFooter(); return; }
   if (t.dataset.syn) {
     settings.cfg.synthesis[t.dataset.syn] = t.value;
     if (t.dataset.syn === 'harness') harnessChanged(settings.cfg.synthesis);

@@ -49,6 +49,14 @@ FAKE_CLAUDE = textwrap.dedent('''\
     if failing and f'You are **{failing}**' in prompt:
         print('rate limited', flush=True)
         sys.exit(1)
+    if 'You record a video walkthrough' in prompt:
+        out = re.search(r'Save every file you produce for the person in `([^`]+)`', prompt).group(1)
+        with open(os.path.join(out, 'walkthrough.webm'), 'wb') as video:
+            video.write(b'webm')
+        value = {'outcome': 'reproduced', 'summary': 'The last item is missing.', 'steps': ['Open the list'], 'video': 'walkthrough.webm'}
+        print(json.dumps({'type': 'result', 'subtype': 'success', 'session_id': 'sess-w', 'result': '```json\\n' + json.dumps(value) + '\\n```',
+                          'usage': {'input_tokens': 10, 'output_tokens': 5}}))
+        sys.exit(0)
     if 'You are the synthesis step' in prompt and os.environ.get('FAKE_SYNTH_FAIL'):
         print('overloaded', flush=True)
         sys.exit(1)
@@ -258,6 +266,32 @@ class PureHelpers(unittest.TestCase):
         self.assertEqual(reviewers['check-payments']['agent']['harness'], 'claude-code')
         self.assertEqual(roster['synthesize']['agent']['effort'], 'max')
 
+    def test_walkthroughs_need_instructions_and_a_known_record_setting(self):
+        roster = self.roster()
+        folder = self.config_folder({'panel.yaml': 'walkthroughs:\n  record: blocking\n'})
+        with self.assertRaisesRegex(review_panel.PanelError, 'needs .fabrica/review-panel/walkthroughs.md'):
+            review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        roster = self.roster()
+        folder = self.config_folder({'panel.yaml': 'walkthroughs:\n  record: all\n  effort: high\n', 'walkthroughs.md': 'Run bun dev.\n'})
+        review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+        self.assertEqual(roster['walkthroughs']['record'], 'all')
+        self.assertEqual(roster['walkthroughs']['instructions'], 'Run bun dev.')
+        self.assertEqual(roster['walkthroughs']['agent']['effort'], 'high')
+        roster = self.roster()
+        folder = self.config_folder({'panel.yaml': 'walkthroughs:\n  record: sometimes\n', 'walkthroughs.md': 'x\n'})
+        with self.assertRaisesRegex(review_panel.PanelError, 'record must be one of'):
+            review_panel.apply_repo_config(roster, folder, '.fabrica/review-panel')
+
+    def test_a_walkthrough_must_save_the_video_it_names(self):
+        with tempfile.TemporaryDirectory() as folder:
+            value = {'outcome': 'reproduced', 'summary': 'Shown.', 'steps': [], 'video': 'walkthrough.webm'}
+            self.assertIn('video walkthrough.webm is not in the output folder', ' '.join(review_panel.validate_walkthrough(value, Path(folder))))
+            Path(folder, 'walkthrough.webm').write_bytes(b'x')
+            self.assertEqual(review_panel.validate_walkthrough(value, Path(folder)), [])
+            self.assertIn('a reproduced finding needs its video',
+                          review_panel.validate_walkthrough({**value, 'video': None}, Path(folder)))
+            self.assertEqual(review_panel.validate_walkthrough({**value, 'outcome': 'not-reachable', 'video': None}, Path(folder)), [])
+
     def test_repo_config_errors_name_the_problem(self):
         cases = {
             'no reviewer named check-nope': {'panel.yaml': 'reviewers:\n  - check-nope\n'},
@@ -445,6 +479,65 @@ class PanelRun(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('claude auth login', result.stderr + result.stdout)
         self.assertFalse(self.log.exists())
+
+    def test_walkthroughs_record_the_blocking_findings_after_the_synthesis(self):
+        self.install('claude', FAKE_CLAUDE)
+        panel = Path(self.temp.name) / 'panel'
+        panel.mkdir()
+        (panel / 'panel.yaml').write_text('walkthroughs:\n  record: blocking\n')
+        (panel / 'walkthroughs.md').write_text('Start the app with python3 app.py.\n')
+        result, state, run_dir = self.run_panel('--only', 'check-docs', '--panel', str(panel))
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        item = state['walkthroughs']['items']['S1']
+        self.assertEqual((item['status'], item['result']['outcome']), ('done', 'reproduced'))
+        self.assertTrue((run_dir / 'walkthroughs' / 'S1' / 'walkthrough.webm').is_file())
+        command = json.loads((run_dir / 'walkthroughs' / 'S1' / 'command-1.json').read_text())
+        self.assertIn('Bash', command[command.index('--allowedTools') + 1:])
+        self.assertNotIn('--restricted', command)
+        prompt = (run_dir / 'walkthroughs' / 'S1' / 'prompt-1.md').read_text()
+        self.assertIn('Start the app with python3 app.py.', prompt)
+
+    def test_prune_deletes_runs_whose_review_is_over(self):
+        root = self.repo / '.git' / 'review-panel'
+        head = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=self.repo, capture_output=True, text=True).stdout.strip()
+        def make(name, target, age_days=0):
+            folder = root / name
+            folder.mkdir(parents=True)
+            (folder / 'state.json').write_text(json.dumps({'status': 'done', 'target': target}))
+            (folder / 'walkthroughs').mkdir()
+            (folder / 'walkthroughs' / 'v.webm').write_bytes(b'x' * 100)
+            stamp = time.time() - age_days * 86400
+            os.utime(folder / 'state.json', (stamp, stamp))
+            return folder
+        live = make('a-live', {'kind': 'local', 'branch': 'feature', 'head': head, 'base': 'main'})
+        gone = make('b-gone', {'kind': 'local', 'branch': 'deleted-branch', 'head': head, 'base': 'main'})
+        old = make('c-old', {'kind': 'local', 'branch': 'feature', 'head': head, 'base': 'main'}, age_days=30)
+        subprocess.run(['git', 'branch', '-q', 'merged-one', 'main'], cwd=self.repo, check=True)
+        main_head = subprocess.run(['git', 'rev-parse', 'main'], cwd=self.repo, capture_output=True, text=True).stdout.strip()
+        merged = make('d-merged', {'kind': 'local', 'branch': 'merged-one', 'head': main_head, 'base': 'feature'})
+        dry = review_panel.prune_runs(self.repo, 14, dry_run=True)
+        self.assertEqual({p.name for p, _, _ in dry}, {'b-gone', 'c-old', 'd-merged'})
+        self.assertTrue(gone.exists())
+        removed = dict((p.name, reason) for p, reason, _ in review_panel.prune_runs(self.repo, 14))
+        self.assertEqual(removed['b-gone'], 'branch deleted-branch no longer exists')
+        self.assertEqual(removed['c-old'], 'older than 14 days')
+        self.assertEqual(removed['d-merged'], 'branch merged-one is merged into feature')
+        self.assertTrue(live.exists())
+        self.assertFalse(old.exists() or gone.exists() or merged.exists())
+
+    def test_attach_adds_outside_videos_to_a_finding(self):
+        self.install('claude', FAKE_CLAUDE)
+        result, state, run_dir = self.run_panel('--only', 'check-docs')
+        video = Path(self.temp.name) / 'scenario-a.mp4'
+        video.write_bytes(b'mp4')
+        done = subprocess.run([sys.executable, str(SCRIPT), 'attach', str(run_dir), 'S1', str(video), '--summary', 'Shown.',
+                               '--title', 'Save fails'], capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        data = json.loads((run_dir / 'state.json').read_text())
+        item = data['walkthroughs']['items']['S1']['result']
+        self.assertEqual(item['videos'], [{'file': 'walkthrough.mp4', 'title': 'Save fails'}])
+        self.assertTrue((run_dir / 'walkthroughs' / 'S1' / 'walkthrough.mp4').is_file())
+        self.assertIn('walkthrough.mp4', (run_dir / 'report.html').read_text())
 
     def test_panel_runs_claude_and_codex_reviewers_then_synthesizes(self):
         self.install('claude', FAKE_CLAUDE)

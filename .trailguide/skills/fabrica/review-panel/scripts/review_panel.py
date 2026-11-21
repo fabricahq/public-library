@@ -45,6 +45,14 @@ SYNTHESIS_VERDICTS = ('ready', 'fix-first', 'needs-decision')
 # Codex sessions can run shell commands, inside a sandbox that blocks writes and network access; that is
 # an accepted risk. --claude-only gives the stricter no-shell setup for untrusted pull requests.
 CLAUDE_TOOLS = ['Read', 'Grep', 'Glob']
+# Walkthroughs are different: they run the change's code to record a video, so they get a shell and can write
+# files, inside the run's temporary worktree. They run only when a repository opts in, and never on a pull
+# request from a fork unless the person passes --allow-run.
+WALKTHROUGH_TOOLS = ['Read', 'Grep', 'Glob', 'Bash', 'Write', 'Edit']
+WALKTHROUGH_DENIED = ['WebFetch', 'WebSearch', 'Agent', 'Task']
+RECORD_CHOICES = ('off', 'blocking', 'all')
+WALKTHROUGH_OUTCOMES = ('reproduced', 'not-reproduced', 'not-reachable')
+VIDEO_TYPES = {'.webm': 'video/webm', '.mp4': 'video/mp4'}
 CLAUDE_DENIED = ['Bash', 'Edit', 'Write', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Agent', 'Task']
 
 
@@ -490,7 +498,7 @@ def prepare_target(args, repo, run_dir):
         if not shutil.which('gh'):
             raise PanelError('--pr needs the GitHub CLI (gh), signed in')
         result = subprocess.run(
-            ['gh', 'pr', 'view', str(args.pr), '--json', 'number,title,body,baseRefName,headRefOid,url'],
+            ['gh', 'pr', 'view', str(args.pr), '--json', 'number,title,body,baseRefName,headRefOid,url,isCrossRepository'],
             cwd=repo, capture_output=True, text=True)
         if result.returncode != 0:
             raise PanelError(f'gh pr view {args.pr} failed: {result.stderr.strip()}')
@@ -498,7 +506,8 @@ def prepare_target(args, repo, run_dir):
         git(['fetch', '--quiet', 'origin', pr['baseRefName'], f"refs/pull/{pr['number']}/head"], repo)
         base, head = f"origin/{pr['baseRefName']}", pr['headRefOid']
         target = {'kind': 'pr', 'label': f"PR #{pr['number']}: {pr['title']}", 'url': pr['url'],
-                  'description': pr.get('body') or '', 'number': pr['number'], 'title': pr['title']}
+                  'description': pr.get('body') or '', 'number': pr['number'], 'title': pr['title'],
+                  'cross_repo': bool(pr.get('isCrossRepository'))}
     else:
         base = args.base or default_base(repo)
         branch = git(['branch', '--show-current'], repo, check=False) or git(['rev-parse', '--short', 'HEAD'], repo)
@@ -624,13 +633,15 @@ def claude_command(agent, run_dir, resume=None):
     # Layered, so each holds where the installed version lacks another: no project settings or hooks; only the
     # file tools exist; anything else is denied rather than asked about; and the deny list as a last layer.
     command += ['--setting-sources', 'user']
-    if claude_supports('--restricted'):
+    walkthrough = agent.get('mode') == 'walkthrough'
+    tools, denied = (WALKTHROUGH_TOOLS, WALKTHROUGH_DENIED) if walkthrough else (CLAUDE_TOOLS, CLAUDE_DENIED)
+    if claude_supports('--restricted') and not walkthrough:
         command += ['--restricted']
     if claude_supports('--tools'):
-        command += ['--tools', ','.join(CLAUDE_TOOLS)]
+        command += ['--tools', ','.join(tools)]
     if claude_supports('dontAsk'):
         command += ['--permission-mode', 'dontAsk']
-    command += ['--allowedTools', *CLAUDE_TOOLS, '--disallowedTools', *CLAUDE_DENIED]
+    command += ['--allowedTools', *tools, '--disallowedTools', *denied]
     if agent.get('effort', 'default') != 'default':
         command += ['--effort', agent['effort']]
     if resume:
@@ -856,9 +867,16 @@ def apply_repo_config(roster, folder, label):
     reviewers = roster['reviewers']
     config_path = folder / 'panel.yaml'
     config = parse_yaml(config_path.read_text(), str(config_path)) if config_path.exists() else {}
-    unknown = sorted(set(config) - {'reviewers', 'synthesis', 'codex_fallback'})
+    unknown = sorted(set(config) - {'reviewers', 'synthesis', 'codex_fallback', 'walkthroughs', 'retention'})
     if unknown:
-        raise PanelError(f"{config_path}: unknown setting {', '.join(unknown)}; use reviewers, synthesis, or codex_fallback")
+        raise PanelError(f"{config_path}: unknown setting {', '.join(unknown)}; use reviewers, synthesis, codex_fallback, walkthroughs, or retention")
+    retention = config.get('retention')
+    if retention is not None:
+        days = retention.get('days') if isinstance(retention, dict) else None
+        if set(retention if isinstance(retention, dict) else {'x'}) != {'days'} or not isinstance(days, int) or days < 1:
+            raise PanelError(f'{config_path}: retention must be a map with days, a whole number of days of at least 1')
+        roster['retention'] = {'days': days}
+    apply_walkthroughs(roster, config.get('walkthroughs'), folder, label, config_path)
     for key, target in (('synthesis', roster['synthesize']), ('codex_fallback', None)):
         settings = config.get(key)
         if settings is None:
@@ -922,6 +940,31 @@ def apply_repo_config(roster, folder, label):
     roster.setdefault('config', {})['panel'] = config
 
 
+def apply_walkthroughs(roster, settings, folder, label, config_path):
+    """Read panel.yaml's walkthroughs map and the folder's walkthroughs.md, which tells the agent how to run the app."""
+    walk = roster.setdefault('walkthroughs', {'record': 'off', 'agent': dict(NEW_REVIEWER_AGENT), 'instructions': '', 'file': None})
+    guide = folder / 'walkthroughs.md'
+    if guide.exists():
+        walk.update(instructions=guide.read_text().strip(), file=f'{label}/walkthroughs.md')
+    if settings is None:
+        return
+    if not isinstance(settings, dict):
+        raise PanelError(f'{config_path}: walkthroughs must be a map of record, model, and effort')
+    extra = sorted(set(settings) - {'record', 'model', 'effort'})
+    if extra:
+        raise PanelError(f"{config_path}: unknown walkthroughs setting {', '.join(extra)}; use record, model, or effort")
+    record = str(settings.get('record', walk['record']))
+    if record not in RECORD_CHOICES:
+        raise PanelError(f"{config_path}: walkthroughs record must be one of {', '.join(RECORD_CHOICES)}")
+    if record != 'off' and not walk.get('instructions'):
+        raise PanelError(f'{config_path}: walkthroughs record {record} needs {label}/walkthroughs.md, which tells the '
+                         'agent how to start the app and record a browser session')
+    walk['record'] = record
+    walk['agent'] = _agent_with(walk['agent'], {k: v for k, v in settings.items() if k != 'record'}, f'{config_path} walkthroughs')
+    if walk['agent']['harness'] != 'claude-code':
+        raise PanelError(f'{config_path}: walkthroughs run on Claude Code')
+
+
 def roster_summary(roster):
     """Every reviewer the panel would run, and where each setting comes from, for the settings window."""
     chosen = roster['config'].get('panel', {}).get('reviewers')
@@ -940,6 +983,9 @@ def roster_summary(roster):
         'builtin_synthesis': roster.get('builtin_synthesis'),
         'codex_fallback': dict(roster['codex_fallback']),
         'panel_codex_fallback': roster['config'].get('panel', {}).get('codex_fallback'),
+        'walkthroughs': dict(roster.get('walkthroughs') or {}),
+        'retention': dict(roster.get('retention') or {'days': 14}),
+        'builtin_walkthroughs': roster.get('builtin_walkthroughs'),
     }
 
 
@@ -954,6 +1000,8 @@ def load_roster(only, claude_only, repo=None, panel=None, settings_only=False):
         raise PanelError(f'--panel {panel} is not a folder')
     roster['built_in'] = roster['reviewers']
     roster['builtin_synthesis'] = dict(roster['synthesize']['agent'])
+    roster['walkthroughs'] = {**roster['walkthroughs'], 'agent': dict(roster['walkthroughs']['agent']), 'instructions': '', 'file': None}
+    roster['builtin_walkthroughs'] = {'record': roster['walkthroughs']['record'], 'agent': dict(roster['walkthroughs']['agent'])}
     script = Path(__file__).resolve()
     roster['config'] = {'dir': str(CONFIG_DIR) if not panel else str(folder), 'found': bool(folder and folder.is_dir()),
                         'command': shlex.join(['python3', str(script), 'settings', *(['--panel', str(panel)] if panel else [])])}
@@ -996,6 +1044,39 @@ def synthesis_prompt(context, reviews, failures):
     if failures:
         parts += ['\n# Reviewers that did not report\n'] + [f'- {name}: {reason}' for name, reason in failures.items()]
     return '\n'.join(parts) + '\n'
+
+
+def validate_walkthrough(value, folder):
+    """Return the ways a walkthrough's JSON breaks its contract, including a video it names but didn't save."""
+    if not isinstance(value, dict):
+        return ['the reply is not a JSON object']
+    problems = []
+    _require(value.get('outcome') in WALKTHROUGH_OUTCOMES, f"outcome must be one of {', '.join(WALKTHROUGH_OUTCOMES)}", problems)
+    _require(isinstance(value.get('summary'), str) and value['summary'].strip(), 'summary must be a non-empty string', problems)
+    steps = value.get('steps', [])
+    _require(isinstance(steps, list) and all(isinstance(s, str) for s in steps), 'steps must be a list of strings', problems)
+    video = value.get('video')
+    if video is not None:
+        ok = isinstance(video, str) and re.fullmatch(r'[A-Za-z0-9._-]+', video) and Path(video).suffix in VIDEO_TYPES
+        _require(bool(ok), f"video must be a file name ending in {' or '.join(VIDEO_TYPES)}, or null", problems)
+        if ok:
+            _require((folder / video).is_file(), f'video {video} is not in the output folder {folder}', problems)
+    _require(value.get('outcome') != 'reproduced' or video, 'a reproduced finding needs its video', problems)
+    return problems
+
+
+def walkthrough_findings(synthesis, record):
+    """The synthesis findings a walkthrough setting asks to record, in ranked order."""
+    if record == 'off' or not synthesis:
+        return []
+    return [f for f in synthesis['findings'] if record == 'all' or f['severity'] == 'blocking']
+
+
+def walkthrough_prompt(finding, instructions, context, out_dir):
+    base = (SKILL / 'prompts' / 'walkthrough.md').read_text().replace('{{OUTPUT_DIR}}', str(out_dir))
+    shown = {k: finding.get(k) for k in ('id', 'severity', 'category', 'title', 'file', 'line', 'body', 'fix')}
+    return '\n'.join([base, '\n---\n', "# This repository's walkthrough instructions\n", instructions, '\n---\n',
+                      '# The finding\n', '```json', json.dumps(shown, indent=2, ensure_ascii=False), '```', '\n---\n', context]) + '\n'
 
 
 def report_markdown(state):
@@ -1064,7 +1145,7 @@ def standalone_html(state_json):
                         f'<script id="inline-state" type="application/json">{inline}</script>')
 
 
-SETTINGS_FILE = re.compile(r'(panel\.yaml|reviewers/[a-z0-9-]+\.md)')
+SETTINGS_FILE = re.compile(r'(panel\.yaml|walkthroughs\.md|reviewers/[a-z0-9-]+\.md)')
 
 
 def save_settings(repo, panel, files, remove):
@@ -1076,7 +1157,7 @@ def save_settings(repo, panel, files, remove):
     paths = [*files, *remove]
     bad = [p for p in paths if not isinstance(p, str) or not SETTINGS_FILE.fullmatch(p)]
     if bad:
-        raise PanelError(f'can only write panel.yaml and reviewers/<name>.md, not {bad[0]}')
+        raise PanelError(f'can only write panel.yaml, walkthroughs.md, and reviewers/<name>.md, not {bad[0]}')
     if not all(isinstance(text, str) for text in files.values()):
         raise PanelError('each file needs its text')
     with tempfile.TemporaryDirectory() as scratch:
@@ -1114,6 +1195,13 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
                 body, kind = PAGE.read_bytes(), 'text/html; charset=utf-8'
             elif path == f'/{token}/state.json':
                 body, kind = state.serve_snapshot().encode(), 'application/json'
+            elif re.fullmatch(rf'/{re.escape(token)}/walkthroughs/S[0-9]+/[A-Za-z0-9._-]+', path):
+                file = run_dir / path.split('/', 2)[2]
+                if file.suffix not in VIDEO_TYPES or not file.is_file():
+                    self.send_error(404)
+                    return
+                self.send_video(file)
+                return
             elif path.startswith(f'/{token}/log/'):
                 name = path.rsplit('/', 1)[-1]
                 if not re.fullmatch(r'[a-z0-9-]+', name):
@@ -1133,6 +1221,32 @@ def serve(state, run_dir, port, token, repo=None, panel=None):
             self.send_response(200)
             self.send_header('Content-Type', kind)
             self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def send_video(self, file):
+            """Serve a walkthrough video, honoring one byte range so the player can seek."""
+            size = file.stat().st_size
+            start, end = 0, size - 1
+            match = re.fullmatch(r'bytes=(\d*)-(\d*)', self.headers.get('Range', ''))
+            if match and (match.group(1) or match.group(2)):
+                if match.group(1):
+                    start, end = int(match.group(1)), int(match.group(2) or size - 1)
+                else:
+                    start = max(0, size - int(match.group(2)))
+                end = min(end, size - 1)
+                if start > end:
+                    self.send_error(416)
+                    return
+            with file.open('rb') as handle:
+                handle.seek(start)
+                body = handle.read(end - start + 1)
+            self.send_response(206 if match and (match.group(1) or match.group(2)) else 200)
+            self.send_header('Content-Type', VIDEO_TYPES[file.suffix])
+            self.send_header('Accept-Ranges', 'bytes')
+            if match and (match.group(1) or match.group(2)):
+                self.send_header('Content-Range', f'bytes {start}-{end}/{size}')
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -1237,10 +1351,13 @@ def code_snippets(code_dir, findings):
     return snippets
 
 
+def stage_entry(agent, **extra):
+    return {'agent': agent, 'status': 'queued', 'started_at': None, 'ended_at': None, 'activity': None,
+            'usage': {}, 'result': None, 'error': None, **extra}
+
+
 def initial_state(repo, run_dir, target, stat, roster, reviewers):
-    def entry(agent, **extra):
-        return {'agent': agent, 'status': 'queued', 'started_at': None, 'ended_at': None, 'activity': None,
-                'usage': {}, 'result': None, 'error': None, **extra}
+    entry = stage_entry
     return {
         'status': 'running', 'started_at': now(), 'updated_at': now(), 'ended_at': None,
         'repo': str(repo), 'run_dir': str(run_dir), 'target': target, 'diff_stat': stat,
@@ -1250,7 +1367,39 @@ def initial_state(repo, run_dir, target, stat, roster, reviewers):
         'config': {k: v for k, v in roster.get('config', {}).items() if k != 'panel'}, 'snippets': {},
         'models': roster.get('models', []), 'roster': roster.get('all'),
         'synthesis': entry(roster['synthesize']['agent'], status='waiting'),
+        'walkthroughs': {'record': 'off', 'note': None, 'items': {}},
+        'retention_days': (roster.get('retention') or {}).get('days', 14),
     }
+
+
+def walkthrough_plan(args, roster, target):
+    """Return (record, note): which findings to record, and why none will be when something stands in the way."""
+    walk = roster['walkthroughs']
+    record = getattr(args, 'walkthroughs', None) or walk['record']
+    if record == 'off':
+        return record, None
+    if not walk.get('instructions'):
+        return record, f'no {CONFIG_DIR}/walkthroughs.md tells the agent how to start the app and record it'
+    if target.get('cross_repo') and not getattr(args, 'allow_run', False):
+        return record, 'this pull request comes from a fork; walkthroughs run its code, so pass --allow-run to record them'
+    return record, None
+
+
+def run_walkthroughs(panel, run_dir, state, context, roster, record, note):
+    """Record a video walkthrough of each finding the setting picks, one at a time, since each starts the app."""
+    findings = [] if note or panel.cancelled.is_set() else walkthrough_findings(state.data['synthesis'].get('result'), record)
+    walk = roster['walkthroughs']
+    agent = {**walk['agent'], 'mode': 'walkthrough'}
+    state.update(lambda data: data['walkthroughs'].update(
+        record=record, note=note, items={f['id']: stage_entry(walk['agent']) for f in findings}))
+    for finding in findings:
+        if panel.cancelled.is_set():
+            break
+        key, out = finding['id'], run_dir / 'walkthroughs' / finding['id']
+        out.mkdir(parents=True, exist_ok=True)
+        panel.run_stage(lambda data, k=key: data['walkthroughs']['items'][k], agent,
+                        walkthrough_prompt(finding, walk['instructions'], context, out),
+                        lambda value, o=out: validate_walkthrough(value, o), out)
 
 
 def wait_for_page(state, server, limit=20):
@@ -1262,11 +1411,105 @@ def wait_for_page(state, server, limit=20):
     server.shutdown()
 
 
+def git_common(repo):
+    common = Path(git(['rev-parse', '--git-common-dir'], repo))
+    return common if common.is_absolute() else repo / common
+
+
+def folder_size(path):
+    return sum(f.stat().st_size for f in path.rglob('*') if f.is_file() and not f.is_symlink())
+
+
+def prune_reason(run_dir, repo, days, pr_state):
+    """Why a finished run can be deleted, or None to keep it. `pr_state(number)` returns GitHub's state or None."""
+    state_path = run_dir / 'state.json'
+    try:
+        data = json.loads(state_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        data = None
+    stamp = state_path if state_path.exists() else run_dir
+    age_days = (time.time() - stamp.stat().st_mtime) / 86400
+    if data and data.get('status') == 'running' and age_days < 1:
+        return None  # Another panel may still be writing it.
+    if age_days > days:
+        return f'older than {days} days'
+    target = (data or {}).get('target') or {}
+    if target.get('kind') == 'pr' and target.get('number'):
+        status = pr_state(target['number'])
+        return f"PR #{target['number']} is {status.lower()}" if status in ('MERGED', 'CLOSED') else None
+    if target.get('kind') == 'local' and target.get('branch') and target.get('head'):
+        branch = target['branch']
+        if git(['rev-parse', '--verify', '--quiet', f'refs/heads/{branch}'], repo, check=False) == '':
+            return f'branch {branch} no longer exists'
+        base = target.get('base')
+        if base and subprocess.run(['git', 'merge-base', '--is-ancestor', target['head'], base], cwd=repo,
+                                   capture_output=True).returncode == 0:
+            return f'branch {branch} is merged into {base}'
+    return None
+
+
+def prune_runs(repo, days, dry_run=False, keep=None):
+    """Delete finished runs whose review is over: the PR merged or closed, the branch merged or gone, or too old.
+
+    Returns [(run_dir, reason, bytes)]. A run whose PR state GitHub can't report is kept, not guessed about."""
+    root = git_common(repo) / 'review-panel'
+    if not root.is_dir():
+        return []
+    states = {}
+
+    def pr_state(number):
+        if number not in states:
+            states[number] = None
+            if shutil.which('gh'):
+                done = subprocess.run(['gh', 'pr', 'view', str(number), '--json', 'state', '-q', '.state'], cwd=repo,
+                                      capture_output=True, text=True, timeout=30)
+                states[number] = done.stdout.strip() if done.returncode == 0 else None
+        return states[number]
+
+    removed = []
+    for run_dir in sorted(p for p in root.iterdir() if p.is_dir() and p != keep):
+        reason = prune_reason(run_dir, repo, days, pr_state)
+        if reason:
+            removed.append((run_dir, reason, folder_size(run_dir)))
+            if not dry_run:
+                if (run_dir / 'worktree').exists():
+                    git(['worktree', 'remove', '--force', str(run_dir / 'worktree')], repo, check=False)
+                shutil.rmtree(run_dir, ignore_errors=True)
+    if removed and not dry_run:
+        git(['worktree', 'prune'], repo, check=False)
+    return removed
+
+
+def megabytes(size):
+    return f'{size / 1e6:.1f} MB'
+
+
+def prune_command(args):
+    repo = Path(git(['rev-parse', '--show-toplevel'], Path.cwd()))
+    roster, _ = load_roster(None, False, repo, args.panel, settings_only=True)
+    days = args.days or roster.get('retention', {}).get('days', 14)
+    removed = prune_runs(repo, days, dry_run=args.dry_run)
+    for run_dir, reason, size in removed:
+        print(f"{'would delete' if args.dry_run else 'deleted'} {run_dir.name} ({reason}, {megabytes(size)})")
+    total = sum(size for _, _, size in removed)
+    print(f"{'Would free' if args.dry_run else 'Freed'} {megabytes(total)} from {len(removed)} run{'s' if len(removed) != 1 else ''}."
+          if removed else 'Nothing to delete.')
+    return 0
+
+
 def run(args):
     repo = Path(git(['rev-parse', '--show-toplevel'], Path.cwd()))
-    common = Path(git(['rev-parse', '--git-common-dir'], repo))
-    common = common if common.is_absolute() else repo / common
+    common = git_common(repo)
     roster, reviewers = load_roster(args.only, args.claude_only, repo, args.panel)
+    if not args.keep_runs:
+        try:
+            removed = prune_runs(repo, roster.get('retention', {}).get('days', 14))
+        except (OSError, subprocess.SubprocessError) as error:  # Cleanup never stops a review.
+            removed = []
+            print(f'review-panel: skipped cleaning up old runs: {error}', file=sys.stderr)
+        if removed:
+            print(f"Deleted {len(removed)} finished run{'s' if len(removed) != 1 else ''} whose review is over "
+                  f"({megabytes(sum(size for _, _, size in removed))}).", flush=True)
     try:
         extra = Path(args.context).read_text() if args.context else ''
     except OSError as error:
@@ -1355,6 +1598,9 @@ def run_panel(args, run_dir, code_dir, state, server, context, files, roster, re
                         lambda value: validate_synthesis(normalize_synthesis(value), reviews), run_dir / 'synthesis')
         if state.data['synthesis'].get('result'):
             add_snippets(state.data['synthesis']['result']['findings'])
+        record, note = walkthrough_plan(args, roster, state.data['target'])
+        if record != 'off':
+            run_walkthroughs(panel, run_dir, state, context, roster, record, note)
     else:
         reason = 'cancelled' if panel.cancelled.is_set() else 'no reviewer reported'
         state.update(lambda data: data['synthesis'].update(status='skipped', error=reason))
@@ -1383,6 +1629,39 @@ def reopen(args):
         raise PanelError(f'{page} does not exist; the run may still be going or was interrupted')
     open_page(page.as_uri())
     print(page)
+    return 0
+
+
+def attach_command(args):
+    """Add videos recorded outside the panel to a finished run's finding, and rebuild its report page."""
+    run_dir = Path(args.run_dir).resolve()
+    state_path = run_dir / 'state.json'
+    if not state_path.exists():
+        raise PanelError(f'{run_dir} is not a review panel run (no state.json)')
+    data = json.loads(state_path.read_text())
+    ids = [f['id'] for f in ((data.get('synthesis') or {}).get('result') or {}).get('findings', [])]
+    if args.finding not in ids:
+        raise PanelError(f"no synthesis finding {args.finding} in this run; choose from {', '.join(ids) or 'none'}")
+    out = run_dir / 'walkthroughs' / args.finding
+    out.mkdir(parents=True, exist_ok=True)
+    videos = []
+    for index, source in enumerate(args.video, 1):
+        source = Path(source)
+        if source.suffix not in VIDEO_TYPES or not source.is_file():
+            raise PanelError(f"{source} is not a {' or '.join(VIDEO_TYPES)} file")
+        name = f'walkthrough-{index}{source.suffix}' if len(args.video) > 1 else f'walkthrough{source.suffix}'
+        shutil.copyfile(source, out / name)
+        videos.append({'file': name, 'title': (args.title or [])[index - 1] if args.title and index <= len(args.title) else source.stem})
+    result = {'outcome': args.outcome, 'summary': args.summary, 'steps': args.step or [], 'video': videos[0]['file'] if videos else None,
+              'videos': videos, 'attached': True}
+    problems = validate_walkthrough({k: v for k, v in result.items() if k not in ('videos', 'attached')}, out)
+    if problems:
+        raise PanelError('; '.join(problems))
+    walk = data.setdefault('walkthroughs', {'record': 'off', 'note': None, 'items': {}})
+    walk.setdefault('items', {})[args.finding] = {**stage_entry(None), 'status': 'done', 'ended_at': now(), 'result': result}
+    state_path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    (run_dir / 'report.html').write_text(standalone_html(json.dumps(data, ensure_ascii=False)))
+    print(f"Attached {len(videos)} video{'s' if len(videos) != 1 else ''} to {args.finding}: {run_dir / 'report.html'}")
     return 0
 
 
@@ -1441,15 +1720,30 @@ def main(argv=None):
     start.add_argument('--port', type=int, default=0, help='port for the live view (default: any free port)')
     start.add_argument('--no-open', action='store_true', help='print the live view URL without opening a browser')
     start.add_argument('--no-serve', action='store_true', help='skip the live view; write the report only')
+    start.add_argument('--walkthroughs', choices=RECORD_CHOICES, help="record video walkthroughs of these findings (default: the repository's setting, else off)")
+    start.add_argument('--allow-run', action='store_true', help="let walkthroughs run a fork's pull request code")
+    start.add_argument('--keep-runs', action='store_true', help="don't delete finished runs whose review is over before starting")
     again = commands.add_parser('open', help="open a finished run's standalone report page")
     again.add_argument('run_dir')
+    prune = commands.add_parser('prune', help='delete finished runs whose PR merged or closed, whose branch merged or is gone, or that are too old')
+    prune.add_argument('--dry-run', action='store_true', help='list what would be deleted')
+    prune.add_argument('--days', type=positive, help='also delete runs older than this (default: the retention setting, else 14)')
+    prune.add_argument('--panel', metavar='DIR', help=f'read the retention setting from DIR instead of {CONFIG_DIR}')
+    attach = commands.add_parser('attach', help="add videos recorded outside the panel to a finished run's finding")
+    attach.add_argument('run_dir')
+    attach.add_argument('finding', help='the synthesis finding, such as S1')
+    attach.add_argument('video', nargs='+', help='.webm or .mp4 files, shown in this order')
+    attach.add_argument('--outcome', choices=WALKTHROUGH_OUTCOMES, default='reproduced')
+    attach.add_argument('--summary', required=True, help='what the videos show, and how much it matters')
+    attach.add_argument('--title', action='append', help='a title for each video, in order (default: its file name)')
+    attach.add_argument('--step', action='append', help='a step the recording took; repeat for each')
     config = commands.add_parser('settings', help="edit this repository's panel settings in the page, saving them to its config folder")
     config.add_argument('--panel', metavar='DIR', help=f'save to DIR instead of {CONFIG_DIR} in the repository')
     config.add_argument('--port', type=int, default=0, help='port for the page (default: any free port)')
     config.add_argument('--no-open', action='store_true', help='print the URL without opening a browser')
     args = parser.parse_args(argv)
     try:
-        return {'run': run, 'open': reopen, 'settings': settings_command}[args.command](args)
+        return {'run': run, 'open': reopen, 'attach': attach_command, 'prune': prune_command, 'settings': settings_command}[args.command](args)
     except PanelError as error:
         print(f'review-panel: {error}', file=sys.stderr)
         return 2

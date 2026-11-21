@@ -50,7 +50,8 @@ A repository changes its panel with a folder of plain files, `.fabrica/review-pa
 
 ```text
 .fabrica/review-panel/
-├── panel.yaml              which reviewers run, in what order, and the synthesis model
+├── panel.yaml              which reviewers run, in what order, the synthesis model, walkthroughs, and retention
+├── walkthroughs.md         how an agent starts the app and records it, for video walkthroughs
 └── reviewers/
     ├── check-security.md   replaces or extends a built-in reviewer
     └── check-payments.md   adds a new reviewer
@@ -66,6 +67,22 @@ python3 PATH_TO_SKILL/scripts/review_panel.py settings
 
 It opens the latest run's page at its settings window, which shows where each reviewer's settings come from (built-in or the repository) and saves edits as files in `.fabrica/review-panel/`, uncommitted, for you to review and commit. A saved report page can't write files, so its settings window copies the commands that write them instead.
 
+## Video walkthroughs
+
+A repository can have the panel record a short video of each blocking finding, or of every finding, so a person can see what it looks like in the running app and judge how much it matters. After the synthesis, an agent runs the change in the run's temporary worktree, follows `walkthroughs.md` to start the app and drive it in a browser with video on, and reports whether the problem reproduced, didn't, or can't be seen in the UI. Each video appears in a Walkthrough tab on its finding.
+
+```yaml
+# .fabrica/review-panel/panel.yaml
+walkthroughs:
+  record: blocking   # off (the default), blocking, or all
+```
+
+`walkthroughs.md` says how to start the app on its own ports, when it's ready, how to sign in with test data, how to record (Playwright with `video: 'on'` is a good default), and how to stop everything. The Video walkthroughs page in Settings explains the setup and copies a prompt that has your coding agent do it. Unlike the reviewers, a walkthrough runs the change's code with a shell, so the panel never records a pull request from a fork unless you pass `--allow-run`. `--walkthroughs all` overrides the setting for one run. To add videos recorded some other way to a finished run's finding, use `review_panel.py attach RUN_DIR S1 video.mp4 --summary '...'`.
+
+## Cleanup
+
+Runs, videos included, live in `.git/review-panel/` and are never committed or pushed. Each time the panel starts, it deletes finished runs whose review is over: the pull request merged or closed, or the local branch merged into its base or deleted. It also deletes runs older than 14 days, which `retention: {days: N}` in `panel.yaml` changes. When GitHub can't be reached, a run is kept. `review_panel.py prune --dry-run` shows what it would delete, `prune` deletes it now, and `run --keep-runs` skips the cleanup once.
+
 ## Requirements and cost
 
 - macOS or Linux, Python 3.10+, and Git. No packages to install.
@@ -73,7 +90,7 @@ It opens the latest run's page at its settings window, which shows where each re
 - Codex, signed in, for the four Codex reviewers. Without it, or when a Codex session fails, those reviewers run on Claude and the page says so.
 - The GitHub CLI, signed in, for `--pr`.
 
-A full run starts nine sessions (eight reviewers and the synthesis), each limited to 20 minutes; a run of the whole panel on a small pull request took about eight minutes. Reviewers read a snapshot of your branch, including uncommitted and new files, so you can keep working meanwhile. Claude reviewers can only read and search files (no shell, project settings, hooks, or MCP servers), and Codex reviewers run in Codex's read-only sandbox. Results stay in `.git/review-panel/` in the reviewed repository; nothing is posted anywhere.
+A full run starts nine sessions (eight reviewers and the synthesis), each limited to 20 minutes; a run of the whole panel on a small pull request took about eight minutes. Reviewers read a snapshot of your branch, including uncommitted and new files, so you can keep working meanwhile. Claude reviewers can only read and search files (no shell, project settings, hooks, or MCP servers), and Codex reviewers run in Codex's read-only sandbox. Results stay in `.git/review-panel/` in the reviewed repository until the review is over; nothing is posted anywhere.
 
 ## Credits
 

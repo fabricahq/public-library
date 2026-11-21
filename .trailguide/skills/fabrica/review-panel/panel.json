@@ -93,6 +93,17 @@
       "effort": "high"
     }
   },
+  "walkthroughs": {
+    "record": "off",
+    "agent": {
+      "harness": "claude-code",
+      "model": "opus",
+      "effort": "default"
+    }
+  },
+  "retention": {
+    "days": 14
+  },
   "models": [
     {
       "id": "opus",
